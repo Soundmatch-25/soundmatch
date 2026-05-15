@@ -2097,7 +2097,7 @@ function bewerkProfiel() {
         const div = document.createElement('div');
         div.style.cssText = 'display:flex;gap:8px;align-items:center;';
         div.innerHTML = `<input class="input-field" style="flex:1;" value="${link}" placeholder="SoundCloud, YouTube..."/>
-          <button onclick="this.parentElement.remove()" style="width:36px;height:44px;border-radius:10px;border:1px solid rgba(229,57,53,0.3);background:rgba(229,57,53,0.1);color:#e53935;cursor:pointer;font-size:20px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">×</button>`;
+          <button onclick="this.parentElement.remove()" style="width:36px;height:44px;border-radius:10px;border:1px solid rgba(229,57,53,0.3);background:rgba(229,57,53,0.1);color:#e53935;cursor:pointer;font-size:20px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">&#215;</button>`;
         container.appendChild(div);
       });
       // Altijd een plus knop rij toevoegen
@@ -2205,7 +2205,7 @@ function voegAdLinkToe() {
   const div = document.createElement('div');
   div.style.cssText = 'display:flex;gap:8px;align-items:center;';
   div.innerHTML = `<input class="input-field" style="flex:1;" placeholder="SoundCloud, YouTube, Spotify..."/>
-    <button type="button" onclick="this.parentElement.remove()" style="width:36px;height:44px;border-radius:10px;border:1px solid rgba(229,57,53,0.3);background:rgba(229,57,53,0.1);color:#e53935;cursor:pointer;font-size:20px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">×</button>`;
+    <button type="button" onclick="this.parentElement.remove()" style="width:36px;height:44px;border-radius:10px;border:1px solid rgba(229,57,53,0.3);background:rgba(229,57,53,0.1);color:#e53935;cursor:pointer;font-size:20px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">&#215;</button>`;
   container.appendChild(div);
 }
 
@@ -2213,12 +2213,13 @@ function getAdLinks() {
   const inputs = document.querySelectorAll('#adMuzieklinks input');
   return [...inputs].map(i => i.value.trim()).filter(Boolean).join(', ');
 }
+function voegLinkToe() {
   const container = document.getElementById('muzieklinks');
   const div = document.createElement('div');
   div.style.cssText = 'display:flex;gap:8px;align-items:center;';
   div.innerHTML = `
     <input class="input-field" style="flex:1;" placeholder="SoundCloud, YouTube, Spotify, Instagram..." oninput="syncMuzieklinks()"/>
-    <button onclick="this.parentElement.remove();syncMuzieklinks()" style="width:36px;height:44px;border-radius:10px;border:1px solid rgba(229,57,53,0.3);background:rgba(229,57,53,0.1);color:#e53935;cursor:pointer;font-size:20px;display:flex;align-items:center;justify-content:center;flex-shrink:0;" title="Verwijder link">×</button>`;
+    <button type="button" onclick="this.parentElement.remove();syncMuzieklinks()" style="width:36px;height:44px;border-radius:10px;border:1px solid rgba(229,57,53,0.3);background:rgba(229,57,53,0.1);color:#e53935;cursor:pointer;font-size:20px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">&#215;</button>`;
   container.appendChild(div);
 }
 
