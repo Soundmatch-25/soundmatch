@@ -87,7 +87,8 @@ html, body {
 #screen-onboard {
   background: linear-gradient(160deg, #13002e 0%, #0d0d14 45%, #001133 100%);
   position: relative;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .ob-glow-1 { position: absolute; top: -80px; right: -80px; width: 400px; height: 400px; border-radius: 50%; background: radial-gradient(circle, rgba(124,77,255,0.15) 0%, transparent 70%); pointer-events: none; }
@@ -98,10 +99,11 @@ html, body {
   position: relative;
   z-index: 2;
   display: flex;
-  height: 100%;
+  min-height: 100%;
   align-items: center;
   justify-content: center;
-  padding: 40px;
+  padding: 48px 24px;
+  box-sizing: border-box;
 }
 
 .ob-left {
@@ -116,7 +118,7 @@ html, body {
 
 .ob-logo {
   font-family: var(--font-head);
-  font-size: clamp(48px, 6vw, 72px);
+  font-size: clamp(36px, 8vw, 72px);
   font-weight: 900;
   color: #fff;
   letter-spacing: 4px;
@@ -128,7 +130,7 @@ html, body {
 
 .ob-headline {
   font-family: var(--font-head);
-  font-size: clamp(22px, 3vw, 36px);
+  font-size: clamp(20px, 5vw, 36px);
   font-weight: 700;
   color: #fff;
   line-height: 1.25;
@@ -143,7 +145,7 @@ html, body {
   max-width: 420px;
 }
 
-.ob-btns { display: flex; flex-direction: column; gap: 12px; width: 100%; max-width: 400px; }
+.ob-btns { display: flex; flex-direction: column; gap: 12px; width: 100%; max-width: 400px; box-sizing: border-box; }
 
 .ob-right { display: none; }
 
@@ -927,10 +929,11 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
   .mobile-nav { display: flex !important; }
 
   /* Welkomstscherm */
-  .ob-inner { flex-direction: column; padding: 40px 20px 32px; justify-content: center; gap: 28px; }
-  .ob-left { max-width: 100%; align-items: center; text-align: center; }
-  .ob-logo { font-size: 42px; }
-  .ob-headline { font-size: 24px; }
+  .ob-inner { padding: 32px 20px 40px; }
+  .ob-left { gap: 20px; }
+  .ob-logo { font-size: 30px; letter-spacing: 2px; }
+  .ob-headline { font-size: 20px; }
+  .ob-sub { font-size: 14px; }
   .ob-btns { max-width: 100%; }
   .ob-right { display: none; }
 
@@ -1532,13 +1535,18 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
           </div>
 
           <div>
-            <div class="field-label">Link naar muziek (optioneel)</div>
-            <input class="input-field" id="adFormLink" placeholder="SoundCloud, YouTube, Spotify, Instagram..."/>
+            <div class="field-label">Link(s) naar muziek <span style="color:var(--sub);font-weight:400;">(optioneel)</span></div>
+            <div id="adMuzieklinks" style="display:flex;flex-direction:column;gap:8px;">
+              <div style="display:flex;gap:8px;align-items:center;">
+                <input class="input-field" style="flex:1;" placeholder="SoundCloud, YouTube, Spotify, Instagram..."/>
+                <button type="button" onclick="voegAdLinkToe()" style="width:36px;height:44px;border-radius:10px;border:1px solid var(--border);background:var(--card2);color:var(--sub);cursor:pointer;font-size:20px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">+</button>
+              </div>
+            </div>
           </div>
 
           <div style="display:flex;gap:12px;padding-bottom:16px;">
-            <button class="btn btn-ghost" style="flex:1;" onclick="hideAdForm()">Annuleren</button>
-            <button class="btn btn-primary" style="flex:2;" onclick="saveAdPanel()">
+            <button type="button" class="btn btn-ghost" style="flex:1;" onclick="hideAdForm()">Annuleren</button>
+            <button type="button" class="btn btn-primary" style="flex:2;" onclick="saveAdPanel()">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
               Advertentie opslaan
             </button>
@@ -2038,7 +2046,7 @@ async function saveAdPanel() {
   const niveau = isBand ? null : document.getElementById('adFormLevel')?.value;
   const beschikbaarheid = isBand ? null : document.getElementById('adFormAvail')?.value;
   const omschrijving = document.getElementById('adFormDesc')?.value.trim();
-  const muzieklinks = document.getElementById('adFormLink')?.value.trim();
+  const muzieklinks = getAdLinks();
 
   const { error } = await sb.from('advertenties').insert({
     user_id: currentUser.id, titel, type, instrumenten, genres, niveau, beschikbaarheid, omschrijving, muzieklinks, actief: true
@@ -2191,7 +2199,20 @@ function schaalFoto(file, maxSize) {
     reader.readAsDataURL(file);
   });
 }
-function voegLinkToe() {
+function voegAdLinkToe() {
+  const container = document.getElementById('adMuzieklinks');
+  if (!container) return;
+  const div = document.createElement('div');
+  div.style.cssText = 'display:flex;gap:8px;align-items:center;';
+  div.innerHTML = `<input class="input-field" style="flex:1;" placeholder="SoundCloud, YouTube, Spotify..."/>
+    <button type="button" onclick="this.parentElement.remove()" style="width:36px;height:44px;border-radius:10px;border:1px solid rgba(229,57,53,0.3);background:rgba(229,57,53,0.1);color:#e53935;cursor:pointer;font-size:20px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">×</button>`;
+  container.appendChild(div);
+}
+
+function getAdLinks() {
+  const inputs = document.querySelectorAll('#adMuzieklinks input');
+  return [...inputs].map(i => i.value.trim()).filter(Boolean).join(', ');
+}
   const container = document.getElementById('muzieklinks');
   const div = document.createElement('div');
   div.style.cssText = 'display:flex;gap:8px;align-items:center;';
@@ -2270,12 +2291,13 @@ function showAdForm(editId) {
   // Reset form
   if (!editId) {
     document.getElementById('adFormTitle').value = '';
-    document.getElementById('adFormName').value = '';
-    document.getElementById('adFormLocation').value = '';
     document.getElementById('adFormDesc').value = '';
-    document.getElementById('adFormLink').value = '';
-    document.getElementById('adPhotoPreview').textContent = '🎵';
-    document.querySelectorAll('#adFormInstruments .chip, #adFormGenres .chip').forEach(c => c.classList.remove('selected'));
+    // Reset links container
+    const adLinks = document.getElementById('adMuzieklinks');
+    if (adLinks) adLinks.innerHTML = `<div style="display:flex;gap:8px;align-items:center;"><input class="input-field" style="flex:1;" placeholder="SoundCloud, YouTube, Spotify, Instagram..."/><button type="button" onclick="voegAdLinkToe()" style="width:36px;height:44px;border-radius:10px;border:1px solid var(--border);background:var(--card2);color:var(--sub);cursor:pointer;font-size:20px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">+</button></div>`;
+    const prev = document.getElementById('adPhotoPreview');
+    if (prev) prev.innerHTML = '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>';
+    document.querySelectorAll('#adFormInstruments .chip, #adFormGenres .chip, #adFormWijZoeken .chip').forEach(c => c.classList.remove('selected'));
   }
 }
 
@@ -2341,7 +2363,7 @@ function saveAdPanel() {
   const instruments = [...document.querySelectorAll('#adFormInstruments .chip.selected')].map(c => c.textContent);
   const genres = [...document.querySelectorAll('#adFormGenres .chip.selected')].map(c => c.textContent);
   const photoEl = document.getElementById('adPhotoPreview');
-  const photoHTML = photoEl.innerHTML || photoEl.textContent || '🎵';
+  const photoHTML = photoEl.innerHTML || '';
   const meta = [...genres.slice(0,2), ...instruments.slice(0,1), level, avail].filter(Boolean).join(' · ');
   const tags = [...instruments.slice(0,3), ...genres.slice(0,2), location].filter(Boolean);
 
