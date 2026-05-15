@@ -2032,8 +2032,10 @@ async function laadMijnAdvertenties() {
 async function saveAdPanel() {
   if (!currentUser) { alert('Niet ingelogd'); return; }
   
+  console.log('saveAdPanel aangeroepen');
   const titelEl = document.getElementById('adFormTitle');
-  if (!titelEl) { alert('Formulier niet gevonden'); return; }
+  console.log('adFormTitle element:', titelEl);
+  if (!titelEl) { alert('Formulier niet gevonden - probeer opnieuw'); return; }
   const titel = titelEl.value.trim();
   if (!titel) { alert('Geef je advertentie een titel.'); return; }
 
