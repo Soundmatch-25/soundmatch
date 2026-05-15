@@ -2030,8 +2030,11 @@ async function laadMijnAdvertenties() {
 }
 
 async function saveAdPanel() {
-  if (!currentUser) return;
-  const titel = document.getElementById('adFormTitle')?.value.trim();
+  if (!currentUser) { alert('Niet ingelogd'); return; }
+  
+  const titelEl = document.getElementById('adFormTitle');
+  if (!titelEl) { alert('Formulier niet gevonden'); return; }
+  const titel = titelEl.value.trim();
   if (!titel) { alert('Geef je advertentie een titel.'); return; }
 
   const type = document.getElementById('adFormTypeBand')?.classList.contains('active') ? 'band'
@@ -2048,10 +2051,13 @@ async function saveAdPanel() {
   const omschrijving = document.getElementById('adFormDesc')?.value.trim();
   const muzieklinks = getAdLinks();
 
+  console.log('Advertentie opslaan:', { titel, type, instrumenten, genres, niveau, beschikbaarheid, omschrijving, muzieklinks });
+
   const { error } = await sb.from('advertenties').insert({
     user_id: currentUser.id, titel, type, instrumenten, genres, niveau, beschikbaarheid, omschrijving, muzieklinks, actief: true
   });
 
+  console.log('Insert error:', error);
   if (error) { alert('Opslaan mislukt: ' + error.message); return; }
 
   hideAdForm();
