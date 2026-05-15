@@ -1,0 +1,2697 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+<meta name="theme-color" content="#0d0d14"/>
+<meta name="description" content="Soundmatch — Vind je perfecte bandgenoot in Nederland"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="Soundmatch"/>
+<title>Soundmatch</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="stylesheet" href="https://unpkg.com/@tabler/icons-webfont@latest/dist/tabler-icons.min.css"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
+
+<style>
+/* ═══════════════════════════════════════════
+   ROOT & RESET
+═══════════════════════════════════════════ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #0d0d14;
+  --bg2: #11111f;
+  --card: #16162a;
+  --card2: #1e1e35;
+  --card3: #24243e;
+  --text: #f0f0ff;
+  --sub: #a0a0c0;
+  --muted: #6666888;
+  --border: #2a2a3d;
+  --border2: #333355;
+  --neon: #7c4dff;
+  --neon2: #448aff;
+  --green: #2ecc71;
+  --red: #e53935;
+  --grad: linear-gradient(135deg, #7c4dff, #448aff);
+  --font-head: 'Syne', sans-serif;
+  --font-body: 'Inter', sans-serif;
+  --radius: 20px;
+  --radius-sm: 12px;
+  --sidebar-w: 240px;
+  --detail-w: 0px;
+}
+
+html, body {
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+
+/* ═══════════════════════════════════════════
+   APP SHELL — gebruik dvh voor correcte mobiele hoogte
+═══════════════════════════════════════════ */
+#app {
+  width: 100%;
+  height: 100vh;
+  height: 100dvh; /* Dynamic viewport height — fix voor iOS/Android browser UI */
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ═══════════════════════════════════════════
+   SCREENS
+═══════════════════════════════════════════ */
+.screen { display: none; width: 100%; height: 100%; flex-direction: column; }
+.screen.active { display: flex; }
+
+/* Safe area insets voor iOS notch/home indicator */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .mobile-nav {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+/* ═══════════════════════════════════════════
+   ONBOARDING — DESKTOP
+═══════════════════════════════════════════ */
+#screen-onboard {
+  background: linear-gradient(160deg, #13002e 0%, #0d0d14 45%, #001133 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+.ob-glow-1 { position: absolute; top: -80px; right: -80px; width: 400px; height: 400px; border-radius: 50%; background: radial-gradient(circle, rgba(124,77,255,0.15) 0%, transparent 70%); pointer-events: none; }
+.ob-glow-2 { position: absolute; bottom: 60px; left: -60px; width: 300px; height: 300px; border-radius: 50%; background: radial-gradient(circle, rgba(68,138,255,0.12) 0%, transparent 70%); pointer-events: none; }
+.ob-glow-3 { position: absolute; top: 40%; right: 5%; width: 200px; height: 200px; border-radius: 50%; background: radial-gradient(circle, rgba(168,85,247,0.1) 0%, transparent 70%); pointer-events: none; }
+
+.ob-inner {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  height: 100%;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+}
+
+.ob-left {
+  width: 100%;
+  max-width: 520px;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  align-items: center;
+  text-align: center;
+}
+
+.ob-logo {
+  font-family: var(--font-head);
+  font-size: clamp(48px, 6vw, 72px);
+  font-weight: 900;
+  color: #fff;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  line-height: 1;
+}
+.ob-logo .accent { background: var(--grad); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.ob-logo .dot { color: var(--neon); -webkit-text-fill-color: var(--neon); }
+
+.ob-headline {
+  font-family: var(--font-head);
+  font-size: clamp(22px, 3vw, 36px);
+  font-weight: 700;
+  color: #fff;
+  line-height: 1.25;
+  text-align: center;
+}
+.ob-headline .grad-text { background: var(--grad); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+
+.ob-sub {
+  font-size: 16px;
+  color: rgba(255,255,255,0.5);
+  line-height: 1.65;
+  max-width: 420px;
+}
+
+.ob-btns { display: flex; flex-direction: column; gap: 12px; width: 100%; max-width: 400px; }
+
+.ob-right { display: none; }
+
+.ob-emoji-grid {
+  position: relative;
+  width: 320px;
+  height: 320px;
+}
+.ob-emoji-grid .center { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-58%); font-size: 100px; filter: drop-shadow(0 0 32px rgba(124,77,255,0.5)); }
+.ob-emoji-grid .e1 { position: absolute; top: 8%; left: 4%; font-size: 36px; opacity: .75; filter: drop-shadow(0 0 10px rgba(68,138,255,0.4)); }
+.ob-emoji-grid .e2 { position: absolute; top: 5%; right: 6%; font-size: 34px; opacity: .7; }
+.ob-emoji-grid .e3 { position: absolute; bottom: 22%; left: 0%; font-size: 30px; opacity: .65; }
+.ob-emoji-grid .e4 { position: absolute; bottom: 20%; right: 2%; font-size: 28px; opacity: .6; }
+.ob-emoji-grid .e5 { position: absolute; top: 38%; left: -2%; font-size: 18px; color: var(--neon); opacity: .45; font-family: serif; }
+.ob-emoji-grid .e6 { position: absolute; top: 22%; right: -2%; font-size: 16px; color: var(--neon2); opacity: .4; font-family: serif; }
+.ob-emoji-grid .e7 { position: absolute; bottom: 5%; left: 38%; font-size: 20px; color: #9c88ff; opacity: .4; font-family: serif; }
+
+/* ═══════════════════════════════════════════
+   BUTTONS
+═══════════════════════════════════════════ */
+.btn {
+  display: flex; align-items: center; justify-content: center;
+  gap: 8px;
+  padding: 16px 24px;
+  border-radius: 14px;
+  border: none;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: var(--font-body);
+  transition: opacity .15s, transform .12s;
+  text-decoration: none;
+}
+.btn:active { transform: scale(0.97); opacity: .88; }
+.btn-primary { background: var(--grad); color: #fff; }
+.btn-ghost { background: transparent; border: 1.5px solid rgba(255,255,255,0.2); color: rgba(255,255,255,0.7); }
+.btn-ghost:hover { background: rgba(255,255,255,0.05); }
+.btn-full { width: 100%; }
+.btn-sm { padding: 10px 18px; font-size: 13px; border-radius: 10px; }
+
+/* ═══════════════════════════════════════════
+   MAIN APP LAYOUT (desktop)
+═══════════════════════════════════════════ */
+#screen-app {
+  flex-direction: row;
+  overflow: hidden;
+}
+
+/* SIDEBAR */
+.sidebar {
+  width: var(--sidebar-w);
+  flex-shrink: 0;
+  background: var(--bg2);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  padding: 24px 16px;
+  gap: 4px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.sidebar-logo {
+  font-family: var(--font-head);
+  font-size: 18px;
+  font-weight: 900;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  padding: 4px 10px 24px;
+  white-space: nowrap;
+  overflow: visible;
+}
+.sidebar-logo .acc { background: var(--grad); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.sidebar-logo .dot { color: var(--neon); -webkit-text-fill-color: var(--neon); }
+
+.nav-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  color: var(--sub);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all .15s;
+  border: none;
+  background: transparent;
+  text-align: left;
+  width: 100%;
+}
+.nav-link i { font-size: 20px; }
+.nav-link:hover { background: var(--card); color: var(--text); }
+.nav-link.active { background: rgba(124,77,255,0.15); color: var(--text); }
+.nav-link.active i { color: var(--neon); }
+
+.sidebar-spacer { flex: 1; }
+
+.sidebar-user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 12px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  cursor: pointer;
+}
+.sidebar-avatar {
+  width: 38px; height: 38px;
+  border-radius: 10px;
+  background: var(--grad);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+.sidebar-user-info { flex: 1; overflow: hidden; }
+.sidebar-user-name { font-size: 14px; font-weight: 600; color: var(--text); }
+.sidebar-user-role { font-size: 12px; color: var(--sub); }
+
+/* MAIN CONTENT */
+.main-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+}
+
+/* CONTENT PANELS */
+.panel { display: none; flex: 1; overflow: hidden; }
+.panel.active { display: flex; flex-direction: column; }
+
+/* ═══════════════════════════════════════════
+   SWIPE / DISCOVER PANEL
+═══════════════════════════════════════════ */
+#panel-discover {
+  flex-direction: column;
+  align-items: stretch;
+  overflow: hidden;
+}
+
+.discover-center {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  gap: 20px;
+  position: relative;
+  overflow: hidden;
+}
+
+.discover-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  max-width: 440px;
+}
+.discover-header h2 {
+  font-family: var(--font-head);
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+/* CARD STACK */
+.card-stack {
+  position: relative;
+  width: 100%;
+  max-width: 420px;
+  height: 520px;
+  flex-shrink: 0;
+}
+
+.profile-card {
+  position: absolute;
+  inset: 0;
+  border-radius: 24px;
+  overflow: hidden;
+  cursor: pointer;
+  user-select: none;
+  transition: transform .15s;
+  background: var(--card2);
+  border: 1px solid var(--border2);
+  display: flex;
+  flex-direction: column;
+}
+.profile-card.stack-1 { transform: scale(0.97) translateY(8px); z-index: 1; }
+.profile-card.stack-2 { transform: scale(0.94) translateY(16px); z-index: 0; }
+.profile-card.top { z-index: 10; transform: scale(1); }
+.profile-card.dragging { transition: none; }
+
+.card-visual {
+  height: 58%;
+  flex-shrink: 0;
+  background: linear-gradient(180deg, #1a1a35 0%, #0d0d20 100%);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 90px;
+  position: relative;
+}
+.card-badge-genre {
+  position: absolute; top: 14px; left: 14px;
+  padding: 6px 14px; border-radius: 24px;
+  background: rgba(124,77,255,0.35);
+  border: 1px solid rgba(124,77,255,0.55);
+  color: #c4b0ff; font-size: 12px; font-weight: 600;
+}
+.card-badge-dist {
+  position: absolute; top: 14px; right: 14px;
+  padding: 6px 12px; border-radius: 24px;
+  background: rgba(0,0,0,0.55); color: var(--sub); font-size: 12px;
+}
+.card-badge-type {
+  position: absolute; bottom: 14px; left: 14px;
+  padding: 5px 12px; border-radius: 20px; font-size: 11px; font-weight: 700;
+}
+.type-band { background: rgba(255,107,53,0.25); border: 1px solid rgba(255,107,53,0.5); color: #ff9f7a; }
+.type-muzikant { background: rgba(68,138,255,0.25); border: 1px solid rgba(68,138,255,0.5); color: #7ab8ff; }
+.type-sessie { background: rgba(168,85,247,0.25); border: 1px solid rgba(168,85,247,0.5); color: #d4a4ff; }
+.type-industry { background: rgba(251,191,36,0.2); border: 1px solid rgba(251,191,36,0.4); color: #fcd34d; }
+
+/* Actief indicator */
+.active-dot {
+  position: absolute; top: 12px; right: 14px;
+  display: flex; align-items: center; gap: 5px;
+  padding: 4px 10px; border-radius: 20px;
+  font-size: 11px; font-weight: 700;
+  backdrop-filter: blur(4px);
+}
+.active-now { background: rgba(34,197,94,0.2); border: 1px solid rgba(34,197,94,0.4); color: #4ade80; }
+.active-today { background: rgba(251,191,36,0.15); border: 1px solid rgba(251,191,36,0.35); color: #fcd34d; }
+.active-old { background: rgba(100,100,120,0.2); border: 1px solid rgba(100,100,120,0.35); color: var(--sub); }
+.active-dot .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+
+/* Spotlight badge */
+.spotlight-badge {
+  position: absolute; bottom: 12px; right: 14px;
+  padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700;
+  background: linear-gradient(135deg, rgba(124,77,255,0.4), rgba(68,138,255,0.4));
+  border: 1px solid rgba(124,77,255,0.5); color: #c4b0ff;
+}
+
+.card-body {
+  flex: 1;
+  padding: 16px;
+  background: var(--card);
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.card-name { font-family: var(--font-head); font-size: 20px; font-weight: 600; color: var(--text); }
+.card-role { font-size: 14px; color: var(--neon); font-weight: 600; margin-top: 2px; }
+.card-desc { font-size: 13px; color: var(--sub); line-height: 1.4; margin-top: 6px; }
+.card-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+.tag { font-size: 11px; padding: 3px 10px; border-radius: 20px; border: 1px solid var(--border); color: var(--sub); }
+
+/* SWIPE FEEDBACK */
+.swipe-fb {
+  position: absolute; top: 44%; left: 50%; transform: translate(-50%,-50%);
+  font-size: 42px; font-weight: 900; opacity: 0; pointer-events: none; z-index: 20;
+  border: 4px solid; padding: 8px 18px; border-radius: 14px; letter-spacing: 3px;
+  transition: opacity .18s;
+}
+.fb-like { color: #2ecc71; border-color: #2ecc71; }
+.fb-nope { color: #e53935; border-color: #e53935; }
+
+/* SWIPE ACTIONS */
+.swipe-actions {
+  display: flex; align-items: center; justify-content: center;
+  gap: 16px;
+  width: 100%; max-width: 420px;
+}
+.sw-btn {
+  display: flex; align-items: center; justify-content: center;
+  border: none; cursor: pointer; transition: all .15s;
+  border-radius: 18px; flex-shrink: 0;
+}
+.sw-btn:active { transform: scale(0.92); opacity: .85; }
+.sw-nope  { width: 60px; height: 60px; background: #e53935; }
+.sw-like  { width: 72px; height: 72px; background: #2ecc71; border-radius: 20px; }
+.sw-chat  { width: 60px; height: 60px; background: var(--neon); }
+
+/* DETAIL PANEL (right side on desktop) */
+.detail-panel {
+  width: var(--detail-w);
+  flex-shrink: 0;
+  border-left: 1px solid var(--border);
+  background: var(--bg2);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.detail-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: var(--sub);
+}
+.detail-empty i { font-size: 48px; opacity: .3; }
+.detail-empty p { font-size: 14px; opacity: .5; }
+
+.detail-content { flex: 1; overflow-y: auto; display: flex; flex-direction: column; }
+.detail-visual {
+  height: 260px;
+  background: linear-gradient(180deg, #1a1a35, #0d0d20);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 96px;
+  position: relative;
+  flex-shrink: 0;
+}
+.detail-body { padding: 24px; display: flex; flex-direction: column; gap: 16px; }
+.detail-name { font-family: var(--font-head); font-size: 26px; font-weight: 800; color: var(--text); }
+.detail-role { font-size: 13px; color: var(--neon); font-weight: 600; text-transform: uppercase; letter-spacing: .5px; margin-top: -8px; }
+.detail-section-title { font-size: 11px; color: var(--sub); text-transform: uppercase; letter-spacing: 1.5px; }
+.detail-bio { font-size: 14px; color: var(--text); line-height: 1.65; }
+.detail-link {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 16px; background: var(--card); border-radius: 12px;
+  border: 1px solid var(--border); cursor: pointer;
+}
+.detail-link-text { font-size: 14px; color: var(--neon2); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.detail-actions {
+  display: flex; gap: 10px;
+  padding: 16px 24px;
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.detail-actions .sw-btn { flex: 1; height: 52px; border-radius: 14px; }
+.detail-actions .sw-like { flex: 1.5; }
+
+/* TYPE TOGGLE SWITCH */
+.type-toggle-wrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  max-width: 420px;
+}
+.type-toggle {
+  position: relative;
+  display: flex;
+  background: var(--card2);
+  border: 1px solid var(--border2);
+  border-radius: 40px;
+  padding: 4px;
+  gap: 0;
+}
+.type-toggle-slider {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  height: calc(100% - 8px);
+  border-radius: 30px;
+  background: var(--grad);
+  transition: all .25s cubic-bezier(.4,0,.2,1);
+  z-index: 0;
+}
+.type-toggle-opt {
+  position: relative;
+  z-index: 1;
+  padding: 9px 22px;
+  border-radius: 30px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--sub);
+  cursor: pointer;
+  transition: color .2s;
+  user-select: none;
+  white-space: nowrap;
+}
+.type-toggle-opt.active { color: #fff; }
+
+/* ═══════════════════════════════════════════
+   LIKED LIST PANEL
+═══════════════════════════════════════════ */
+#panel-liked {
+  overflow: hidden;
+}
+.panel-header {
+  padding: 24px 28px 16px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.panel-header h2 { font-family: var(--font-head); font-size: 22px; font-weight: 800; }
+
+.liked-tabs { display: flex; gap: 4px; margin-top: 14px; background: var(--card2); border-radius: 12px; padding: 4px; }
+.liked-tab { flex: 1; padding: 9px; text-align: center; font-size: 13px; font-weight: 600; color: var(--sub); cursor: pointer; border-radius: 10px; transition: all .15s; }
+.liked-tab.active { background: var(--neon); color: #fff; }
+
+.liked-grid {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px 24px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 14px;
+  align-content: start;
+}
+
+.liked-card {
+  display: flex; align-items: center; gap: 14px;
+  padding: 16px;
+  border-radius: 16px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: background .15s;
+}
+.liked-card:hover { background: var(--card2); border-color: var(--border2); }
+.liked-avatar {
+  width: 54px; height: 54px; border-radius: 14px;
+  background: linear-gradient(135deg, #2a1060, #0a2050);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 26px; flex-shrink: 0;
+}
+.liked-card-info { flex: 1; overflow: hidden; }
+.liked-card-name { font-size: 15px; font-weight: 600; color: var(--text); }
+.liked-card-role { font-size: 13px; color: var(--sub); margin-top: 2px; }
+.liked-card-meta { font-size: 12px; color: var(--sub); margin-top: 4px; }
+.liked-badge { padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; white-space: nowrap; }
+.badge-liked { background: rgba(46,204,113,0.15); border: 1px solid rgba(46,204,113,0.3); color: #69f0ae; }
+.badge-skipped { background: rgba(229,57,53,0.12); border: 1px solid rgba(229,57,53,0.3); color: #ff8a80; }
+.undo-btn {
+  padding: 5px 12px; border-radius: 10px;
+  border: 1px solid var(--border); background: transparent;
+  color: var(--sub); font-size: 12px; cursor: pointer;
+  font-family: var(--font-body); margin-top: 6px;
+  white-space: nowrap;
+}
+
+/* ═══════════════════════════════════════════
+   MESSAGES PANEL
+═══════════════════════════════════════════ */
+#panel-messages {
+  flex-direction: row;
+}
+.msg-list-col {
+  width: 320px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.msg-list-header {
+  padding: 24px 20px 16px;
+  border-bottom: 1px solid var(--border);
+  font-family: var(--font-head);
+  font-size: 20px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.msg-list-scroll { flex: 1; overflow-y: auto; padding: 10px; }
+.msg-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px; border-radius: 14px; cursor: pointer; transition: background .15s;
+}
+.msg-item:hover, .msg-item.active { background: var(--card); }
+.msg-av {
+  width: 48px; height: 48px; border-radius: 14px;
+  background: var(--grad); display: flex; align-items: center;
+  justify-content: center; font-size: 22px; flex-shrink: 0;
+}
+.msg-name { font-size: 14px; font-weight: 600; color: var(--text); }
+.msg-preview { font-size: 13px; color: var(--sub); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.unread-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--neon); }
+
+/* CHAT COLUMN */
+.chat-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.chat-header-bar {
+  display: flex; align-items: center; gap: 12px;
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.chat-av-sm {
+  width: 40px; height: 40px; border-radius: 12px;
+  background: var(--grad); display: flex; align-items: center; justify-content: center; font-size: 20px;
+}
+.chat-msgs {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.bubble {
+  max-width: 65%;
+  padding: 11px 16px;
+  border-radius: 18px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.bubble-them { background: var(--card2); color: var(--text); border-bottom-left-radius: 4px; align-self: flex-start; border: 1px solid var(--border); }
+.bubble-me { background: var(--neon); color: #fff; border-bottom-right-radius: 4px; align-self: flex-end; }
+.chat-input-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 16px 24px;
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.chat-input {
+  flex: 1; padding: 12px 18px; border-radius: 28px;
+  border: 1px solid var(--border); background: var(--card);
+  color: var(--text); font-size: 14px; outline: none; font-family: var(--font-body);
+}
+.chat-input:focus { border-color: var(--neon); }
+.send-btn {
+  width: 44px; height: 44px; border-radius: 50%;
+  background: var(--grad); border: none; color: #fff; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; font-size: 18px;
+}
+
+/* ═══════════════════════════════════════════
+   PROFILE / SETTINGS PANEL
+═══════════════════════════════════════════ */
+#panel-profile {
+  overflow-y: auto;
+  padding: 32px;
+  gap: 24px;
+  align-items: center;
+}
+
+.profile-hero {
+  display: flex; align-items: center; gap: 20px;
+  padding: 24px;
+  background: var(--card);
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  width: 100%;
+  max-width: 600px;
+}
+.profile-big-av {
+  width: 80px; height: 80px; border-radius: 20px;
+  background: var(--grad); display: flex; align-items: center;
+  justify-content: center; font-size: 36px; flex-shrink: 0;
+  border: 3px solid rgba(124,77,255,0.4);
+}
+.profile-section {
+  width: 100%;
+  max-width: 600px;
+  background: var(--card);
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+.profile-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+}
+.profile-row:last-child { border-bottom: none; }
+.profile-row-label { display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 500; color: var(--text); }
+.profile-row-label i { color: var(--sub); font-size: 18px; }
+.profile-row-value { font-size: 13px; color: var(--sub); }
+
+/* ═══════════════════════════════════════════
+   FILTER DRAWER (modal)
+═══════════════════════════════════════════ */
+.modal-overlay {
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.7);
+  z-index: 500;
+  align-items: center;
+  justify-content: center;
+}
+.modal-overlay.open { display: flex; }
+
+.modal-box {
+  background: var(--card);
+  border-radius: 24px;
+  border: 1px solid var(--border2);
+  width: 90%;
+  max-width: 560px;
+  max-height: 85vh;
+  overflow-y: auto;
+  padding: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.modal-header { display: flex; align-items: center; justify-content: space-between; }
+.modal-header h3 { font-family: var(--font-head); font-size: 20px; font-weight: 700; }
+.modal-close { width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--border); background: transparent; color: var(--sub); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+
+.field-label { font-size: 12px; color: var(--sub); margin-bottom: 8px; font-weight: 600; text-transform: uppercase; letter-spacing: .8px; }
+.input-field {
+  width: 100%; padding: 13px 16px; border-radius: 12px;
+  border: 1px solid var(--border); background: var(--bg);
+  color: var(--text); font-size: 15px; outline: none; font-family: var(--font-body);
+}
+.input-field:focus { border-color: var(--neon); }
+.input-field::placeholder { color: var(--sub); }
+.select-field {
+  width: 100%; padding: 13px 16px; border-radius: 12px;
+  border: 1px solid var(--border); background: var(--bg);
+  color: var(--text); font-size: 15px; outline: none; appearance: none; cursor: pointer; font-family: var(--font-body);
+}
+select option { background: #1a1a2e; }
+
+.chip-group { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { padding: 8px 14px; border-radius: 20px; border: 1px solid var(--border); background: var(--bg); color: var(--sub); font-size: 13px; cursor: pointer; transition: all .15s; font-family: var(--font-body); }
+.chip.selected { background: rgba(124,77,255,0.2); border-color: var(--neon); color: #c4b0ff; }
+
+.role-toggle { display: flex; background: var(--bg); border-radius: 12px; padding: 4px; gap: 4px; border: 1px solid var(--border); }
+.role-opt { flex: 1; padding: 10px; border-radius: 10px; text-align: center; font-size: 14px; color: var(--sub); cursor: pointer; font-weight: 500; transition: all .15s; font-family: var(--font-body); }
+.role-opt.active { background: var(--neon); color: #fff; font-weight: 600; }
+
+input[type=range] { width: 100%; accent-color: var(--neon); }
+.dual-range { position: relative; height: 36px; }
+.dual-range input[type=range] { position: absolute; width: 100%; pointer-events: none; appearance: none; background: transparent; height: 4px; top: 16px; }
+.dual-range input[type=range]::-webkit-slider-thumb { pointer-events: all; appearance: none; width: 18px; height: 18px; border-radius: 50%; background: var(--neon); border: 2px solid #fff; cursor: pointer; }
+.range-track { position: absolute; top: 18px; left: 0; right: 0; height: 4px; background: var(--border); border-radius: 2px; }
+.range-fill { position: absolute; top: 18px; height: 4px; background: var(--neon); border-radius: 2px; }
+
+/* TYPE CARDS (registratie) */
+.type-card {
+  padding: 14px;
+  border-radius: 14px;
+  border: 1.5px solid var(--border);
+  background: var(--card);
+  cursor: pointer;
+  transition: all .15s;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.type-card:hover { border-color: var(--border2); background: var(--card2); }
+.type-card.active { border-color: var(--neon); background: rgba(124,77,255,0.12); }
+.type-card-icon { display:flex; align-items:center; justify-content:center; color: var(--sub); }
+.type-card.active .type-card-icon { color: var(--neon); }
+.type-card-label { font-size: 13px; font-weight: 700; color: var(--text); }
+.type-card-sub { font-size: 11px; color: var(--sub); }
+
+/* NOTIFICATIE RIJEN */
+.notif-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 14px;
+  background: var(--card);
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  cursor: pointer;
+}
+.notif-check {
+  width: 18px; height: 18px;
+  accent-color: var(--neon);
+  cursor: pointer;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+/* NOTIFICATIE INSTELLINGEN in profiel */
+.notif-settings-section {
+  max-width: 600px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+#panel-ads {
+  position: relative;
+  overflow: hidden;
+}
+#panel-ads .panel-header {
+  padding: 24px 28px 16px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  flex-direction: row;
+  align-items: flex-start;
+  justify-content: space-between;
+  display: flex;
+  gap: 16px;
+  max-width: 720px;
+  width: 100%;
+  align-self: center;
+  box-sizing: border-box;
+}
+.ad-panel-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  overflow: hidden;
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto 14px;
+  transition: border-color .15s;
+}
+.ad-panel-card:hover { border-color: var(--border2); }
+.ad-card-top {
+  display: flex;
+  gap: 18px;
+  padding: 20px;
+}
+.ad-card-photo {
+  width: 80px; height: 80px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #2a1060, #0a2050);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 36px;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+.ad-card-photo img { width: 100%; height: 100%; object-fit: cover; }
+.ad-card-info { flex: 1; min-width: 0; }
+.ad-card-title { font-family: var(--font-head); font-size: 17px; font-weight: 700; color: var(--text); }
+.ad-card-meta { font-size: 13px; color: var(--neon); margin-top: 3px; font-weight: 500; }
+.ad-card-desc { font-size: 13px; color: var(--sub); margin-top: 6px; line-height: 1.5; }
+.ad-card-footer {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 20px;
+  border-top: 1px solid var(--border);
+  background: var(--card2);
+}
+.ad-status-badge {
+  font-size: 12px; font-weight: 700; padding: 4px 12px; border-radius: 20px;
+  background: rgba(46,204,113,0.15); border: 1px solid rgba(46,204,113,0.3); color: #69f0ae;
+}
+#screen-login, #screen-register {
+  align-items: center;
+  justify-content: flex-start;
+  background: var(--bg);
+  overflow-y: auto;
+  padding: 40px 20px;
+}
+
+.auth-box {
+  width: 100%;
+  max-width: 440px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.auth-logo {
+  font-family: var(--font-head);
+  font-size: 28px;
+  font-weight: 900;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  text-align: center;
+  margin-bottom: 8px;
+}
+.auth-logo .acc { background: var(--grad); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.auth-logo .dot { color: var(--neon); -webkit-text-fill-color: var(--neon); }
+.auth-title { font-family: var(--font-head); font-size: 26px; font-weight: 700; text-align: center; }
+.auth-sub { font-size: 14px; color: var(--sub); text-align: center; margin-top: -8px; }
+.divider { display: flex; align-items: center; gap: 12px; }
+.divider-line { flex: 1; height: 1px; background: var(--border); }
+.divider span { font-size: 12px; color: var(--sub); }
+.input-icon-wrap { position: relative; }
+.input-icon-wrap i { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--sub); font-size: 18px; pointer-events: none; }
+.input-icon-wrap input { padding-left: 44px; }
+
+/* ═══════════════════════════════════════════
+   MOBILE OVERRIDES
+═══════════════════════════════════════════ */
+@media (max-width: 768px) {
+  :root { --sidebar-w: 0px; --detail-w: 0px; }
+
+  /* App shell */
+  #screen-app { flex-direction: column; }
+  .sidebar { display: none; }
+  .detail-panel { display: none; }
+  .main-content { flex: 1; overflow: hidden; }
+  .mobile-nav { display: flex !important; }
+
+  /* Welkomstscherm */
+  .ob-inner { flex-direction: column; padding: 40px 20px 32px; justify-content: center; gap: 28px; }
+  .ob-left { max-width: 100%; align-items: center; text-align: center; }
+  .ob-logo { font-size: 42px; }
+  .ob-headline { font-size: 24px; }
+  .ob-btns { max-width: 100%; }
+  .ob-right { display: none; }
+
+  /* Login / Register schermen */
+  #screen-login, #screen-register { padding: 24px 16px 40px; }
+  .auth-box { max-width: 100%; gap: 14px; }
+  .auth-title { font-size: 22px; }
+  .auth-logo { font-size: 22px; }
+
+  /* Register grid naar 1 kolom */
+  #screen-register .auth-box > div[style*="grid-template-columns: 1fr 1fr"] {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 14px !important;
+  }
+
+  /* Type cards 2x2 houden op mobiel maar kleiner */
+  .type-card { padding: 10px 8px; }
+  .type-card-label { font-size: 12px; }
+  .type-card-sub { font-size: 10px; }
+
+  /* Discover */
+  .discover-center { padding: 10px 12px 8px; gap: 10px; }
+  .card-stack {
+    height: calc(100dvh - 230px);
+    min-height: 320px;
+    max-height: 520px;
+  }
+  .discover-header h2 { font-size: 17px; }
+  .card-name { font-size: 16px; }
+  .card-role { font-size: 11px; }
+  .card-desc { font-size: 12px; -webkit-line-clamp: 3; }
+  .card-body { padding: 14px 16px 12px; gap: 4px; }
+  .swipe-actions { gap: 12px; }
+  .sw-like { width: 60px !important; height: 60px !important; }
+  .sw-nope { width: 50px !important; height: 50px !important; }
+  .sw-chat { width: 50px !important; height: 50px !important; }
+  .type-toggle-wrap { max-width: 100%; }
+
+  /* Mijn Lijst */
+  .liked-grid { grid-template-columns: 1fr; padding: 12px; }
+  .panel-header { padding: 14px 16px 10px; }
+  .liked-tabs { margin-top: 10px; }
+
+  /* Berichten */
+  #panel-messages { flex-direction: column; }
+  .msg-list-col { width: 100%; flex: 1; border-right: none; }
+  .chat-col { display: none; }
+
+  /* Profiel */
+  #panel-profile { padding: 12px; gap: 12px; }
+  .profile-hero { padding: 16px; gap: 14px; flex-wrap: wrap; }
+  .profile-big-av { width: 60px; height: 60px; font-size: 26px; }
+  .profile-row { padding: 12px 16px; }
+  .profile-row-label { font-size: 13px; gap: 8px; }
+
+  /* Advertenties */
+  #panel-ads .panel-header { padding: 14px 16px 12px; flex-wrap: wrap; }
+  .ad-card-top { padding: 14px; gap: 12px; }
+  .ad-card-photo { width: 56px; height: 56px; font-size: 24px; }
+  .ad-card-title { font-size: 14px; }
+  #adPanelList { padding: 12px 12px 24px; }
+
+  /* Advertentie form */
+  #adFormWrap > div { padding: 16px; gap: 16px; }
+
+  /* Filter modal */
+  .modal-box { padding: 20px 16px; max-height: 90vh; }
+
+  /* Chip groups op mobiel iets kleiner */
+  .chip { padding: 6px 10px; font-size: 12px; }
+
+  /* Match modal */
+  .modal-overlay { padding: 16px; }
+}
+
+.mobile-nav {
+  display: none;
+  border-top: 1px solid var(--border);
+  background: var(--bg2);
+  flex-shrink: 0;
+  position: relative;
+  z-index: 50;
+}
+.mob-nav-item {
+  flex: 1;
+  display: flex; flex-direction: column; align-items: center;
+  gap: 3px; color: var(--sub); font-size: 10px; font-weight: 600;
+  cursor: pointer; padding: 10px 0 12px;
+  text-transform: uppercase; letter-spacing: .5px;
+  border: none; background: transparent;
+  font-family: var(--font-body);
+  -webkit-tap-highlight-color: transparent;
+}
+.mob-nav-item svg { flex-shrink: 0; }
+.mob-nav-item.active { color: var(--neon); }
+
+/* ═══════════════════════════════════════════
+   AD CARD
+═══════════════════════════════════════════ */
+.ad-card-inner {
+  width: 100%; height: 100%;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 32px; gap: 14px; text-align: center;
+  background: var(--card2);
+}
+.ad-label { font-size: 11px; color: var(--sub); letter-spacing: 1.5px; text-transform: uppercase; background: var(--card3); padding: 4px 14px; border-radius: 20px; }
+
+/* ═══════════════════════════════════════════
+   SCROLLBAR
+═══════════════════════════════════════════ */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #444466; }
+
+/* ═══════════════════════════════════════════
+   COPIED TOAST
+═══════════════════════════════════════════ */
+.toast {
+  position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+  background: var(--green); color: #fff; padding: 10px 20px;
+  border-radius: 12px; font-size: 14px; font-weight: 600;
+  z-index: 9999; opacity: 0; transition: opacity .2s;
+  pointer-events: none;
+}
+.toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+
+<div id="app">
+
+<!-- ═══════ ONBOARDING ═══════ -->
+<div id="screen-onboard" class="screen active">
+  <div class="ob-glow-1"></div>
+  <div class="ob-glow-2"></div>
+  <div class="ob-glow-3"></div>
+  <div class="ob-inner">
+    <div class="ob-left">
+      <div class="ob-logo">SOUND<span class="accent">MATCH</span><span class="dot">.</span></div>
+      <div>
+        <div class="ob-headline">Vind jouw perfecte<br><span class="grad-text">bandgenoot.</span></div>
+        <div class="ob-sub" style="margin-top:12px;">Swipe door muzikanten en bands in jouw buurt. Match. Speel. Maak muziek.</div>
+      </div>
+      <div class="ob-btns">
+        <button class="btn btn-primary btn-full" style="padding:18px;font-size:16px;border-radius:16px;gap:10px;" onclick="loginMetGoogle()">
+          <svg width="20" height="20" viewBox="0 0 18 18"><path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 0 1-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#fff"/><path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" fill="#fff" opacity=".8"/><path d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#fff" opacity=".6"/><path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z" fill="#fff" opacity=".7"/></svg>
+          Doorgaan met Google
+        </button>
+        <div id="authError" style="font-size:13px;color:#ff8a80;text-align:center;display:none;"></div>
+        <div style="font-size:11px;color:rgba(255,255,255,0.2);text-align:center;margin-top:4px;">Door verder te gaan ga je akkoord met onze <a href="/voorwaarden" style="color:rgba(255,255,255,0.45);text-decoration:underline;cursor:pointer;">voorwaarden</a></div>
+      </div>
+    </div>
+    <div class="ob-right" style="display:none;">
+      <div class="ob-emoji-grid">
+        <div class="center">🎸</div>
+        <div class="e1">🎹</div>
+        <div class="e2">🥁</div>
+        <div class="e3">🎤</div>
+        <div class="e4">🎺</div>
+        <div class="e5">♪</div>
+        <div class="e6">♫</div>
+        <div class="e7">♩</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════ LOGIN ═══════ -->
+<div id="screen-login" class="screen">
+  <div class="auth-box">
+    <div class="auth-logo">SOUND<span class="acc">MATCH</span><span class="dot">.</span></div>
+    <div class="auth-title">Welkom terug</div>
+    <div class="auth-sub">Log in op je Soundmatch account</div>
+    <div>
+      <div class="field-label">E-mailadres</div>
+      <div class="input-icon-wrap"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--sub);pointer-events:none;"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg><input class="input-field" type="email" placeholder="jouw@email.nl" style="padding-left:44px;"/></div>
+    </div>
+    <div>
+      <div class="field-label">Wachtwoord</div>
+      <div class="input-icon-wrap"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--sub);pointer-events:none;"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg><input class="input-field" type="password" placeholder="••••••••" style="padding-left:44px;"/></div>
+    </div>
+    <div style="text-align:right;margin-top:-8px;"><span style="font-size:13px;color:var(--neon);cursor:pointer;">Wachtwoord vergeten?</span></div>
+    <button class="btn btn-primary btn-full" style="padding:17px;" onclick="showScreen('app')">Inloggen</button>
+    <div class="divider"><div class="divider-line"></div><span>of</span><div class="divider-line"></div></div>
+    <button class="btn btn-ghost btn-full" style="gap:10px;">
+      <svg width="18" height="18" viewBox="0 0 18 18"><path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 0 1-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/><path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" fill="#34A853"/><path d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/><path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/></svg>
+      Doorgaan met Google
+    </button>
+    <div style="text-align:center;"><span style="font-size:13px;color:var(--sub);">Nog geen account? </span><span style="font-size:13px;color:var(--neon);cursor:pointer;" onclick="showScreen('register')">Aanmelden</span></div>
+    <button class="btn btn-ghost btn-sm" style="align-self:flex-start;" onclick="showScreen('onboard')">← Terug</button>
+  </div>
+</div>
+
+<!-- ═══════ REGISTER ═══════ -->
+<div id="screen-register" class="screen">
+  <div class="auth-box" style="max-width:520px;gap:16px;">
+    <div class="auth-logo">SOUND<span class="acc">MATCH</span><span class="dot">.</span></div>
+    <div class="auth-title">Maak je profiel</div>
+    <div class="auth-sub">Vertel andere muzikanten wie je bent</div>
+
+    <!-- Foto -->
+    <div style="text-align:center;">
+      <div id="regFotoPreview" onclick="document.getElementById('regFotoInput').click()" style="width:90px;height:90px;border-radius:22px;background:var(--grad);display:flex;align-items:center;justify-content:center;cursor:pointer;margin:0 auto;border:3px solid rgba(124,77,255,0.4);overflow:hidden;position:relative;">
+        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      </div>
+      <input type="file" id="regFotoInput" accept="image/jpeg,image/png,image/webp" style="display:none;" onchange="handleFotoUpload(this)"/>
+      <div style="font-size:12px;color:var(--sub);margin-top:8px;">Klik om profielfoto te kiezen</div>
+      <div id="fotoUploadStatus" style="font-size:12px;margin-top:4px;display:none;"></div>
+    </div>
+
+    <!-- Type -->
+    <div>
+      <div class="field-label">Ik ben een...</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <div class="type-card active" id="regMuz" onclick="setRegRole('muzikant')">
+          <div class="type-card-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>
+          <div class="type-card-label">Muzikant</div>
+          <div class="type-card-sub">Ik zoek een band</div>
+        </div>
+        <div class="type-card" id="regBand" onclick="setRegRole('band')">
+          <div class="type-card-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="12" r="1"/><circle cx="15" cy="12" r="1"/><path d="M8 20v-2a4 4 0 0 1 8 0v2"/><path d="M3 20v-2a7 7 0 0 1 3-5.8"/><path d="M21 20v-2a7 7 0 0 0-3-5.8"/><circle cx="12" cy="7" r="3"/><circle cx="5" cy="8" r="2"/><circle cx="19" cy="8" r="2"/></svg></div>
+          <div class="type-card-label">Band</div>
+          <div class="type-card-sub">Ik zoek bandleden</div>
+        </div>
+        <div class="type-card" id="regSessie" onclick="setRegRole('sessie')">
+          <div class="type-card-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg></div>
+          <div class="type-card-label">Sessiemuzikant</div>
+          <div class="type-card-sub">Losse opdrachten</div>
+        </div>
+        <div class="type-card" id="regIndustry" onclick="setRegRole('industry')">
+          <div class="type-card-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg></div>
+          <div class="type-card-label">Industry</div>
+          <div class="type-card-sub">Technicus / producer</div>
+        </div>
+      </div>
+      <div style="font-size:12px;color:var(--sub);margin-top:8px;padding:8px 12px;background:var(--card2);border-radius:10px;border:1px solid var(--border);" id="regHint">Als muzikant zie je bands en sessiemuzikanten in jouw buurt.</div>
+    </div>
+
+    <!-- Naam + Leeftijd (muzikant/sessie/industry) -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;" id="regNaamLeeftijdRij">
+      <div><div class="field-label" id="regNaamLabel">Naam *</div><input class="input-field" id="regNaam" placeholder="Jouw naam"/></div>
+      <div><div class="field-label">Leeftijd *</div><input class="input-field" id="regLeeftijd" type="number" inputmode="numeric" pattern="[0-9]*" placeholder="bijv. 24" min="13" max="99" onkeypress="return event.charCode>=48&&event.charCode<=57"/></div>
+    </div>
+
+    <!-- Locatie -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+      <div>
+        <div class="field-label">Provincie *</div>
+        <select class="select-field" id="regProvincie" onchange="updateSteden()">
+          <option value="">Selecteer provincie</option>
+          <option>Drenthe</option><option>Flevoland</option><option>Friesland</option><option>Gelderland</option><option>Groningen</option><option>Limburg</option><option>Noord-Brabant</option><option>Noord-Holland</option><option>Overijssel</option><option>Utrecht</option><option>Zeeland</option><option>Zuid-Holland</option>
+        </select>
+      </div>
+      <div>
+        <div class="field-label">Stad / gemeente *</div>
+        <select class="select-field" id="regStad"><option value="">Kies eerst een provincie</option></select>
+      </div>
+    </div>
+
+    <!-- MUZIKANT/SESSIE/INDUSTRY velden -->
+    <div id="regVeldenMuzikant">
+      <div class="field-label">Instrument(en)</div>
+      <div class="chip-group" id="regInstrumenten">
+        <div class="chip" onclick="tc(this)">Gitaar</div><div class="chip" onclick="tc(this)">Basgitaar</div><div class="chip" onclick="tc(this)">Drums</div><div class="chip" onclick="tc(this)">Percussie</div><div class="chip" onclick="tc(this)">Zang</div><div class="chip" onclick="tc(this)">Keys / Piano</div><div class="chip" onclick="tc(this)">Synthesizer</div><div class="chip" onclick="tc(this)">Viool</div><div class="chip" onclick="tc(this)">Cello</div><div class="chip" onclick="tc(this)">Trompet</div><div class="chip" onclick="tc(this)">Saxofoon</div><div class="chip" onclick="tc(this)">Trombone</div><div class="chip" onclick="tc(this)">DJ</div><div class="chip" onclick="tc(this)">Producer</div><div class="chip" onclick="tc(this)">Ukulele</div><div class="chip" onclick="tc(this)">Banjo</div><div class="chip" onclick="tc(this)">Overig</div>
+      </div>
+    </div>
+
+    <!-- BAND velden -->
+    <div id="regVeldenBand" style="display:none;">
+      <div class="field-label">Wij zoeken...</div>
+      <div class="chip-group" id="regWijZoeken">
+        <div class="chip" onclick="tc(this)">Gitarist</div><div class="chip" onclick="tc(this)">Bassist</div><div class="chip" onclick="tc(this)">Drummer</div><div class="chip" onclick="tc(this)">Zanger/es</div><div class="chip" onclick="tc(this)">Toetsenist</div><div class="chip" onclick="tc(this)">Saxofonist</div><div class="chip" onclick="tc(this)">Trompettist</div><div class="chip" onclick="tc(this)">Violist</div><div class="chip" onclick="tc(this)">DJ</div><div class="chip" onclick="tc(this)">Producer</div><div class="chip" onclick="tc(this)">Overig</div>
+      </div>
+    </div>
+
+    <!-- Genre (altijd) -->
+    <div>
+      <div class="field-label">Genre(s)</div>
+      <div class="chip-group" id="regGenres">
+        <div class="chip" onclick="tc(this)">Rock</div><div class="chip" onclick="tc(this)">Classic Rock</div><div class="chip" onclick="tc(this)">Alt-Rock</div><div class="chip" onclick="tc(this)">Indie Rock</div><div class="chip" onclick="tc(this)">Prog Rock</div><div class="chip" onclick="tc(this)">Punk</div><div class="chip" onclick="tc(this)">Pop-Punk</div><div class="chip" onclick="tc(this)">Hardcore</div><div class="chip" onclick="tc(this)">Metal</div><div class="chip" onclick="tc(this)">Heavy Metal</div><div class="chip" onclick="tc(this)">Pop</div><div class="chip" onclick="tc(this)">Indie Pop</div><div class="chip" onclick="tc(this)">Jazz</div><div class="chip" onclick="tc(this)">Blues</div><div class="chip" onclick="tc(this)">Soul</div><div class="chip" onclick="tc(this)">R&amp;B</div><div class="chip" onclick="tc(this)">Funk</div><div class="chip" onclick="tc(this)">Hip-hop</div><div class="chip" onclick="tc(this)">Electronic</div><div class="chip" onclick="tc(this)">House</div><div class="chip" onclick="tc(this)">Techno</div><div class="chip" onclick="tc(this)">Folk</div><div class="chip" onclick="tc(this)">Country</div><div class="chip" onclick="tc(this)">Reggae</div><div class="chip" onclick="tc(this)">Ska</div><div class="chip" onclick="tc(this)">Klassiek</div><div class="chip" onclick="tc(this)">Overig</div>
+      </div>
+    </div>
+
+    <!-- Niveau + Beschikbaarheid (alleen voor muzikant/sessie/industry) -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;" id="regNiveauRij">
+      <div><div class="field-label">Niveau</div><select class="select-field" id="regNiveau"><option>Beginner</option><option selected>Gevorderd</option><option>Professioneel</option></select></div>
+      <div><div class="field-label">Beschikbaarheid</div><select class="select-field" id="regBeschikbaarheid"><option>Hobby</option><option selected>Serieus</option><option>Professioneel</option></select></div>
+    </div>
+
+    <!-- Links -->
+    <div>
+      <div class="field-label">Link(s) naar muziek <span style="color:var(--sub);font-weight:400;">(optioneel)</span></div>
+      <div id="muzieklinks" style="display:flex;flex-direction:column;gap:8px;">
+        <div style="display:flex;gap:8px;align-items:center;">
+          <input class="input-field" style="flex:1;" placeholder="SoundCloud, YouTube, Spotify, Instagram..." oninput="syncMuzieklinks()"/>
+          <button onclick="voegLinkToe()" style="width:36px;height:44px;border-radius:10px;border:1px solid var(--border);background:var(--card2);color:var(--sub);cursor:pointer;font-size:20px;display:flex;align-items:center;justify-content:center;flex-shrink:0;" title="Voeg link toe">+</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bio -->
+    <div>
+      <div class="field-label">Bio</div>
+      <textarea class="input-field" id="regBio" rows="3" style="resize:none;overflow:hidden;" placeholder="Vertel iets over jezelf en wat je zoekt..." oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"></textarea>
+    </div>
+
+    <div id="regError" style="font-size:13px;color:#ff8a80;display:none;padding:10px 14px;background:rgba(255,82,82,0.1);border-radius:10px;border:1px solid rgba(255,82,82,0.3);"></div>
+    <button class="btn btn-primary btn-full" style="padding:17px;" onclick="slaProfielOp()">Profiel aanmaken →</button>
+    <div style="height:16px;"></div>
+  </div>
+</div>
+
+<!-- ═══════ MAIN APP ═══════ -->
+<div id="screen-app" class="screen">
+
+  <!-- SIDEBAR (desktop) -->
+  <div class="sidebar">
+    <div class="sidebar-logo">SOUND<span class="acc">MATCH</span><span class="dot">.</span></div>
+
+    <button class="nav-link active" id="nl-discover" onclick="showPanel('discover')">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      Ontdekken
+    </button>
+    <button class="nav-link" id="nl-liked" onclick="showPanel('liked')">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+      Mijn Lijst
+    </button>
+    <button class="nav-link" id="nl-ads" onclick="showPanel('ads')">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+      Advertenties
+    </button>
+    <button class="nav-link" id="nl-messages" onclick="showPanel('messages')">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      Berichten
+      <span style="margin-left:auto;background:var(--neon);color:#fff;font-size:11px;font-weight:700;padding:2px 7px;border-radius:10px;">2</span>
+    </button>
+    <button class="nav-link" id="nl-profile" onclick="showPanel('profile')">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      Mijn Profiel
+    </button>
+
+    <div class="sidebar-spacer"></div>
+
+    <div class="sidebar-user" onclick="showPanel('profile')">
+      <div class="sidebar-avatar"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>
+      <div class="sidebar-user-info">
+        <div class="sidebar-user-name">Jan de Vries</div>
+        <div class="sidebar-user-role">Gitarist · Hengelo</div>
+      </div>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:var(--sub);flex-shrink:0;"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    </div>
+  </div>
+
+  <!-- MAIN CONTENT -->
+  <div class="main-content">
+
+    <!-- ── DISCOVER PANEL ── -->
+    <div class="panel active" id="panel-discover">
+      <div class="discover-center">
+        <div class="discover-header">
+          <h2>Ontdekken</h2>
+          <button class="btn btn-sm" style="background:var(--card);border:1px solid var(--border);color:var(--sub);gap:6px;" onclick="openFilter()">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="11" y1="18" x2="13" y2="18"/></svg> Filters
+          </button>
+        </div>
+
+        <!-- Type toggle switch -->
+        <div class="type-toggle-wrap">
+          <div class="type-toggle" id="typeToggle">
+            <div class="type-toggle-slider" id="toggleSlider"></div>
+            <div class="type-toggle-opt active" id="togBands" onclick="setTypeToggle('bands')">Bands</div>
+            <div class="type-toggle-opt" id="togMuz" onclick="setTypeToggle('muzikanten')">Muzikanten</div>
+          </div>
+        </div>
+
+        <!-- Card stack -->
+        <div class="card-stack" id="cardStack"></div>
+
+        <!-- Swipe actions -->
+        <div class="swipe-actions">
+          <button class="sw-btn sw-nope" onclick="doSwipe('nope')" title="Geen interesse">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none"><line x1="6" y1="6" x2="18" y2="18" stroke="white" stroke-width="2.5" stroke-linecap="round"/><line x1="18" y1="6" x2="6" y2="18" stroke="white" stroke-width="2.5" stroke-linecap="round"/></svg>
+          </button>
+          <button class="sw-btn sw-like" onclick="doSwipe('like')" title="Interesse">
+            <svg width="32" height="32" viewBox="0 0 30 30" fill="none"><path d="M11 22V8l14-3v14" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/><circle cx="8" cy="22" r="3" stroke="#fff" stroke-width="2.4"/><circle cx="22" cy="19" r="3" stroke="#fff" stroke-width="2.4"/><line x1="11" y1="13" x2="25" y2="10" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/></svg>
+          </button>
+          <button class="sw-btn sw-chat" onclick="openChat()" title="Direct bericht">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── LIKED PANEL ── -->
+    <div class="panel" id="panel-liked">
+      <div class="panel-header">
+        <h2>Mijn Lijst</h2>
+        <div class="liked-tabs">
+          <div class="liked-tab active" id="tabLiked" onclick="switchTab('liked')">♥ Geliked</div>
+          <div class="liked-tab" id="tabSkipped" onclick="switchTab('skipped')">✕ Geskipt</div>
+          <div class="liked-tab" id="tabAll" onclick="switchTab('all')">Alle</div>
+        </div>
+      </div>
+      <div class="liked-grid" id="likedGrid"></div>
+    </div>
+
+    <!-- ── MESSAGES PANEL ── -->
+    <div class="panel" id="panel-messages">
+      <div class="msg-list-col">
+        <div class="msg-list-header">Berichten</div>
+        <div class="msg-list-scroll" id="msgListScroll"></div>
+      </div>
+      <div class="chat-col">
+        <div class="chat-header-bar">
+          <div class="chat-av-sm"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
+          <div>
+            <div class="chat-name" style="font-size:16px;font-weight:600;color:var(--text)">Selecteer een gesprek</div>
+            <div style="font-size:12px;color:var(--sub)">Soundmatch</div>
+          </div>
+        </div>
+        <div class="chat-msgs" id="chatMsgs"></div>
+        <div class="chat-input-row">
+          <input class="chat-input" id="chatInput" placeholder="Typ een bericht..." onkeydown="if(event.key==='Enter')sendMsg()"/>
+          <button class="send-btn" onclick="sendMsg()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── PROFILE PANEL ── -->
+    <div class="panel" id="panel-profile">
+      <div class="profile-hero">
+        <div class="profile-big-av"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+        <div>
+          <div style="font-family:var(--font-head);font-size:22px;font-weight:800;">Jan de Vries</div>
+          <div style="font-size:14px;color:var(--neon);margin-top:2px;">Muzikant · Hengelo · 27 jaar</div>
+          <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">
+            <span class="tag" style="padding:5px 12px;">Rock</span>
+            <span class="tag" style="padding:5px 12px;">Blues</span>
+            <span class="tag" style="padding:5px 12px;">Gitaar</span>
+            <span class="tag" style="padding:5px 12px;">Gevorderd</span>
+          </div>
+        </div>
+        <button class="btn btn-sm" style="margin-left:auto;background:var(--card2);border:1px solid var(--border);color:var(--sub);align-self:flex-start;gap:6px;" onclick="bewerkProfiel()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          Bewerken
+        </button>
+      </div>
+
+      <div class="profile-section">
+        <div class="profile-row"><div class="profile-row-label"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:var(--sub)"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> Type</div><div class="profile-row-value">Muzikant</div></div>
+        <div class="profile-row"><div class="profile-row-label"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:var(--sub)"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg> Instrument</div><div class="profile-row-value">Gitaar, Bass</div></div>
+        <div class="profile-row"><div class="profile-row-label"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:var(--sub)"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg> Locatie</div><div class="profile-row-value">Hengelo, OV</div></div>
+        <div class="profile-row"><div class="profile-row-label"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:var(--sub)"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> Leeftijd</div><div class="profile-row-value">27 jaar</div></div>
+        <div class="profile-row"><div class="profile-row-label"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:var(--sub)"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> Niveau</div><div class="profile-row-value">Gevorderd</div></div>
+        <div class="profile-row" id="profileBioRij" style="flex-direction:column;align-items:flex-start;gap:6px;">
+          <div class="profile-row-label"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:var(--sub)"><line x1="17" y1="10" x2="3" y2="10"/><line x1="21" y1="6" x2="3" y2="6"/><line x1="21" y1="14" x2="3" y2="14"/><line x1="13" y1="18" x2="3" y2="18"/></svg> Bio</div>
+          <div id="profileBioText" style="font-size:13px;color:var(--sub);line-height:1.6;padding-left:26px;">—</div>
+        </div>
+      </div>
+
+      <div class="profile-section">
+        <div class="profile-row" style="cursor:pointer;" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none'">
+          <div class="profile-row-label"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:var(--sub)"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg> Notificaties</div>
+          <div style="display:flex;align-items:center;gap:8px;"><span style="font-size:13px;color:var(--sub);">Ingesteld</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg></div>
+        </div>
+        <div style="display:none;padding:12px 16px;border-top:1px solid var(--border);background:var(--card2);">
+          <div class="notif-settings-section">
+            <label class="notif-row"><input type="checkbox" checked class="notif-check"/><div><div style="font-size:13px;font-weight:500;color:var(--text);">Match notificatie</div><div style="font-size:12px;color:var(--sub);">E-mail + push bij wederzijdse like</div></div></label>
+            <label class="notif-row"><input type="checkbox" checked class="notif-check"/><div><div style="font-size:13px;font-weight:500;color:var(--text);">Nieuw in jouw buurt</div><div style="font-size:12px;color:var(--sub);">Melding bij nieuwe match-kandidaat in jouw regio</div></div></label>
+            <label class="notif-row"><input type="checkbox" class="notif-check"/><div><div style="font-size:13px;font-weight:500;color:var(--text);">Wekelijks overzicht</div><div style="font-size:12px;color:var(--sub);">E-mail met nieuwe advertenties die passen</div></div></label>
+            <label class="notif-row"><input type="checkbox" class="notif-check"/><div><div style="font-size:13px;font-weight:500;color:var(--text);">Nieuwe berichten</div><div style="font-size:12px;color:var(--sub);">Push bij nieuw chatbericht</div></div></label>
+          </div>
+        </div>
+        <div class="profile-row"><div class="profile-row-label"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:var(--sub)"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg> Muzieklinks</div><div class="profile-row-value">SoundCloud</div></div>
+        <div class="profile-row" style="cursor:pointer;" onclick="uitloggen()"><div class="profile-row-label" style="color:#e53935;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#e53935" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg> Uitloggen</div></div>
+      </div>
+      <div style="height:32px;"></div>
+    </div>
+
+    <!-- ── ADVERTENTIES PANEL ── -->
+    <div class="panel" id="panel-ads">
+      <div class="panel-header" style="display:flex;align-items:flex-start;justify-content:space-between;flex-direction:row;gap:16px;">
+        <div>
+          <h2>Mijn Advertenties</h2>
+          <div style="font-size:14px;color:var(--sub);margin-top:4px;font-weight:400;">Maak meerdere advertenties — één per band, instrument of project.</div>
+        </div>
+        <button class="btn btn-primary btn-sm" style="flex-shrink:0;margin-top:4px;" onclick="showAdForm()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Nieuwe advertentie
+        </button>
+      </div>
+
+      <!-- AD LIST -->
+      <div style="flex:1;overflow-y:auto;padding:20px 28px 32px;display:flex;flex-direction:column;align-items:center;" id="adPanelList">
+      </div>
+
+      <!-- AD FORM (inline, verborgen) -->
+      <div id="adFormWrap" style="display:none;position:absolute;inset:0;background:var(--bg);z-index:10;overflow-y:auto;border-radius:inherit;">
+        <div style="padding:28px;max-width:680px;display:flex;flex-direction:column;gap:20px;">
+          <div style="display:flex;align-items:center;gap:16px;">
+            <button onclick="hideAdForm()" style="width:36px;height:36px;border-radius:50%;border:1px solid var(--border);background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--sub);flex-shrink:0;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+            </button>
+            <div>
+              <div style="font-family:var(--font-head);font-size:20px;font-weight:800;" id="adFormHeading">Nieuwe advertentie</div>
+              <div style="font-size:13px;color:var(--sub);margin-top:2px;">Vul in wat je zoekt of aanbiedt</div>
+            </div>
+          </div>
+
+          <div>
+            <div class="field-label">Foto</div>
+            <div style="display:flex;align-items:center;gap:16px;">
+              <div id="adPhotoPreview" onclick="document.getElementById('adPhotoInput').click()" style="width:80px;height:80px;border-radius:18px;background:var(--grad);display:flex;align-items:center;justify-content:center;border:2px solid rgba(124,77,255,0.3);cursor:pointer;flex-shrink:0;overflow:hidden;">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+              </div>
+              <div>
+                <button class="btn btn-sm" style="background:var(--card2);border:1px solid var(--border);color:var(--sub);gap:6px;" onclick="document.getElementById('adPhotoInput').click()">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                  Foto uploaden
+                </button>
+                <input type="file" id="adPhotoInput" accept="image/*" style="display:none;" onchange="previewAdPhoto(this)"/>
+                <div style="font-size:12px;color:var(--sub);margin-top:6px;">JPG, PNG of WebP · Max 5MB</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Type -->
+          <div>
+            <div class="field-label">Type advertentie</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+              <div class="type-card active" id="adFormTypeMuz" onclick="setAdFormType('muzikant')">
+                <div class="type-card-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>
+                <div class="type-card-label">Muzikant</div>
+                <div class="type-card-sub">Ik zoek een band</div>
+              </div>
+              <div class="type-card" id="adFormTypeBand" onclick="setAdFormType('band')">
+                <div class="type-card-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="12" r="1"/><circle cx="15" cy="12" r="1"/><path d="M8 20v-2a4 4 0 0 1 8 0v2"/><path d="M3 20v-2a7 7 0 0 1 3-5.8"/><path d="M21 20v-2a7 7 0 0 0-3-5.8"/><circle cx="12" cy="7" r="3"/><circle cx="5" cy="8" r="2"/><circle cx="19" cy="8" r="2"/></svg></div>
+                <div class="type-card-label">Band</div>
+                <div class="type-card-sub">Ik zoek bandleden</div>
+              </div>
+              <div class="type-card" id="adFormTypeSessie" onclick="setAdFormType('sessie')">
+                <div class="type-card-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg></div>
+                <div class="type-card-label">Sessiemuzikant</div>
+                <div class="type-card-sub">Losse opdrachten</div>
+              </div>
+              <div class="type-card" id="adFormTypeIndustry" onclick="setAdFormType('industry')">
+                <div class="type-card-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg></div>
+                <div class="type-card-label">Industry</div>
+                <div class="type-card-sub">Technicus / producer</div>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <div class="field-label" id="adFormTitelLabel">Titel</div>
+            <input class="input-field" id="adFormTitle" placeholder="bijv. Gitarist zoekt rockband"/>
+          </div>
+
+          <!-- Instrument velden (muzikant/sessie/industry) -->
+          <div id="adVeldenMuzikant">
+            <div class="field-label">Instrument(en)</div>
+            <div class="chip-group" id="adFormInstruments">
+              <div class="chip" onclick="tc(this)">Gitaar</div><div class="chip" onclick="tc(this)">Basgitaar</div><div class="chip" onclick="tc(this)">Drums</div><div class="chip" onclick="tc(this)">Percussie</div><div class="chip" onclick="tc(this)">Zang</div><div class="chip" onclick="tc(this)">Keys / Piano</div><div class="chip" onclick="tc(this)">Synthesizer</div><div class="chip" onclick="tc(this)">Viool</div><div class="chip" onclick="tc(this)">Cello</div><div class="chip" onclick="tc(this)">Trompet</div><div class="chip" onclick="tc(this)">Saxofoon</div><div class="chip" onclick="tc(this)">Trombone</div><div class="chip" onclick="tc(this)">DJ</div><div class="chip" onclick="tc(this)">Producer</div><div class="chip" onclick="tc(this)">Ukulele</div><div class="chip" onclick="tc(this)">Banjo</div><div class="chip" onclick="tc(this)">Overig</div>
+            </div>
+          </div>
+
+          <!-- Wij zoeken velden (band) -->
+          <div id="adVeldenBand" style="display:none;">
+            <div class="field-label">Wij zoeken...</div>
+            <div class="chip-group" id="adFormWijZoeken">
+              <div class="chip" onclick="tc(this)">Gitarist</div><div class="chip" onclick="tc(this)">Bassist</div><div class="chip" onclick="tc(this)">Drummer</div><div class="chip" onclick="tc(this)">Zanger/es</div><div class="chip" onclick="tc(this)">Toetsenist</div><div class="chip" onclick="tc(this)">Saxofonist</div><div class="chip" onclick="tc(this)">Trompettist</div><div class="chip" onclick="tc(this)">Violist</div><div class="chip" onclick="tc(this)">DJ</div><div class="chip" onclick="tc(this)">Producer</div><div class="chip" onclick="tc(this)">Overig</div>
+            </div>
+          </div>
+
+          <div>
+            <div class="field-label">Genre(s)</div>
+            <div class="chip-group" id="adFormGenres">
+              <div class="chip" onclick="tc(this)">Rock</div><div class="chip" onclick="tc(this)">Classic Rock</div><div class="chip" onclick="tc(this)">Alt-Rock</div><div class="chip" onclick="tc(this)">Indie Rock</div><div class="chip" onclick="tc(this)">Prog Rock</div><div class="chip" onclick="tc(this)">Punk</div><div class="chip" onclick="tc(this)">Pop-Punk</div><div class="chip" onclick="tc(this)">Hardcore</div><div class="chip" onclick="tc(this)">Metal</div><div class="chip" onclick="tc(this)">Heavy Metal</div><div class="chip" onclick="tc(this)">Pop</div><div class="chip" onclick="tc(this)">Indie Pop</div><div class="chip" onclick="tc(this)">Jazz</div><div class="chip" onclick="tc(this)">Blues</div><div class="chip" onclick="tc(this)">Soul</div><div class="chip" onclick="tc(this)">R&amp;B</div><div class="chip" onclick="tc(this)">Funk</div><div class="chip" onclick="tc(this)">Hip-hop</div><div class="chip" onclick="tc(this)">Electronic</div><div class="chip" onclick="tc(this)">House</div><div class="chip" onclick="tc(this)">Techno</div><div class="chip" onclick="tc(this)">Folk</div><div class="chip" onclick="tc(this)">Country</div><div class="chip" onclick="tc(this)">Reggae</div><div class="chip" onclick="tc(this)">Ska</div><div class="chip" onclick="tc(this)">Klassiek</div><div class="chip" onclick="tc(this)">Overig</div>
+            </div>
+          </div>
+
+          <!-- Niveau + Beschikbaarheid (niet voor bands) -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;" id="adNiveauRij">
+            <div>
+              <div class="field-label">Niveau</div>
+              <select class="select-field" id="adFormLevel"><option>Beginner</option><option selected>Gevorderd</option><option>Professioneel</option></select>
+            </div>
+            <div>
+              <div class="field-label">Beschikbaarheid</div>
+              <select class="select-field" id="adFormAvail"><option>Hobby</option><option selected>Serieus</option><option>Professioneel / betaald</option></select>
+            </div>
+          </div>
+
+          <div>
+            <div class="field-label">Beschrijving</div>
+            <textarea class="input-field" id="adFormDesc" rows="4" style="resize:none;overflow:hidden;" placeholder="Vertel wie je bent, wat je zoekt, welke muziek je maakt..." oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"></textarea>
+          </div>
+
+          <div>
+            <div class="field-label">Link naar muziek (optioneel)</div>
+            <input class="input-field" id="adFormLink" placeholder="SoundCloud, YouTube, Spotify, Instagram..."/>
+          </div>
+
+          <div style="display:flex;gap:12px;padding-bottom:16px;">
+            <button class="btn btn-ghost" style="flex:1;" onclick="hideAdForm()">Annuleren</button>
+            <button class="btn btn-primary" style="flex:2;" onclick="saveAdPanel()">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+              Advertentie opslaan
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /main-content -->
+
+  <nav class="mobile-nav">
+    <button class="mob-nav-item active" id="mn-discover" onclick="showPanel('discover')">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <span>Ontdek</span>
+    </button>
+    <button class="mob-nav-item" id="mn-liked" onclick="showPanel('liked')">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+      <span>Lijst</span>
+    </button>
+    <button class="mob-nav-item" id="mn-ads" onclick="showPanel('ads')">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+      <span>Advert.</span>
+    </button>
+    <button class="mob-nav-item" id="mn-messages" onclick="showPanel('messages')">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      <span>Berichten</span>
+    </button>
+    <button class="mob-nav-item" id="mn-profile" onclick="showPanel('profile')">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      <span>Profiel</span>
+    </button>
+  </nav>
+
+</div><!-- /screen-app -->
+
+</div><!-- /app -->
+
+<!-- FILTER MODAL -->
+<div class="modal-overlay" id="filterModal" onclick="if(event.target===this)closeFilter()">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3>Filters</h3>
+      <button class="modal-close" onclick="closeFilter()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div>
+      <div class="field-label">Ik zoek...</div>
+      <div class="role-toggle" style="flex-wrap:wrap;gap:4px;">
+        <div class="role-opt active" id="fBands" onclick="setFR('bands')">Bands</div>
+        <div class="role-opt" id="fMuz" onclick="setFR('muzikanten')">Muzikanten</div>
+        <div class="role-opt" id="fSessie" onclick="setFR('sessie')">Sessie</div>
+        <div class="role-opt" id="fIndustry" onclick="setFR('industry')">Industry</div>
+        <div class="role-opt" id="fAll" onclick="setFR('alles')">Alles</div>
+      </div>
+    </div>
+    <div>
+      <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
+        <div class="field-label" style="margin:0;">Max. afstand</div>
+        <div style="font-size:14px;font-weight:600;color:var(--text)" id="distVal">30 km</div>
+      </div>
+      <input type="range" min="5" max="100" value="30" step="5" oninput="document.getElementById('distVal').textContent=this.value+' km'"/>
+    </div>
+    <div>
+      <div style="display:flex;justify-content:space-between;margin-bottom:10px;">
+        <div class="field-label" style="margin:0;">Leeftijdsbereik</div>
+        <div style="font-size:14px;font-weight:600;color:var(--text)" id="ageLabel">18 – 45</div>
+      </div>
+      <div class="dual-range">
+        <div class="range-track"></div>
+        <div class="range-fill" id="rangeFill"></div>
+        <input type="range" id="ageMin" min="16" max="70" value="18" step="1" oninput="updateAge()"/>
+        <input type="range" id="ageMax" min="16" max="70" value="45" step="1" oninput="updateAge()"/>
+      </div>
+    </div>
+    <div>
+      <div class="field-label">Instrument</div>
+      <div class="chip-group">
+        <div class="chip selected" onclick="tc(this)">Alles</div><div class="chip" onclick="tc(this)">Gitaar</div><div class="chip" onclick="tc(this)">Basgitaar</div><div class="chip" onclick="tc(this)">Drums</div><div class="chip" onclick="tc(this)">Zang</div><div class="chip" onclick="tc(this)">Keys / Piano</div><div class="chip" onclick="tc(this)">DJ</div><div class="chip" onclick="tc(this)">Producer</div>
+      </div>
+    </div>
+    <div>
+      <div class="field-label">Genre</div>
+      <div class="chip-group">
+        <div class="chip selected" onclick="tc(this)">Alles</div><div class="chip" onclick="tc(this)">Rock</div><div class="chip" onclick="tc(this)">Alt-Rock</div><div class="chip" onclick="tc(this)">Prog Rock</div><div class="chip" onclick="tc(this)">Punk</div><div class="chip" onclick="tc(this)">Metal</div><div class="chip" onclick="tc(this)">Pop</div><div class="chip" onclick="tc(this)">Jazz</div><div class="chip" onclick="tc(this)">Blues</div><div class="chip" onclick="tc(this)">Funk</div><div class="chip" onclick="tc(this)">Electronic</div><div class="chip" onclick="tc(this)">Folk</div>
+      </div>
+    </div>
+    <div>
+      <div class="field-label">Niveau</div>
+      <div class="chip-group">
+        <div class="chip selected" onclick="tc(this)">Alles</div><div class="chip" onclick="tc(this)">Beginner</div><div class="chip" onclick="tc(this)">Gevorderd</div><div class="chip" onclick="tc(this)">Professioneel</div>
+      </div>
+    </div>
+    <button class="btn btn-primary btn-full" onclick="closeFilter()">Filters toepassen</button>
+  </div>
+</div>
+
+<!-- MATCH MODAL -->
+<div class="modal-overlay" id="matchModal" onclick="if(event.target===this)closeMatch()">
+  <div class="modal-box" style="max-width:400px;text-align:center;align-items:center;gap:20px;">
+    <div style="width:90px;height:90px;border-radius:24px;background:var(--grad);display:flex;align-items:center;justify-content:center;overflow:hidden;" id="matchEmoji"></div>
+    <div>
+      <div style="font-family:var(--font-head);font-size:26px;font-weight:900;color:var(--text);">Het is een match!</div>
+      <div style="font-size:15px;color:var(--sub);margin-top:8px;line-height:1.6;">Jij en <strong style="color:var(--text)" id="matchName"></strong> hebben allebei interesse.<br>Stuur een berichtje!</div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px;width:100%;">
+      <button class="btn btn-primary btn-full" onclick="closeMatch();showPanel('messages')">Bericht sturen</button>
+      <button class="btn btn-ghost btn-full" onclick="closeMatch()">Verder swipen</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- TOAST -->
+<div class="toast" id="toast">Gekopieerd!</div>
+
+<script>
+// ═══════════════ HELPERS ═══════════════
+function tc(el) { el.classList.toggle('selected'); }
+
+// ═══════════════ DATA ═══════════════
+let advertentiesData = []; // echte profielen/advertenties uit Supabase
+let cardIndex = 0;
+let swipeHistory = [];
+let currentTab = 'liked';
+let currentDetail = null;
+let activeType = 'bands';
+
+// ═══════════════ HELPERS ═══════════════
+function typeIcon(type) {
+  const icons = {
+    muzikant: `<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>`,
+    band: `<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="12" r="1"/><circle cx="15" cy="12" r="1"/><path d="M8 20v-2a4 4 0 0 1 8 0v2"/><path d="M3 20v-2a7 7 0 0 1 3-5.8"/><path d="M21 20v-2a7 7 0 0 0-3-5.8"/><circle cx="12" cy="7" r="3"/><circle cx="5" cy="8" r="2"/><circle cx="19" cy="8" r="2"/></svg>`,
+    sessie: `<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>`,
+    industry: `<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3z"/><path d="M3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></svg>`,
+  };
+  return icons[type] || icons.muzikant;
+}
+
+function getActiefMinuten(actief_op) {
+  if (!actief_op) return 9999;
+  return Math.floor((Date.now() - new Date(actief_op)) / 60000);
+}
+
+function profielNaarKaart(p) {
+  const genres = (p.genres || []).slice(0,2).join(' / ') || 'Muzikant';
+  const stad = p.stad || p.locatie || '';
+  const naam = p.naam || 'Onbekend';
+  const type = p.type || 'muzikant';
+  const rol = type === 'band' ? 'Band zoekt muzikant' : type === 'sessie' ? 'Sessiemuzikant' : type === 'industry' ? 'Industry professional' : 'Muzikant zoekt band';
+  const tags = [...(p.instrument || []).slice(0,2), ...(p.genres || []).slice(0,1), p.niveau, stad].filter(Boolean);
+  return {
+    id: p.id,
+    naam,
+    rol,
+    genre: genres,
+    type,
+    desc: p.bio || 'Geen beschrijving beschikbaar.',
+    tags,
+    activeMin: getActiefMinuten(p.actief_op),
+    spotlight: p.spotlight || false,
+    foto_url: p.foto_url || null,
+    link: p.muzieklink || '',
+    raw: p
+  };
+}
+
+// ═══════════════ SUPABASE DATA LADEN ═══════════════
+async function laadAdvertenties() {
+  const stack = document.getElementById('cardStack');
+  if (stack) stack.innerHTML = `<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--sub);flex-direction:column;gap:12px;"><div style="font-size:32px;">🎵</div><div>Muzikanten laden...</div></div>`;
+
+  // Filter op type
+  let query = sb.from('profiles').select('*').neq('id', currentUser?.id).not('naam', 'is', null);
+  if (activeType === 'bands') query = query.eq('type', 'band');
+  else if (activeType === 'muzikanten') query = query.in('type', ['muzikant', 'sessie', 'industry']);
+
+  const { data, error } = await query.order('actief_op', { ascending: false }).limit(50);
+
+  if (error || !data?.length) {
+    advertentiesData = [];
+    if (stack) stack.innerHTML = `<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--sub);flex-direction:column;gap:12px;"><div style="font-size:48px;">🔍</div><div style="font-size:16px;font-weight:600;">Niemand gevonden</div><div style="font-size:13px;">Probeer een andere filter</div></div>`;
+    return;
+  }
+
+  // Filter al geswiped profielen eruit
+  const { data: swipes } = await sb.from('swipes').select('target_id').eq('swiper_id', currentUser.id);
+  const geswiped = new Set((swipes || []).map(s => s.target_id));
+  advertentiesData = data.filter(p => !geswiped.has(p.id)).map(profielNaarKaart);
+  cardIndex = 0;
+  renderCards();
+}
+
+// ═══════════════ CARD RENDERING ═══════════════
+function getTypeBadge(type) {
+  const map = { band:['type-band','Band'], muzikant:['type-muzikant','Muzikant'], sessie:['type-sessie','Sessie'], industry:['type-industry','Industry'] };
+  const [cls, label] = map[type] || map.muzikant;
+  return `<div class="card-badge-type ${cls}">${label}</div>`;
+}
+
+function getActiveLabel(min) {
+  if (min < 10) return ['active-now', '● Nu actief'];
+  if (min < 60) return ['active-today', `● ${min}m geleden`];
+  if (min < 1440) return ['active-today', `● ${Math.floor(min/60)}u geleden`];
+  const days = Math.floor(min/1440);
+  if (days < 7) return ['active-old', `● ${days}d geleden`];
+  return ['active-old', `● ${Math.floor(days/7)}w geleden`];
+}
+
+function buildCard(p, cls) {
+  const el = document.createElement('div');
+  el.className = 'profile-card ' + cls;
+  if (!p || p.isAd) return el;
+
+  const [activeCls, activeLabel] = getActiveLabel(p.activeMin || 9999);
+  const fotoHTML = p.foto_url
+    ? `<img src="${p.foto_url}" style="width:100%;height:100%;object-fit:cover;" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"/><div style="display:none;width:100%;height:100%;align-items:center;justify-content:center;">${typeIcon(p.type)}</div>`
+    : `<div style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;">${typeIcon(p.type)}</div>`;
+
+  el.innerHTML = `
+    <div class="card-visual" style="position:relative;overflow:hidden;">
+      <div class="card-badge-genre">${p.genre}</div>
+      ${getTypeBadge(p.type)}
+      <div class="active-dot ${activeCls}"><span class="dot"></span>${activeLabel}</div>
+      ${p.spotlight ? `<div class="spotlight-badge">⭐ Uitgelicht</div>` : ''}
+      ${fotoHTML}
+    </div>
+    <div class="card-body">
+      <div class="card-name">${p.naam}</div>
+      <div class="card-role">${p.rol}</div>
+      <div class="card-desc">${p.desc}</div>
+      <div class="card-tags">${(p.tags||[]).map(t=>`<div class="tag">${t}</div>`).join('')}</div>
+    </div>
+    <div class="swipe-fb fb-like">MATCH!</div>
+    <div class="swipe-fb fb-nope">NOPE</div>`;
+  return el;
+}
+
+function renderCards() {
+  const stack = document.getElementById('cardStack');
+  if (!stack) return;
+  stack.innerHTML = '';
+
+  if (!advertentiesData.length || cardIndex >= advertentiesData.length) {
+    stack.innerHTML = `<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--sub);flex-direction:column;gap:12px;"><div style="font-size:48px;">✓</div><div style="font-size:16px;font-weight:600;">Je hebt iedereen gezien!</div><div style="font-size:13px;">Kom later terug voor nieuwe profielen</div></div>`;
+    return;
+  }
+
+  const remaining = advertentiesData.length - cardIndex;
+  if (remaining >= 3) {
+    stack.appendChild(buildCard(advertentiesData[cardIndex+2], 'stack-2'));
+    stack.appendChild(buildCard(advertentiesData[cardIndex+1], 'stack-1'));
+  } else if (remaining >= 2) {
+    stack.appendChild(buildCard(advertentiesData[cardIndex+1], 'stack-1'));
+  }
+  stack.appendChild(buildCard(advertentiesData[cardIndex], 'top'));
+}
+
+// ═══════════════ SWIPE ═══════════════
+async function doSwipe(dir) {
+  const stack = document.getElementById('cardStack');
+  const top = stack?.querySelector('.top');
+  if (!top || cardIndex >= advertentiesData.length) return;
+
+  const p = advertentiesData[cardIndex];
+
+  // Animatie
+  const fb = top.querySelector(dir==='like' ? '.fb-like' : '.fb-nope');
+  if (fb) fb.style.opacity = '1';
+  top.style.transition = 'transform .35s ease';
+  top.style.transform = `translateX(${dir==='like'?600:-600}px) rotate(${dir==='like'?15:-15}deg)`;
+
+  // Opslaan in Supabase
+  if (currentUser && p.id) {
+    sb.from('swipes').upsert({ swiper_id: currentUser.id, target_id: p.id, richting: dir }, { onConflict: 'swiper_id,target_id' });
+
+    // Check wederzijdse like
+    if (dir === 'like') {
+      const { data: wederzijds } = await sb.from('swipes').select('*').eq('swiper_id', p.id).eq('target_id', currentUser.id).eq('richting', 'like').maybeSingle();
+      if (wederzijds) {
+        // Echte match!
+        await sb.from('matches').insert({ gebruiker_a: currentUser.id, gebruiker_b: p.id }).select().single();
+        setTimeout(() => showMatch(p), 400);
+      }
+    }
+  }
+
+  swipeHistory.push({ ...p, status: dir });
+  setTimeout(() => { cardIndex++; renderCards(); }, 360);
+}
+
+function showMatch(p) {
+  document.getElementById('matchName').textContent = p.naam || p.name || '';
+  const emojiEl = document.getElementById('matchEmoji');
+  if (emojiEl) {
+    if (p.foto_url) emojiEl.innerHTML = `<img src="${p.foto_url}" style="width:100%;height:100%;object-fit:cover;border-radius:20px;"/>`;
+    else emojiEl.textContent = typeIcon(p.type);
+  }
+  document.getElementById('matchModal').classList.add('open');
+}
+
+function closeMatch() { document.getElementById('matchModal').classList.remove('open'); }
+
+// ═══════════════ TYPE TOGGLE ═══════════════
+function setTypeToggle(type) {
+  activeType = type;
+  const bandEl = document.getElementById('togBands');
+  const muzEl = document.getElementById('togMuz');
+  const slider = document.getElementById('toggleSlider');
+  bandEl.classList.toggle('active', type==='bands');
+  muzEl.classList.toggle('active', type==='muzikanten');
+  const activeEl = type==='bands' ? bandEl : muzEl;
+  if (slider && activeEl) { slider.style.left = activeEl.offsetLeft + 'px'; slider.style.width = activeEl.offsetWidth + 'px'; }
+  laadAdvertenties();
+}
+
+function initToggle() {
+  const bandEl = document.getElementById('togBands');
+  if (!bandEl) return;
+  const slider = document.getElementById('toggleSlider');
+  if (slider) { slider.style.left = bandEl.offsetLeft + 'px'; slider.style.width = bandEl.offsetWidth + 'px'; }
+}
+
+function openDetail(p) { /* no-op */ }
+
+// ═══════════════ MIJN LIJST ═══════════════
+function switchTab(tab) {
+  currentTab = tab;
+  ['liked','skipped','all'].forEach(t => {
+    document.getElementById('tab'+t.charAt(0).toUpperCase()+t.slice(1))?.classList.toggle('active', t===tab);
+  });
+  renderLiked();
+}
+
+async function laadSwipeHistory() {
+  if (!currentUser) return;
+  const { data } = await sb.from('swipes').select('*, target:target_id(*)').eq('swiper_id', currentUser.id);
+  swipeHistory = (data || []).map(s => ({ ...profielNaarKaart(s.target || {}), status: s.richting, swipe_id: s.id }));
+  renderLiked();
+}
+
+function renderLiked() {
+  const grid = document.getElementById('likedGrid');
+  if (!grid) return;
+  const filtered = currentTab==='liked' ? swipeHistory.filter(h=>h.status==='like')
+    : currentTab==='skipped' ? swipeHistory.filter(h=>h.status==='nope') : swipeHistory;
+
+  if (!filtered.length) {
+    grid.innerHTML = `<div style="grid-column:1/-1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 20px;gap:12px;color:var(--sub);">
+      <div style="font-size:48px;opacity:.3;">📋</div>
+      <div style="font-size:15px;font-weight:600;">Nog niets hier</div>
+      <div style="font-size:13px;">Ga swipen om profielen in je lijst te zetten</div>
+    </div>`;
+    return;
+  }
+
+  grid.innerHTML = filtered.map(p => `
+    <div class="liked-card">
+      <div class="liked-avatar">${p.foto_url ? `<img src="${p.foto_url}" style="width:100%;height:100%;object-fit:cover;border-radius:14px;"/>` : `<div style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;">${typeIcon(p.type)}</div>`}</div>
+      <div class="liked-card-info">
+        <div class="liked-card-name">${p.naam}</div>
+        <div class="liked-card-role">${p.rol}</div>
+        <div class="liked-card-meta">${(p.tags||[]).slice(0,2).join(' · ')}</div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0;">
+        <div class="liked-badge ${p.status==='like'?'badge-liked':'badge-skipped'}">${p.status==='like'?'♥ Like':'✕ Skip'}</div>
+      </div>
+    </div>`).join('');
+}
+
+// ═══════════════ BERICHTEN ═══════════════
+let huidigeMatch = null;
+let berichtenInterval = null;
+
+async function laadMatches() {
+  if (!currentUser) return;
+  const { data } = await sb.from('matches').select('*, a:gebruiker_a(*), b:gebruiker_b(*)').or(`gebruiker_a.eq.${currentUser.id},gebruiker_b.eq.${currentUser.id}`).order('aangemaakt_op', { ascending: false });
+
+  const scroll = document.getElementById('msgListScroll');
+  if (!scroll) return;
+
+  if (!data?.length) {
+    scroll.innerHTML = `<div style="padding:24px;text-align:center;color:var(--sub);font-size:14px;">Nog geen matches.<br>Ga swipen!</div>`;
+    return;
+  }
+
+  scroll.innerHTML = data.map(match => {
+    const ander = match.gebruiker_a === currentUser.id ? match.b : match.a;
+    if (!ander) return '';
+    return `<div class="msg-item" onclick="openMatch('${match.id}', '${ander.id}')" id="match-${match.id}">
+      <div class="msg-av" style="overflow:hidden;">${ander.foto_url ? `<img src="${ander.foto_url}" style="width:100%;height:100%;object-fit:cover;"/>` : `<div style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;">${typeIcon(ander.type)}</div>`}</div>
+      <div style="flex:1;overflow:hidden;">
+        <div class="msg-name">${ander.naam || 'Onbekend'}</div>
+        <div class="msg-preview" id="preview-${match.id}">Match! Stuur een berichtje.</div>
+      </div>
+    </div>`;
+  }).join('');
+
+  // Laad laatste bericht per match
+  data.forEach(async match => {
+    const { data: msgs } = await sb.from('berichten').select('inhoud').eq('match_id', match.id).order('verstuurd_op', { ascending: false }).limit(1);
+    if (msgs?.[0]) {
+      const el = document.getElementById(`preview-${match.id}`);
+      if (el) el.textContent = msgs[0].inhoud;
+    }
+  });
+}
+
+async function openMatch(matchId, anderId) {
+  huidigeMatch = matchId;
+  document.querySelectorAll('.msg-item').forEach(el => el.classList.remove('active'));
+  document.getElementById(`match-${matchId}`)?.classList.add('active');
+
+  // Laad ander profiel
+  const { data: ander } = await sb.from('profiles').select('*').eq('id', anderId).single();
+  const chatCol = document.querySelector('.chat-col');
+  if (!chatCol) return;
+  chatCol.style.display = 'flex';
+
+  document.querySelector('.chat-header-bar .chat-name').textContent = ander?.naam || 'Match';
+
+  await laadBerichten(matchId);
+
+  // Refresh berichten elke 5 seconden
+  if (berichtenInterval) clearInterval(berichtenInterval);
+  berichtenInterval = setInterval(() => laadBerichten(matchId), 5000);
+}
+
+async function laadBerichten(matchId) {
+  const { data } = await sb.from('berichten').select('*').eq('match_id', matchId).order('verstuurd_op', { ascending: true });
+  const msgs = document.getElementById('chatMsgs');
+  if (!msgs || !data) return;
+  const wasBottom = msgs.scrollHeight - msgs.scrollTop <= msgs.clientHeight + 50;
+  msgs.innerHTML = data.map(b => `
+    <div class="bubble ${b.afzender_id === currentUser.id ? 'bubble-me' : 'bubble-them'}">${b.inhoud}</div>`).join('');
+  if (wasBottom) msgs.scrollTop = msgs.scrollHeight;
+}
+
+async function sendMsg() {
+  const inp = document.getElementById('chatInput');
+  const val = inp?.value.trim();
+  if (!val || !huidigeMatch || !currentUser) return;
+  inp.value = '';
+  await sb.from('berichten').insert({ match_id: huidigeMatch, afzender_id: currentUser.id, inhoud: val });
+  laadBerichten(huidigeMatch);
+}
+
+// ═══════════════ ADVERTENTIES ═══════════════
+async function laadMijnAdvertenties() {
+  if (!currentUser) return;
+  const { data } = await sb.from('advertenties').select('*').eq('user_id', currentUser.id).order('aangemaakt_op', { ascending: false });
+  const list = document.getElementById('adPanelList');
+  if (!list) return;
+
+  if (!data?.length) {
+    list.innerHTML = `<div style="text-align:center;padding:60px 20px;color:var(--sub);"><div style="font-size:48px;margin-bottom:12px;">📋</div><div style="font-size:15px;font-weight:600;">Nog geen advertenties</div><div style="font-size:13px;margin-top:6px;">Maak je eerste advertentie aan</div></div>`;
+    return;
+  }
+
+  list.innerHTML = '';
+  data.forEach(ad => {
+    const card = document.createElement('div');
+    card.className = 'ad-panel-card';
+    card.id = `adcard-${ad.id}`;
+    card.innerHTML = `
+      <div class="ad-card-top">
+        <div class="ad-card-photo">${ad.foto_url ? `<img src="${ad.foto_url}" style="width:100%;height:100%;object-fit:cover;"/>` : typeIcon(ad.type)}</div>
+        <div class="ad-card-info">
+          <div class="ad-card-title">${ad.titel}</div>
+          <div class="ad-card-meta">${[...(ad.genres||[]).slice(0,2), ...(ad.instrumenten||[]).slice(0,1), ad.niveau].filter(Boolean).join(' · ')}</div>
+          ${ad.omschrijving ? `<div class="ad-card-desc">${ad.omschrijving}</div>` : ''}
+          ${ad.muzieklinks ? `<a href="${ad.muzieklinks.startsWith('http')?ad.muzieklinks:'https://'+ad.muzieklinks}" target="_blank" style="font-size:13px;color:var(--neon2);margin-top:6px;display:inline-block;">${ad.muzieklinks}</a>` : ''}
+        </div>
+      </div>
+      <div class="ad-card-footer">
+        <span class="ad-status-badge">● ${ad.actief ? 'Actief' : 'Inactief'}</span>
+        <div style="display:flex;gap:8px;">
+          <button class="undo-btn" onclick="verwijderAd('${ad.id}')">Verwijderen</button>
+        </div>
+      </div>`;
+    list.appendChild(card);
+  });
+}
+
+async function saveAdPanel() {
+  if (!currentUser) return;
+  const titel = document.getElementById('adFormTitle')?.value.trim();
+  if (!titel) { alert('Geef je advertentie een titel.'); return; }
+
+  const type = document.getElementById('adFormTypeBand')?.classList.contains('active') ? 'band'
+    : document.getElementById('adFormTypeSessie')?.classList.contains('active') ? 'sessie'
+    : document.getElementById('adFormTypeIndustry')?.classList.contains('active') ? 'industry' : 'muzikant';
+
+  const isBand = type === 'band';
+  const instrumenten = isBand
+    ? [...document.querySelectorAll('#adFormWijZoeken .chip.selected')].map(c => c.textContent)
+    : [...document.querySelectorAll('#adFormInstruments .chip.selected')].map(c => c.textContent);
+  const genres = [...document.querySelectorAll('#adFormGenres .chip.selected')].map(c => c.textContent);
+  const niveau = isBand ? null : document.getElementById('adFormLevel')?.value;
+  const beschikbaarheid = isBand ? null : document.getElementById('adFormAvail')?.value;
+  const omschrijving = document.getElementById('adFormDesc')?.value.trim();
+  const muzieklinks = document.getElementById('adFormLink')?.value.trim();
+
+  const { error } = await sb.from('advertenties').insert({
+    user_id: currentUser.id, titel, type, instrumenten, genres, niveau, beschikbaarheid, omschrijving, muzieklinks, actief: true
+  });
+
+  if (error) { alert('Opslaan mislukt: ' + error.message); return; }
+
+  hideAdForm();
+  laadMijnAdvertenties();
+  const t = document.getElementById('toast');
+  t.textContent = 'Advertentie opgeslagen!'; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+async function verwijderAd(id) {
+  if (!confirm('Weet je zeker dat je deze advertentie wil verwijderen?')) return;
+  await sb.from('advertenties').delete().eq('id', id).eq('user_id', currentUser.id);
+  laadMijnAdvertenties();
+}
+
+function openChat() { showPanel('messages'); }
+
+// ═══════════════ PROFIEL BEWERKEN ═══════════════
+function bewerkProfiel() {
+  if (!currentProfile) return;
+  const p = currentProfile;
+
+  if (document.getElementById('regNaam')) document.getElementById('regNaam').value = p.naam || '';
+  if (document.getElementById('regLeeftijd')) document.getElementById('regLeeftijd').value = p.leeftijd || '';
+  if (document.getElementById('regBio')) document.getElementById('regBio').value = p.bio || '';
+  if (document.getElementById('regNiveau')) document.getElementById('regNiveau').value = p.niveau || 'Gevorderd';
+  if (document.getElementById('regBeschikbaarheid')) document.getElementById('regBeschikbaarheid').value = p.beschikbaarheid || 'Serieus';
+
+  if (p.provincie && document.getElementById('regProvincie')) {
+    document.getElementById('regProvincie').value = p.provincie;
+    updateSteden();
+    setTimeout(() => {
+      if (p.stad && document.getElementById('regStad')) document.getElementById('regStad').value = p.stad;
+    }, 50);
+  }
+
+  if (p.muzieklink) {
+    const links = p.muzieklink.split(', ').filter(Boolean);
+    const container = document.getElementById('muzieklinks');
+    if (container) {
+      container.innerHTML = '';
+      links.forEach(link => {
+        const div = document.createElement('div');
+        div.style.cssText = 'display:flex;gap:8px;align-items:center;';
+        div.innerHTML = `<input class="input-field" style="flex:1;" value="${link}" placeholder="SoundCloud, YouTube..."/>
+          <button onclick="this.parentElement.remove()" style="width:36px;height:44px;border-radius:10px;border:1px solid rgba(229,57,53,0.3);background:rgba(229,57,53,0.1);color:#e53935;cursor:pointer;font-size:20px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">×</button>`;
+        container.appendChild(div);
+      });
+      // Altijd een plus knop rij toevoegen
+      const plusDiv = document.createElement('div');
+      plusDiv.style.cssText = 'display:flex;gap:8px;align-items:center;';
+      plusDiv.innerHTML = `<input class="input-field" style="flex:1;" placeholder="Voeg nog een link toe..." oninput="syncMuzieklinks()"/>
+        <button onclick="voegLinkToe()" style="width:36px;height:44px;border-radius:10px;border:1px solid var(--border);background:var(--card2);color:var(--sub);cursor:pointer;font-size:20px;display:flex;align-items:center;justify-content:center;flex-shrink:0;" title="Voeg link toe">+</button>`;
+      container.appendChild(plusDiv);
+    }
+  }
+
+  const typeMap = { muzikant:'muzikant', band:'band', sessie:'sessie', industry:'industry' };
+  if (p.type) setRegRole(p.type);
+
+  document.querySelectorAll('#regInstrumenten .chip').forEach(c => {
+    c.classList.toggle('selected', (p.instrument || []).includes(c.textContent));
+  });
+  document.querySelectorAll('#regGenres .chip').forEach(c => {
+    c.classList.toggle('selected', (p.genres || []).includes(c.textContent));
+  });
+
+  if (p.foto_url) {
+    const prev = document.getElementById('regFotoPreview');
+    if (prev) prev.innerHTML = `<img src="${p.foto_url}" style="width:100%;height:100%;object-fit:cover;"/>`;
+    uploadedFotoUrl = p.foto_url;
+  }
+
+  const btn = document.querySelector('#screen-register .btn-primary');
+  if (btn) btn.textContent = 'Profiel opslaan →';
+
+  showScreen('register');
+}
+
+// ═══════════════ FOTO UPLOAD ═══════════════
+let uploadedFotoUrl = null;
+
+async function handleFotoUpload(input) {
+  if (!input.files || !input.files[0]) return;
+  const file = input.files[0];
+  const status = document.getElementById('fotoUploadStatus');
+  status.style.display = 'block';
+  status.style.color = 'var(--sub)';
+  status.textContent = 'Foto verwerken...';
+
+  try {
+    // Client-side schalen naar max 400x400px
+    const scaled = await schaalFoto(file, 400);
+
+    // Preview tonen
+    const preview = document.getElementById('regFotoPreview');
+    preview.innerHTML = `<img src="${scaled.dataUrl}" style="width:100%;height:100%;object-fit:cover;"/>`;
+
+    // Uploaden naar Supabase Storage
+    if (currentUser) {
+      status.textContent = 'Uploaden...';
+      const bestandsnaam = `${currentUser.id}/avatar.jpg`;
+      const blob = await fetch(scaled.dataUrl).then(r => r.blob());
+
+      const { data, error } = await sb.storage
+        .from('avatars')
+        .upload(bestandsnaam, blob, {
+          contentType: 'image/jpeg',
+          upsert: true // overschrijf bestaande foto
+        });
+
+      if (error) throw error;
+
+      // Publieke URL ophalen
+      const { data: urlData } = sb.storage.from('avatars').getPublicUrl(bestandsnaam);
+      uploadedFotoUrl = urlData.publicUrl + '?t=' + Date.now(); // cache busting
+      status.style.color = '#2ecc71';
+      status.textContent = '✓ Foto opgeslagen!';
+    }
+  } catch (err) {
+    status.style.color = '#ff8a80';
+    status.textContent = 'Upload mislukt: ' + err.message;
+  }
+}
+
+function schaalFoto(file, maxSize) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const reader = new FileReader();
+    reader.onload = e => {
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let w = img.width, h = img.height;
+        if (w > h) { if (w > maxSize) { h = h * maxSize / w; w = maxSize; } }
+        else { if (h > maxSize) { w = w * maxSize / h; h = maxSize; } }
+        canvas.width = w; canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, w, h);
+        resolve({ dataUrl: canvas.toDataURL('image/jpeg', 0.85) });
+      };
+      img.onerror = reject;
+      img.src = e.target.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+function voegLinkToe() {
+  const container = document.getElementById('muzieklinks');
+  const div = document.createElement('div');
+  div.style.cssText = 'display:flex;gap:8px;align-items:center;';
+  div.innerHTML = `
+    <input class="input-field" style="flex:1;" placeholder="SoundCloud, YouTube, Spotify, Instagram..." oninput="syncMuzieklinks()"/>
+    <button onclick="this.parentElement.remove();syncMuzieklinks()" style="width:36px;height:44px;border-radius:10px;border:1px solid rgba(229,57,53,0.3);background:rgba(229,57,53,0.1);color:#e53935;cursor:pointer;font-size:20px;display:flex;align-items:center;justify-content:center;flex-shrink:0;" title="Verwijder link">×</button>`;
+  container.appendChild(div);
+}
+
+function syncMuzieklinks() {
+  // Wordt aangeroepen bij input — geen actie nodig, waarde wordt bij opslaan gelezen
+}
+
+function getMuzieklinks() {
+  const inputs = document.querySelectorAll('#muzieklinks input');
+  return [...inputs].map(i => i.value.trim()).filter(Boolean);
+}
+const stedenPerProvincie = {
+  'Drenthe': ['Assen','Emmen','Hoogeveen','Meppel','Coevorden','Borger','Hardenberg','Roden','Beilen','Klazienaveen','Overig'],
+  'Flevoland': ['Almere','Lelystad','Dronten','Emmeloord','Urk','Zeewolde','Biddinghuizen','Overig'],
+  'Friesland': ['Leeuwarden','Drachten','Sneek','Heerenveen','Franeker','Harlingen','Bolsward','Joure','Dokkum','Overig'],
+  'Gelderland': ['Nijmegen','Arnhem','Apeldoorn','Ede','Doetinchem','Harderwijk','Tiel','Zutphen','Wageningen','Barneveld','Winterswijk','Overig'],
+  'Groningen': ['Groningen','Veendam','Hoogezand','Stadskanaal','Winschoten','Delfzijl','Leek','Zuidhorn','Overig'],
+  'Limburg': ['Maastricht','Venlo','Heerlen','Sittard','Roermond','Weert','Geleen','Kerkrade','Brunssum','Overig'],
+  'Noord-Brabant': ['Eindhoven','Tilburg','Breda','s-Hertogenbosch','Helmond','Oss','Bergen op Zoom','Roosendaal','Waalwijk','Veghel','Overig'],
+  'Noord-Holland': ['Amsterdam','Haarlem','Alkmaar','Zaandam','Hoorn','Purmerend','Heerhugowaard','Hilversum','Amstelveen','Beverwijk','Overig'],
+  'Overijssel': ['Enschede','Zwolle','Deventer','Hengelo','Almelo','Kampen','Hardenberg','Oldenzaal','Borne','Rijssen','Overig'],
+  'Utrecht': ['Utrecht','Amersfoort','Veenendaal','Zeist','Nieuwegein','Houten','IJsselstein','Woerden','Ovig'],
+  'Zeeland': ['Middelburg','Vlissingen','Goes','Terneuzen','Hulst','Zierikzee','Overig'],
+  'Zuid-Holland': ['Rotterdam','Den Haag','Leiden','Dordrecht','Zoetermeer','Delft','Westland','Gouda','Spijkenisse','Alphen aan den Rijn','Overig'],
+};
+
+function updateSteden() {
+  const provincie = document.getElementById('regProvincie')?.value;
+  const stadSelect = document.getElementById('regStad');
+  if (!stadSelect) return;
+  stadSelect.innerHTML = '<option value="">Selecteer stad</option>';
+  if (provincie && stedenPerProvincie[provincie]) {
+    stedenPerProvincie[provincie].forEach(stad => {
+      const opt = document.createElement('option');
+      opt.value = stad; opt.textContent = stad;
+      stadSelect.appendChild(opt);
+    });
+  }
+}
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-'+id)?.classList.add('active');
+  if (id === 'app') {
+    laadAdvertenties();
+    updateAge();
+    setTimeout(initToggle, 50);
+  }
+}
+
+function showPanel(id) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('panel-'+id)?.classList.add('active');
+  ['discover','liked','ads','messages','profile'].forEach(n => {
+    document.getElementById('nl-'+n)?.classList.toggle('active', n===id);
+    document.getElementById('mn-'+n)?.classList.toggle('active', n===id);
+  });
+  if (id==='liked') laadSwipeHistory();
+  if (id==='messages') laadMatches();
+  if (id==='ads') laadMijnAdvertenties();
+}
+
+// ═══════════════ ADVERTENTIE PANEL ═══════════════
+let adCounter = 0;
+let currentEditId = null;
+
+function showAdForm(editId) {
+  currentEditId = editId || null;
+  document.getElementById('adFormHeading').textContent = editId ? 'Advertentie bewerken' : 'Nieuwe advertentie';
+  document.getElementById('adFormWrap').style.display = 'block';
+  // Reset form
+  if (!editId) {
+    document.getElementById('adFormTitle').value = '';
+    document.getElementById('adFormName').value = '';
+    document.getElementById('adFormLocation').value = '';
+    document.getElementById('adFormDesc').value = '';
+    document.getElementById('adFormLink').value = '';
+    document.getElementById('adPhotoPreview').textContent = '🎵';
+    document.querySelectorAll('#adFormInstruments .chip, #adFormGenres .chip').forEach(c => c.classList.remove('selected'));
+  }
+}
+
+function hideAdForm() {
+  document.getElementById('adFormWrap').style.display = 'none';
+}
+
+function setAdFormType(type) {
+  ['adFormTypeMuz','adFormTypeBand','adFormTypeSessie','adFormTypeIndustry'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const t = id === 'adFormTypeMuz' ? 'muzikant' : id === 'adFormTypeBand' ? 'band' : id === 'adFormTypeSessie' ? 'sessie' : 'industry';
+    el.classList.toggle('active', t === type);
+  });
+  const isBand = type === 'band';
+  // Instrument vs Wij zoeken
+  const muzVelden = document.getElementById('adVeldenMuzikant');
+  const bandVelden = document.getElementById('adVeldenBand');
+  if (muzVelden) muzVelden.style.display = isBand ? 'none' : 'block';
+  if (bandVelden) bandVelden.style.display = isBand ? 'block' : 'none';
+  // Niveau/beschikbaarheid
+  const niveauRij = document.getElementById('adNiveauRij');
+  if (niveauRij) niveauRij.style.display = isBand ? 'none' : '';
+  // Titel placeholder
+  const titleInput = document.getElementById('adFormTitle');
+  if (titleInput) titleInput.placeholder = isBand ? 'bijv. Rockband zoekt drummer' : 'bijv. Gitarist zoekt rockband';
+}
+
+function previewAdPhoto(input) {
+  if (input.files && input.files[0]) {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const prev = document.getElementById('adPhotoPreview');
+      if (prev) prev.innerHTML = `<img src="${e.target.result}" style="width:100%;height:100%;object-fit:cover;border-radius:16px;"/>`;
+    };
+    reader.readAsDataURL(input.files[0]);
+  }
+}
+
+function previewPhoto(input) {
+  if (input.files && input.files[0]) {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const prev = document.getElementById('adPhotoPreview');
+      prev.innerHTML = `<img src="${e.target.result}" style="width:100%;height:100%;object-fit:cover;border-radius:16px;"/>`;
+    };
+    reader.readAsDataURL(input.files[0]);
+  }
+}
+
+function saveAdPanel() {
+  const title = document.getElementById('adFormTitle').value.trim();
+  if (!title) { alert('Geef je advertentie een titel.'); return; }
+
+  const name = document.getElementById('adFormName').value.trim() || 'Jan de Vries';
+  const location = document.getElementById('adFormLocation').value.trim() || '';
+  const desc = document.getElementById('adFormDesc').value.trim();
+  const link = document.getElementById('adFormLink').value.trim();
+  const level = document.getElementById('adFormLevel').value;
+  const avail = document.getElementById('adFormAvail').value;
+  const isBand = document.getElementById('adFormTypeBand').classList.contains('active');
+
+  const instruments = [...document.querySelectorAll('#adFormInstruments .chip.selected')].map(c => c.textContent);
+  const genres = [...document.querySelectorAll('#adFormGenres .chip.selected')].map(c => c.textContent);
+  const photoEl = document.getElementById('adPhotoPreview');
+  const photoHTML = photoEl.innerHTML || photoEl.textContent || '🎵';
+  const meta = [...genres.slice(0,2), ...instruments.slice(0,1), level, avail].filter(Boolean).join(' · ');
+  const tags = [...instruments.slice(0,3), ...genres.slice(0,2), location].filter(Boolean);
+
+  if (currentEditId) {
+    // Bewerk bestaande
+    const card = document.getElementById('adcard-' + currentEditId);
+    if (card) {
+      card.querySelector('.ad-card-title').textContent = title;
+      card.querySelector('.ad-card-meta').textContent = meta;
+      if (desc) card.querySelector('.ad-card-desc').textContent = desc;
+    }
+  } else {
+    // Nieuwe card
+    adCounter++;
+    const id = 'ad' + adCounter;
+    const card = document.createElement('div');
+    card.className = 'ad-panel-card';
+    card.id = 'adcard-' + id;
+    card.innerHTML = `
+      <div class="ad-card-top">
+        <div class="ad-card-photo">${photoHTML}</div>
+        <div class="ad-card-info">
+          <div class="ad-card-title">${title}</div>
+          <div class="ad-card-meta">${meta}</div>
+          ${desc ? `<div class="ad-card-desc">${desc}</div>` : ''}
+          ${link ? `<a href="${link.startsWith('http')?link:'https://'+link}" target="_blank" style="font-size:13px;color:var(--neon2);margin-top:6px;display:inline-block;">${link}</a>` : ''}
+          <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;">${tags.map(t=>`<span class="tag">${t}</span>`).join('')}</div>
+        </div>
+      </div>
+      <div class="ad-card-footer">
+        <span class="ad-status-badge">● Actief</span>
+        <div style="display:flex;gap:8px;">
+          <button class="undo-btn" onclick="editAd('${id}')">Bewerken</button>
+          <button class="undo-btn" style="color:#e53935;border-color:rgba(229,57,53,0.3);" onclick="deleteAd('${id}')">Verwijderen</button>
+        </div>
+      </div>`;
+    document.getElementById('adPanelList').appendChild(card);
+  }
+
+  hideAdForm();
+  const t = document.getElementById('toast');
+  t.textContent = currentEditId ? 'Advertentie bijgewerkt!' : 'Advertentie opgeslagen!';
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+function editAd(id) { showAdForm(id); }
+function deleteAd(id) {
+  const card = document.getElementById('adcard-' + id);
+  if (card) card.remove();
+}
+
+function openChat() { showPanel('messages'); }
+
+function selectMsg(el) {
+  document.querySelectorAll('.msg-item').forEach(m => m.classList.remove('active'));
+  el.classList.add('active');
+}
+
+// ═══════════════ FILTER ═══════════════
+function openFilter() { document.getElementById('filterModal').classList.add('open'); }
+function closeFilter() { document.getElementById('filterModal').classList.remove('open'); }
+function setFR(r) {
+  const map = {bands:'fBands', muzikanten:'fMuz', sessie:'fSessie', industry:'fIndustry', alles:'fAll'};
+  Object.entries(map).forEach(([type, id]) => {
+    const el = document.getElementById(id);
+    if (el) el.classList.toggle('active', type===r);
+  });
+}
+
+// ═══════════════ REGISTER ═══════════════
+const regHints = {
+  muzikant: 'Als muzikant zie je bands en sessiemuzikanten in jouw buurt.',
+  band: 'Als band zie je muzikanten die op zoek zijn naar een band.',
+  sessie: 'Als sessiemuzikant zie je bands en muzikanten die iemand zoeken voor losse opdrachten.',
+  industry: 'Als industry professional zie je muzikanten en bands die op zoek zijn naar jouw diensten.',
+};
+function setRegRole(r) {
+  ['regMuz','regBand','regSessie','regIndustry'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const type = id === 'regMuz' ? 'muzikant' : id === 'regBand' ? 'band' : id === 'regSessie' ? 'sessie' : 'industry';
+    el.classList.toggle('active', type === r);
+  });
+  document.getElementById('regHint').textContent = regHints[r] || regHints.muzikant;
+
+  const isBand = r === 'band';
+
+  // Naam label aanpassen
+  const naamLabel = document.getElementById('regNaamLabel');
+  if (naamLabel) naamLabel.textContent = isBand ? 'Bandnaam *' : 'Naam *';
+
+  // Naam placeholder aanpassen
+  const naamInput = document.getElementById('regNaam');
+  if (naamInput) naamInput.placeholder = isBand ? 'Naam van de band' : 'Jouw naam';
+
+  // Leeftijd verbergen voor bands
+  const leeftijdRij = document.getElementById('regNaamLeeftijdRij');
+  if (leeftijdRij) {
+    const leeftijdCol = leeftijdRij.children[1];
+    if (leeftijdCol) leeftijdCol.style.display = isBand ? 'none' : '';
+    leeftijdRij.style.gridTemplateColumns = isBand ? '1fr' : '1fr 1fr';
+  }
+
+  // Instrument vs Wij zoeken
+  const muzVelden = document.getElementById('regVeldenMuzikant');
+  const bandVelden = document.getElementById('regVeldenBand');
+  if (muzVelden) muzVelden.style.display = isBand ? 'none' : 'block';
+  if (bandVelden) bandVelden.style.display = isBand ? 'block' : 'none';
+
+  // Niveau en beschikbaarheid verbergen voor bands
+  const niveauRij = document.getElementById('regNiveauRij');
+  if (niveauRij) niveauRij.style.display = isBand ? 'none' : '';
+}
+
+// ═══════════════ DUAL AGE RANGE ═══════════════
+function updateAge() {
+  let min = parseInt(document.getElementById('ageMin').value);
+  let max = parseInt(document.getElementById('ageMax').value);
+  if (min > max-2) {
+    if (event.target.id==='ageMin') { min=max-2; document.getElementById('ageMin').value=min; }
+    else { max=min+2; document.getElementById('ageMax').value=max; }
+  }
+  document.getElementById('ageLabel').textContent = min+' – '+max;
+  const p1=(min-16)/(70-16)*100, p2=(max-16)/(70-16)*100;
+  document.getElementById('rangeFill').style.left = p1+'%';
+  document.getElementById('rangeFill').style.width = (p2-p1)+'%';
+}
+
+// ═══════════════ CHAT ═══════════════
+function sendMsg() {
+  const inp = document.getElementById('chatInput');
+  const val = inp.value.trim(); if (!val) return;
+  const msgs = document.getElementById('chatMsgs');
+  const b = document.createElement('div');
+  b.className = 'bubble bubble-me'; b.textContent = val;
+  msgs.appendChild(b); inp.value = ''; msgs.scrollTop = msgs.scrollHeight;
+}
+
+// ═══════════════ SUPABASE ═══════════════
+const SUPABASE_URL = 'https://clwqhqmfmkuysszpjgck.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNsd3FocW1mbWt1eXNzenBqZ2NrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg3NjQ1MDQsImV4cCI6MjA5NDM0MDUwNH0.rnIBK-Ht6aC-qUPp-DNbM2IH41nd1bQkfJrS7V5PM7c';
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+let currentUser = null;
+let currentProfile = null;
+
+sb.auth.onAuthStateChange(async (event, session) => {
+  console.log('Auth event:', event, session?.user?.email);
+  if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session?.user) {
+    currentUser = session.user;
+    await laadOfMaakProfiel(session.user);
+  } else if (event === 'SIGNED_OUT') {
+    currentUser = null;
+    currentProfile = null;
+    showScreen('onboard');
+  }
+});
+
+async function loginMetGoogle() {
+  const { error } = await sb.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      redirectTo: window.location.origin
+    }
+  });
+  if (error) {
+    const el = document.getElementById('authError');
+    if (el) { el.textContent = 'Inloggen mislukt: ' + error.message; el.style.display = 'block'; }
+  }
+}
+
+async function uitloggen() {
+  await sb.auth.signOut();
+  showScreen('onboard');
+}
+
+async function laadOfMaakProfiel(user) {
+  console.log('laadOfMaakProfiel voor:', user.email);
+  const { data: profiel, error } = await sb
+    .from('profiles')
+    .select('*')
+    .eq('id', user.id)
+    .maybeSingle();
+
+  console.log('Profiel data:', profiel, 'Error:', error);
+
+  if (profiel && profiel.naam) {
+    currentProfile = profiel;
+    vulProfielIn(profiel);
+    showScreen('app');
+  } else if (profiel && !profiel.naam) {
+    currentProfile = profiel;
+    showScreen('register');
+  } else {
+    console.log('Nieuw profiel aanmaken...');
+    const { data: nieuwProfiel, error: insertError } = await sb
+      .from('profiles')
+      .insert({
+        id: user.id,
+        naam: null,
+        foto_url: user.user_metadata?.avatar_url || null,
+      })
+      .select()
+      .single();
+    console.log('Nieuw profiel:', nieuwProfiel, 'Error:', insertError);
+    currentProfile = nieuwProfiel;
+    showScreen('register');
+  }
+}
+
+function vulProfielIn(profiel) {
+  const naamEls = document.querySelectorAll('.sidebar-user-name');
+  naamEls.forEach(el => { if (profiel.naam) el.textContent = profiel.naam; });
+}
+
+async function slaProfielOp() {
+  if (!currentUser) return;
+
+  const naam = document.getElementById('regNaam')?.value.trim();
+  const leeftijd = document.getElementById('regLeeftijd')?.value;
+  const provincie = document.getElementById('regProvincie')?.value;
+  const stad = document.getElementById('regStad')?.value;
+  const locatie = stad && provincie ? `${stad}, ${provincie}` : stad || provincie || '';
+  const niveau = document.getElementById('regNiveau')?.value;
+  const beschikbaarheid = document.getElementById('regBeschikbaarheid')?.value;
+  const muzieklinks = getMuzieklinks();
+  const muzieklink = muzieklinks.join(', '); // opslaan als komma-gescheiden string
+  const bio = document.getElementById('regBio')?.value.trim();
+
+  const instrumenten = type === 'band'
+    ? [...document.querySelectorAll('#regWijZoeken .chip.selected')].map(c => c.textContent)
+    : [...document.querySelectorAll('#regInstrumenten .chip.selected')].map(c => c.textContent);
+  const genres = [...document.querySelectorAll('#regGenres .chip.selected')].map(c => c.textContent);
+
+  const typeMap = { regMuz: 'muzikant', regBand: 'band', regSessie: 'sessie', regIndustry: 'industry' };
+  let type = 'muzikant';
+  for (const [id, val] of Object.entries(typeMap)) {
+    if (document.getElementById(id)?.classList.contains('active')) { type = val; break; }
+  }
+
+  const err = document.getElementById('regError');
+  if (!naam) { err.textContent = 'Vul je naam in.'; err.style.display = 'block'; return; }
+  if (type !== 'band' && !leeftijd) { err.textContent = 'Vul je leeftijd in.'; err.style.display = 'block'; return; }
+  if (!provincie) { err.textContent = 'Selecteer een provincie.'; err.style.display = 'block'; return; }
+  if (!stad) { err.textContent = 'Selecteer een stad.'; err.style.display = 'block'; return; }
+  err.style.display = 'none';
+
+  console.log('Opslaan voor user:', currentUser.id, 'naam:', naam);
+
+  const { data, error } = await sb
+    .from('profiles')
+    .update({
+      naam,
+      type,
+      leeftijd: leeftijd ? parseInt(leeftijd) : null,
+      locatie,
+      provincie,
+      stad,
+      instrument: instrumenten,
+      genres,
+      niveau,
+      beschikbaarheid,
+      muzieklink,
+      bio,
+      ...(uploadedFotoUrl ? { foto_url: uploadedFotoUrl } : {}),
+      actief_op: new Date().toISOString()
+    })
+    .eq('id', currentUser.id);
+
+  console.log('Update resultaat:', data, 'Error:', error);
+
+  if (error) {
+    const err = document.getElementById('regError');
+    err.textContent = 'Opslaan mislukt: ' + error.message; err.style.display = 'block';
+    return;
+  }
+
+  // Profiel bijwerken in geheugen
+  currentProfile = { ...currentProfile, naam, type, leeftijd, locatie, instrument: instrumenten, genres, niveau, beschikbaarheid, muzieklink, bio };
+
+  // UI updaten
+  vulProfielIn(currentProfile);
+  showScreen('app');
+}
+
+function vulProfielIn(profiel) {
+  if (!profiel) return;
+
+  // Sidebar
+  document.querySelectorAll('.sidebar-user-name').forEach(el => { el.textContent = profiel.naam || 'Mijn profiel'; });
+  document.querySelectorAll('.sidebar-user-role').forEach(el => {
+    const parts = [profiel.type ? profiel.type.charAt(0).toUpperCase() + profiel.type.slice(1) : null, profiel.stad || profiel.locatie].filter(Boolean);
+    el.textContent = parts.join(' · ');
+  });
+
+  // Profiel hero
+  const hero = document.querySelector('#panel-profile .profile-hero');
+  if (hero) {
+    // Naam
+    const naamEl = hero.querySelector('div > div:first-child');
+    if (naamEl) naamEl.textContent = profiel.naam || '';
+    // Sub info
+    const subEl = hero.querySelector('div > div:nth-child(2)');
+    if (subEl) {
+      const parts = [
+        profiel.type ? profiel.type.charAt(0).toUpperCase() + profiel.type.slice(1) : null,
+        profiel.stad || profiel.locatie,
+        profiel.leeftijd ? profiel.leeftijd + ' jaar' : null
+      ].filter(Boolean);
+      subEl.textContent = parts.join(' · ');
+    }
+    // Tags
+    const tagsEl = hero.querySelector('div > div:nth-child(3)');
+    if (tagsEl && profiel.genres?.length) {
+      const allTags = [...(profiel.genres || []).slice(0,2), ...(profiel.instrument || []).slice(0,2), profiel.niveau].filter(Boolean);
+      tagsEl.innerHTML = allTags.map(t => `<span class="tag" style="padding:5px 12px;">${t}</span>`).join('');
+    }
+    // Avatar foto
+    if (profiel.foto_url) {
+      const av = hero.querySelector('.profile-big-av');
+      if (av) av.innerHTML = `<img src="${profiel.foto_url}" style="width:100%;height:100%;object-fit:cover;border-radius:17px;"/>`;
+    }
+  }
+
+  // Profiel rijen
+  const setRij = (label, waarde) => {
+    document.querySelectorAll('.profile-row').forEach(row => {
+      if (row.querySelector('.profile-row-label')?.textContent.trim().endsWith(label)) {
+        const val = row.querySelector('.profile-row-value');
+        if (val) val.textContent = waarde || '—';
+      }
+    });
+  };
+  setRij('Type', profiel.type ? profiel.type.charAt(0).toUpperCase() + profiel.type.slice(1) : '—');
+  setRij('Instrument', profiel.instrument?.join(', ') || '—');
+  setRij('Locatie', profiel.stad && profiel.provincie ? `${profiel.stad}, ${profiel.provincie}` : profiel.locatie || '—');
+  setRij('Leeftijd', profiel.leeftijd ? profiel.leeftijd + ' jaar' : '—');
+  setRij('Niveau', profiel.niveau || '—');
+  setRij('Muzieklinks', profiel.muzieklink || '—');
+
+  // Bio apart updaten
+  const bioEl = document.getElementById('profileBioText');
+  if (bioEl) bioEl.textContent = profiel.bio || '—';
+}
+
+// ═══════════════ INIT ═══════════════
+updateAge();
+setTimeout(initToggle, 50);
+</script>
+
+</body>
+</html>
