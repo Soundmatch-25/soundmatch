@@ -2595,16 +2595,16 @@ async function slaProfielOp() {
   const muzieklink = muzieklinks.join(', '); // opslaan als komma-gescheiden string
   const bio = document.getElementById('regBio')?.value.trim();
 
-  const instrumenten = type === 'band'
-    ? [...document.querySelectorAll('#regWijZoeken .chip.selected')].map(c => c.textContent)
-    : [...document.querySelectorAll('#regInstrumenten .chip.selected')].map(c => c.textContent);
-  const genres = [...document.querySelectorAll('#regGenres .chip.selected')].map(c => c.textContent);
-
   const typeMap = { regMuz: 'muzikant', regBand: 'band', regSessie: 'sessie', regIndustry: 'industry' };
   let type = 'muzikant';
   for (const [id, val] of Object.entries(typeMap)) {
     if (document.getElementById(id)?.classList.contains('active')) { type = val; break; }
   }
+
+  const instrumenten = type === 'band'
+    ? [...document.querySelectorAll('#regWijZoeken .chip.selected')].map(c => c.textContent)
+    : [...document.querySelectorAll('#regInstrumenten .chip.selected')].map(c => c.textContent);
+  const genres = [...document.querySelectorAll('#regGenres .chip.selected')].map(c => c.textContent);
 
   const err = document.getElementById('regError');
   if (!naam) { err.textContent = 'Vul je naam in.'; err.style.display = 'block'; return; }
