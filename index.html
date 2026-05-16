@@ -1635,20 +1635,20 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
       <div class="dual-range">
         <div class="range-track"></div>
         <div class="range-fill" id="rangeFill"></div>
-        <input type="range" id="ageMin" min="16" max="70" value="18" step="1" oninput="updateAge()"/>
-        <input type="range" id="ageMax" min="16" max="70" value="45" step="1" oninput="updateAge()"/>
+        <input type="range" id="ageMin" min="16" max="100" value="18" step="1" oninput="updateAge()"/>
+        <input type="range" id="ageMax" min="16" max="100" value="45" step="1" oninput="updateAge()"/>
       </div>
     </div>
     <div>
       <div class="field-label">Instrument</div>
       <div class="chip-group">
-        <div class="chip selected" onclick="tc(this)">Alles</div><div class="chip" onclick="tc(this)">Gitaar</div><div class="chip" onclick="tc(this)">Basgitaar</div><div class="chip" onclick="tc(this)">Drums</div><div class="chip" onclick="tc(this)">Zang</div><div class="chip" onclick="tc(this)">Keys / Piano</div><div class="chip" onclick="tc(this)">DJ</div><div class="chip" onclick="tc(this)">Producer</div>
+        <div class="chip selected" onclick="tc(this)">Alles</div><div class="chip" onclick="tc(this)">Gitaar</div><div class="chip" onclick="tc(this)">Basgitaar</div><div class="chip" onclick="tc(this)">Drums</div><div class="chip" onclick="tc(this)">Percussie</div><div class="chip" onclick="tc(this)">Zang</div><div class="chip" onclick="tc(this)">Keys / Piano</div><div class="chip" onclick="tc(this)">Synthesizer</div><div class="chip" onclick="tc(this)">Viool</div><div class="chip" onclick="tc(this)">Cello</div><div class="chip" onclick="tc(this)">Trompet</div><div class="chip" onclick="tc(this)">Saxofoon</div><div class="chip" onclick="tc(this)">Trombone</div><div class="chip" onclick="tc(this)">DJ</div><div class="chip" onclick="tc(this)">Producer</div><div class="chip" onclick="tc(this)">Ukulele</div><div class="chip" onclick="tc(this)">Banjo</div><div class="chip" onclick="tc(this)">Overig</div>
       </div>
     </div>
     <div>
       <div class="field-label">Genre</div>
       <div class="chip-group">
-        <div class="chip selected" onclick="tc(this)">Alles</div><div class="chip" onclick="tc(this)">Rock</div><div class="chip" onclick="tc(this)">Alt-Rock</div><div class="chip" onclick="tc(this)">Prog Rock</div><div class="chip" onclick="tc(this)">Punk</div><div class="chip" onclick="tc(this)">Metal</div><div class="chip" onclick="tc(this)">Pop</div><div class="chip" onclick="tc(this)">Jazz</div><div class="chip" onclick="tc(this)">Blues</div><div class="chip" onclick="tc(this)">Funk</div><div class="chip" onclick="tc(this)">Electronic</div><div class="chip" onclick="tc(this)">Folk</div>
+        <div class="chip selected" onclick="tc(this)">Alles</div><div class="chip" onclick="tc(this)">Rock</div><div class="chip" onclick="tc(this)">Classic Rock</div><div class="chip" onclick="tc(this)">Alt-Rock</div><div class="chip" onclick="tc(this)">Indie Rock</div><div class="chip" onclick="tc(this)">Prog Rock</div><div class="chip" onclick="tc(this)">Punk</div><div class="chip" onclick="tc(this)">Pop-Punk</div><div class="chip" onclick="tc(this)">Hardcore</div><div class="chip" onclick="tc(this)">Metal</div><div class="chip" onclick="tc(this)">Heavy Metal</div><div class="chip" onclick="tc(this)">Pop</div><div class="chip" onclick="tc(this)">Indie Pop</div><div class="chip" onclick="tc(this)">Jazz</div><div class="chip" onclick="tc(this)">Blues</div><div class="chip" onclick="tc(this)">Soul</div><div class="chip" onclick="tc(this)">R&amp;B</div><div class="chip" onclick="tc(this)">Funk</div><div class="chip" onclick="tc(this)">Hip-hop</div><div class="chip" onclick="tc(this)">Electronic</div><div class="chip" onclick="tc(this)">House</div><div class="chip" onclick="tc(this)">Techno</div><div class="chip" onclick="tc(this)">Folk</div><div class="chip" onclick="tc(this)">Country</div><div class="chip" onclick="tc(this)">Reggae</div><div class="chip" onclick="tc(this)">Ska</div><div class="chip" onclick="tc(this)">Klassiek</div><div class="chip" onclick="tc(this)">Overig</div>
       </div>
     </div>
     <div>
@@ -2434,7 +2434,7 @@ function updateAge() {
     else { max=min+2; document.getElementById('ageMax').value=max; }
   }
   document.getElementById('ageLabel').textContent = min+' – '+max;
-  const p1=(min-16)/(70-16)*100, p2=(max-16)/(70-16)*100;
+  const p1=(min-16)/(100-16)*100, p2=(max-16)/(100-16)*100;
   document.getElementById('rangeFill').style.left = p1+'%';
   document.getElementById('rangeFill').style.width = (p2-p1)+'%';
 }
