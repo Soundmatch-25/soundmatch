@@ -1417,143 +1417,131 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
 
     <!-- ── ADVERTENTIES PANEL ── -->
     <div class="panel" id="panel-ads">
-      <div class="panel-header" style="display:flex;align-items:flex-start;justify-content:space-between;flex-direction:row;gap:16px;">
-        <div>
-          <h2>Mijn Advertenties</h2>
-          <div style="font-size:14px;color:var(--sub);margin-top:4px;font-weight:400;">Maak meerdere advertenties — één per band, instrument of project.</div>
+
+      <!-- OVERZICHT -->
+      <div id="adOverzicht" style="display:flex;flex-direction:column;height:100%;overflow:hidden;">
+        <div class="panel-header" style="display:flex;align-items:center;justify-content:space-between;gap:16px;">
+          <div>
+            <h2>Mijn Advertenties</h2>
+            <div style="font-size:14px;color:var(--sub);margin-top:4px;font-weight:400;">Maak meerdere advertenties — één per band, instrument of project.</div>
+          </div>
+          <button class="btn btn-primary btn-sm" style="flex-shrink:0;" onclick="toonAdFormulier()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Nieuwe advertentie
+          </button>
         </div>
-        <button class="btn btn-primary btn-sm" style="flex-shrink:0;margin-top:4px;" onclick="showAdForm()">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          Nieuwe advertentie
-        </button>
+        <div style="flex:1;overflow-y:auto;padding:20px 28px 32px;display:flex;flex-direction:column;align-items:center;" id="adPanelList"></div>
       </div>
 
-      <!-- AD LIST -->
-      <div style="flex:1;overflow-y:auto;padding:20px 28px 32px;display:flex;flex-direction:column;align-items:center;" id="adPanelList">
-      </div>
+      <!-- FORMULIER (zelfde structuur als profielformulier) -->
+      <div id="adFormulier" style="display:none;flex-direction:column;height:100%;overflow:hidden;">
+        <div class="panel-header" style="display:flex;align-items:center;gap:14px;">
+          <button type="button" onclick="verbergAdFormulier()" style="width:36px;height:36px;border-radius:50%;border:1px solid var(--border);background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--sub);flex-shrink:0;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+          </button>
+          <h2>Nieuwe advertentie</h2>
+        </div>
 
-      <!-- AD FORM (inline, verborgen) -->
-      <div id="adFormWrap" style="display:none;position:absolute;inset:0;background:var(--bg);z-index:10;overflow-y:auto;border-radius:inherit;">
-        <div style="padding:28px;max-width:680px;display:flex;flex-direction:column;gap:20px;">
-          <div style="display:flex;align-items:center;gap:16px;">
-            <button onclick="hideAdForm()" style="width:36px;height:36px;border-radius:50%;border:1px solid var(--border);background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--sub);flex-shrink:0;">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
-            </button>
+        <div style="flex:1;overflow-y:auto;">
+          <div style="padding:24px 28px;max-width:600px;display:flex;flex-direction:column;gap:16px;align-self:center;width:100%;">
+
+            <!-- Foto -->
+            <div style="text-align:center;">
+              <div id="adFotoPreview" onclick="document.getElementById('adFotoInput').click()" style="width:90px;height:90px;border-radius:22px;background:var(--grad);display:flex;align-items:center;justify-content:center;cursor:pointer;margin:0 auto;border:3px solid rgba(124,77,255,0.4);overflow:hidden;">
+                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+              </div>
+              <input type="file" id="adFotoInput" accept="image/jpeg,image/png,image/webp" style="display:none;" onchange="handleAdFoto(this)"/>
+              <div style="font-size:12px;color:var(--sub);margin-top:8px;">Klik om foto toe te voegen</div>
+            </div>
+
+            <!-- Type -->
             <div>
-              <div style="font-family:var(--font-head);font-size:20px;font-weight:800;" id="adFormHeading">Nieuwe advertentie</div>
-              <div style="font-size:13px;color:var(--sub);margin-top:2px;">Vul in wat je zoekt of aanbiedt</div>
-            </div>
-          </div>
-
-          <div>
-            <div class="field-label">Foto</div>
-            <div style="display:flex;align-items:center;gap:16px;">
-              <div id="adPhotoPreview" onclick="document.getElementById('adPhotoInput').click()" style="width:80px;height:80px;border-radius:18px;background:var(--grad);display:flex;align-items:center;justify-content:center;border:2px solid rgba(124,77,255,0.3);cursor:pointer;flex-shrink:0;overflow:hidden;">
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
-              </div>
-              <div>
-                <button class="btn btn-sm" style="background:var(--card2);border:1px solid var(--border);color:var(--sub);gap:6px;" onclick="document.getElementById('adPhotoInput').click()">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                  Foto uploaden
-                </button>
-                <input type="file" id="adPhotoInput" accept="image/*" style="display:none;" onchange="previewAdPhoto(this)"/>
-                <div style="font-size:12px;color:var(--sub);margin-top:6px;">JPG, PNG of WebP · Max 5MB</div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Type -->
-          <div>
-            <div class="field-label">Type advertentie</div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-              <div class="type-card active" id="adFormTypeMuz" onclick="setAdFormType('muzikant')">
-                <div class="type-card-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>
-                <div class="type-card-label">Muzikant</div>
-                <div class="type-card-sub">Ik zoek een band</div>
-              </div>
-              <div class="type-card" id="adFormTypeBand" onclick="setAdFormType('band')">
-                <div class="type-card-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="12" r="1"/><circle cx="15" cy="12" r="1"/><path d="M8 20v-2a4 4 0 0 1 8 0v2"/><path d="M3 20v-2a7 7 0 0 1 3-5.8"/><path d="M21 20v-2a7 7 0 0 0-3-5.8"/><circle cx="12" cy="7" r="3"/><circle cx="5" cy="8" r="2"/><circle cx="19" cy="8" r="2"/></svg></div>
-                <div class="type-card-label">Band</div>
-                <div class="type-card-sub">Ik zoek bandleden</div>
-              </div>
-              <div class="type-card" id="adFormTypeSessie" onclick="setAdFormType('sessie')">
-                <div class="type-card-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg></div>
-                <div class="type-card-label">Sessiemuzikant</div>
-                <div class="type-card-sub">Losse opdrachten</div>
-              </div>
-              <div class="type-card" id="adFormTypeIndustry" onclick="setAdFormType('industry')">
-                <div class="type-card-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg></div>
-                <div class="type-card-label">Industry</div>
-                <div class="type-card-sub">Technicus / producer</div>
+              <div class="field-label">Type advertentie</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                <div class="type-card active" id="adTypeMuz" onclick="setAdTypeNieuw('muzikant')">
+                  <div class="type-card-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>
+                  <div class="type-card-label">Muzikant</div>
+                  <div class="type-card-sub">Ik zoek een band</div>
+                </div>
+                <div class="type-card" id="adTypeBand" onclick="setAdTypeNieuw('band')">
+                  <div class="type-card-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="12" r="1"/><circle cx="15" cy="12" r="1"/><path d="M8 20v-2a4 4 0 0 1 8 0v2"/><path d="M3 20v-2a7 7 0 0 1 3-5.8"/><path d="M21 20v-2a7 7 0 0 0-3-5.8"/><circle cx="12" cy="7" r="3"/><circle cx="5" cy="8" r="2"/><circle cx="19" cy="8" r="2"/></svg></div>
+                  <div class="type-card-label">Band</div>
+                  <div class="type-card-sub">Ik zoek bandleden</div>
+                </div>
+                <div class="type-card" id="adTypeSessie" onclick="setAdTypeNieuw('sessie')">
+                  <div class="type-card-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg></div>
+                  <div class="type-card-label">Sessiemuzikant</div>
+                  <div class="type-card-sub">Losse opdrachten</div>
+                </div>
+                <div class="type-card" id="adTypeIndustry" onclick="setAdTypeNieuw('industry')">
+                  <div class="type-card-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg></div>
+                  <div class="type-card-label">Industry</div>
+                  <div class="type-card-sub">Technicus / producer</div>
+                </div>
               </div>
             </div>
-          </div>
 
-          <div>
-            <div class="field-label" id="adFormTitelLabel">Titel</div>
-            <input class="input-field" id="adFormTitle" placeholder="bijv. Gitarist zoekt rockband"/>
-          </div>
-
-          <!-- Instrument velden (muzikant/sessie/industry) -->
-          <div id="adVeldenMuzikant">
-            <div class="field-label">Instrument(en)</div>
-            <div class="chip-group" id="adFormInstruments">
-              <div class="chip" onclick="tc(this)">Gitaar</div><div class="chip" onclick="tc(this)">Basgitaar</div><div class="chip" onclick="tc(this)">Drums</div><div class="chip" onclick="tc(this)">Percussie</div><div class="chip" onclick="tc(this)">Zang</div><div class="chip" onclick="tc(this)">Keys / Piano</div><div class="chip" onclick="tc(this)">Synthesizer</div><div class="chip" onclick="tc(this)">Viool</div><div class="chip" onclick="tc(this)">Cello</div><div class="chip" onclick="tc(this)">Trompet</div><div class="chip" onclick="tc(this)">Saxofoon</div><div class="chip" onclick="tc(this)">Trombone</div><div class="chip" onclick="tc(this)">DJ</div><div class="chip" onclick="tc(this)">Producer</div><div class="chip" onclick="tc(this)">Ukulele</div><div class="chip" onclick="tc(this)">Banjo</div><div class="chip" onclick="tc(this)">Overig</div>
-            </div>
-          </div>
-
-          <!-- Wij zoeken velden (band) -->
-          <div id="adVeldenBand" style="display:none;">
-            <div class="field-label">Wij zoeken...</div>
-            <div class="chip-group" id="adFormWijZoeken">
-              <div class="chip" onclick="tc(this)">Gitarist</div><div class="chip" onclick="tc(this)">Bassist</div><div class="chip" onclick="tc(this)">Drummer</div><div class="chip" onclick="tc(this)">Zanger/es</div><div class="chip" onclick="tc(this)">Toetsenist</div><div class="chip" onclick="tc(this)">Saxofonist</div><div class="chip" onclick="tc(this)">Trompettist</div><div class="chip" onclick="tc(this)">Violist</div><div class="chip" onclick="tc(this)">DJ</div><div class="chip" onclick="tc(this)">Producer</div><div class="chip" onclick="tc(this)">Overig</div>
-            </div>
-          </div>
-
-          <div>
-            <div class="field-label">Genre(s)</div>
-            <div class="chip-group" id="adFormGenres">
-              <div class="chip" onclick="tc(this)">Rock</div><div class="chip" onclick="tc(this)">Classic Rock</div><div class="chip" onclick="tc(this)">Alt-Rock</div><div class="chip" onclick="tc(this)">Indie Rock</div><div class="chip" onclick="tc(this)">Prog Rock</div><div class="chip" onclick="tc(this)">Punk</div><div class="chip" onclick="tc(this)">Pop-Punk</div><div class="chip" onclick="tc(this)">Hardcore</div><div class="chip" onclick="tc(this)">Metal</div><div class="chip" onclick="tc(this)">Heavy Metal</div><div class="chip" onclick="tc(this)">Pop</div><div class="chip" onclick="tc(this)">Indie Pop</div><div class="chip" onclick="tc(this)">Jazz</div><div class="chip" onclick="tc(this)">Blues</div><div class="chip" onclick="tc(this)">Soul</div><div class="chip" onclick="tc(this)">R&amp;B</div><div class="chip" onclick="tc(this)">Funk</div><div class="chip" onclick="tc(this)">Hip-hop</div><div class="chip" onclick="tc(this)">Electronic</div><div class="chip" onclick="tc(this)">House</div><div class="chip" onclick="tc(this)">Techno</div><div class="chip" onclick="tc(this)">Folk</div><div class="chip" onclick="tc(this)">Country</div><div class="chip" onclick="tc(this)">Reggae</div><div class="chip" onclick="tc(this)">Ska</div><div class="chip" onclick="tc(this)">Klassiek</div><div class="chip" onclick="tc(this)">Overig</div>
-            </div>
-          </div>
-
-          <!-- Niveau + Beschikbaarheid (niet voor bands) -->
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;" id="adNiveauRij">
+            <!-- Titel -->
             <div>
-              <div class="field-label">Niveau</div>
-              <select class="select-field" id="adFormLevel"><option>Beginner</option><option selected>Gevorderd</option><option>Professioneel</option></select>
+              <div class="field-label" id="adTitelLabel">Naam *</div>
+              <input class="input-field" id="adNaam" placeholder="Jouw naam"/>
             </div>
-            <div>
-              <div class="field-label">Beschikbaarheid</div>
-              <select class="select-field" id="adFormAvail"><option>Hobby</option><option selected>Serieus</option><option>Professioneel / betaald</option></select>
-            </div>
-          </div>
 
-          <div>
-            <div class="field-label">Beschrijving</div>
-            <textarea class="input-field" id="adFormDesc" rows="4" style="resize:none;overflow:hidden;" placeholder="Vertel wie je bent, wat je zoekt, welke muziek je maakt..." oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"></textarea>
-          </div>
-
-          <div>
-            <div class="field-label">Link(s) naar muziek <span style="color:var(--sub);font-weight:400;">(optioneel)</span></div>
-            <div id="adMuzieklinks" style="display:flex;flex-direction:column;gap:8px;">
-              <div style="display:flex;gap:8px;align-items:center;">
-                <input class="input-field" style="flex:1;" placeholder="SoundCloud, YouTube, Spotify, Instagram..."/>
-                <button type="button" onclick="voegAdLinkToe()" style="width:36px;height:44px;border-radius:10px;border:1px solid var(--border);background:var(--card2);color:var(--sub);cursor:pointer;font-size:20px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">+</button>
+            <!-- Instrumenten (muzikant/sessie/industry) -->
+            <div id="adVeldenMuz">
+              <div class="field-label">Instrument(en)</div>
+              <div class="chip-group" id="adInstrumenten">
+                <div class="chip" onclick="tc(this)">Gitaar</div><div class="chip" onclick="tc(this)">Basgitaar</div><div class="chip" onclick="tc(this)">Drums</div><div class="chip" onclick="tc(this)">Percussie</div><div class="chip" onclick="tc(this)">Zang</div><div class="chip" onclick="tc(this)">Keys / Piano</div><div class="chip" onclick="tc(this)">Synthesizer</div><div class="chip" onclick="tc(this)">Viool</div><div class="chip" onclick="tc(this)">Cello</div><div class="chip" onclick="tc(this)">Trompet</div><div class="chip" onclick="tc(this)">Saxofoon</div><div class="chip" onclick="tc(this)">Trombone</div><div class="chip" onclick="tc(this)">DJ</div><div class="chip" onclick="tc(this)">Producer</div><div class="chip" onclick="tc(this)">Ukulele</div><div class="chip" onclick="tc(this)">Banjo</div><div class="chip" onclick="tc(this)">Overig</div>
               </div>
             </div>
-          </div>
 
-          <div style="display:flex;gap:12px;padding-bottom:16px;">
-            <button type="button" class="btn btn-ghost" style="flex:1;" onclick="hideAdForm()">Annuleren</button>
-            <button type="button" class="btn btn-primary" style="flex:2;" onclick="saveAdPanel()">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
-              Advertentie opslaan
-            </button>
+            <!-- Wij zoeken (band) -->
+            <div id="adVeldenBand" style="display:none;">
+              <div class="field-label">Wij zoeken...</div>
+              <div class="chip-group" id="adWijZoeken">
+                <div class="chip" onclick="tc(this)">Gitarist</div><div class="chip" onclick="tc(this)">Bassist</div><div class="chip" onclick="tc(this)">Drummer</div><div class="chip" onclick="tc(this)">Zanger/es</div><div class="chip" onclick="tc(this)">Toetsenist</div><div class="chip" onclick="tc(this)">Saxofonist</div><div class="chip" onclick="tc(this)">Trompettist</div><div class="chip" onclick="tc(this)">Violist</div><div class="chip" onclick="tc(this)">DJ</div><div class="chip" onclick="tc(this)">Producer</div><div class="chip" onclick="tc(this)">Overig</div>
+              </div>
+            </div>
+
+            <!-- Genres -->
+            <div>
+              <div class="field-label">Genre(s)</div>
+              <div class="chip-group" id="adGenres">
+                <div class="chip" onclick="tc(this)">Rock</div><div class="chip" onclick="tc(this)">Classic Rock</div><div class="chip" onclick="tc(this)">Alt-Rock</div><div class="chip" onclick="tc(this)">Indie Rock</div><div class="chip" onclick="tc(this)">Prog Rock</div><div class="chip" onclick="tc(this)">Punk</div><div class="chip" onclick="tc(this)">Pop-Punk</div><div class="chip" onclick="tc(this)">Hardcore</div><div class="chip" onclick="tc(this)">Metal</div><div class="chip" onclick="tc(this)">Heavy Metal</div><div class="chip" onclick="tc(this)">Pop</div><div class="chip" onclick="tc(this)">Indie Pop</div><div class="chip" onclick="tc(this)">Jazz</div><div class="chip" onclick="tc(this)">Blues</div><div class="chip" onclick="tc(this)">Soul</div><div class="chip" onclick="tc(this)">R&amp;B</div><div class="chip" onclick="tc(this)">Funk</div><div class="chip" onclick="tc(this)">Hip-hop</div><div class="chip" onclick="tc(this)">Electronic</div><div class="chip" onclick="tc(this)">House</div><div class="chip" onclick="tc(this)">Techno</div><div class="chip" onclick="tc(this)">Folk</div><div class="chip" onclick="tc(this)">Country</div><div class="chip" onclick="tc(this)">Reggae</div><div class="chip" onclick="tc(this)">Ska</div><div class="chip" onclick="tc(this)">Klassiek</div><div class="chip" onclick="tc(this)">Overig</div>
+              </div>
+            </div>
+
+            <!-- Niveau + beschikbaarheid (niet voor bands) -->
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;" id="adNiveauRij">
+              <div><div class="field-label">Niveau</div><select class="select-field" id="adNiveau"><option>Beginner</option><option selected>Gevorderd</option><option>Professioneel</option></select></div>
+              <div><div class="field-label">Beschikbaarheid</div><select class="select-field" id="adBeschikbaarheid"><option>Hobby</option><option selected>Serieus</option><option>Professioneel</option></select></div>
+            </div>
+
+            <!-- Links -->
+            <div>
+              <div class="field-label">Link(s) naar muziek <span style="color:var(--sub);font-weight:400;">(optioneel)</span></div>
+              <div id="adLinks" style="display:flex;flex-direction:column;gap:8px;">
+                <div style="display:flex;gap:8px;align-items:center;">
+                  <input class="input-field" style="flex:1;" placeholder="SoundCloud, YouTube, Spotify, Instagram..."/>
+                  <button type="button" onclick="voegAdLink()" style="width:36px;height:44px;border-radius:10px;border:1px solid var(--border);background:var(--card2);color:var(--sub);cursor:pointer;font-size:20px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">+</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Bio -->
+            <div>
+              <div class="field-label">Beschrijving</div>
+              <textarea class="input-field" id="adBio" rows="3" style="resize:none;overflow:hidden;" placeholder="Vertel iets over jezelf, wat je zoekt, wanneer je beschikbaar bent..." oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"></textarea>
+            </div>
+
+            <div id="adError" style="font-size:13px;color:#ff8a80;display:none;padding:10px 14px;background:rgba(255,82,82,0.1);border-radius:10px;border:1px solid rgba(255,82,82,0.3);"></div>
+
+            <button type="button" class="btn btn-primary btn-full" style="padding:16px;" onclick="slaAdvertentieOp()">Advertentie opslaan →</button>
+            <div style="height:16px;"></div>
           </div>
         </div>
       </div>
-    </div>
+
 
   </div><!-- /main-content -->
 
@@ -2029,40 +2017,102 @@ async function laadMijnAdvertenties() {
   });
 }
 
-async function saveAdPanel() {
-  if (!currentUser) { alert('Niet ingelogd'); return; }
-  
-  console.log('saveAdPanel aangeroepen');
-  const titelEl = document.getElementById('adFormTitle');
-  console.log('adFormTitle element:', titelEl);
-  if (!titelEl) { alert('Formulier niet gevonden - probeer opnieuw'); return; }
-  const titel = titelEl.value.trim();
-  if (!titel) { alert('Geef je advertentie een titel.'); return; }
+// ═══════════════ ADVERTENTIE FORMULIER ═══════════════
+function toonAdFormulier() {
+  document.getElementById('adOverzicht').style.display = 'none';
+  document.getElementById('adFormulier').style.display = 'flex';
+  // Reset formulier
+  document.getElementById('adNaam').value = '';
+  document.getElementById('adBio').value = '';
+  document.getElementById('adNiveau').value = 'Gevorderd';
+  document.getElementById('adBeschikbaarheid').value = 'Serieus';
+  document.querySelectorAll('#adInstrumenten .chip, #adGenres .chip, #adWijZoeken .chip').forEach(c => c.classList.remove('selected'));
+  // Reset links
+  document.getElementById('adLinks').innerHTML = `<div style="display:flex;gap:8px;align-items:center;"><input class="input-field" style="flex:1;" placeholder="SoundCloud, YouTube, Spotify, Instagram..."/><button type="button" onclick="voegAdLink()" style="width:36px;height:44px;border-radius:10px;border:1px solid var(--border);background:var(--card2);color:var(--sub);cursor:pointer;font-size:20px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">+</button></div>`;
+  // Reset type naar muzikant
+  setAdTypeNieuw('muzikant');
+  // Reset foto
+  document.getElementById('adFotoPreview').innerHTML = '<svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>';
+  document.getElementById('adError').style.display = 'none';
+}
 
-  const type = document.getElementById('adFormTypeBand')?.classList.contains('active') ? 'band'
-    : document.getElementById('adFormTypeSessie')?.classList.contains('active') ? 'sessie'
-    : document.getElementById('adFormTypeIndustry')?.classList.contains('active') ? 'industry' : 'muzikant';
+function verbergAdFormulier() {
+  document.getElementById('adFormulier').style.display = 'none';
+  document.getElementById('adOverzicht').style.display = 'flex';
+}
 
-  const isBand = type === 'band';
+function setAdTypeNieuw(adType) {
+  ['adTypeMuz','adTypeBand','adTypeSessie','adTypeIndustry'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const t = id === 'adTypeMuz' ? 'muzikant' : id === 'adTypeBand' ? 'band' : id === 'adTypeSessie' ? 'sessie' : 'industry';
+    el.classList.toggle('active', t === adType);
+  });
+  const isBand = adType === 'band';
+  document.getElementById('adVeldenMuz').style.display = isBand ? 'none' : 'block';
+  document.getElementById('adVeldenBand').style.display = isBand ? 'block' : 'none';
+  document.getElementById('adNiveauRij').style.display = isBand ? 'none' : '';
+  const label = document.getElementById('adTitelLabel');
+  if (label) label.textContent = isBand ? 'Bandnaam *' : 'Naam *';
+  const input = document.getElementById('adNaam');
+  if (input) input.placeholder = isBand ? 'Naam van de band' : 'Jouw naam';
+}
+
+function voegAdLink() {
+  const container = document.getElementById('adLinks');
+  const div = document.createElement('div');
+  div.style.cssText = 'display:flex;gap:8px;align-items:center;';
+  div.innerHTML = '<input class="input-field" style="flex:1;" placeholder="SoundCloud, YouTube, Spotify..."/><button type="button" onclick="this.parentElement.remove()" style="width:36px;height:44px;border-radius:10px;border:1px solid rgba(229,57,53,0.3);background:rgba(229,57,53,0.1);color:#e53935;cursor:pointer;font-size:20px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">&#215;</button>';
+  container.appendChild(div);
+}
+
+async function handleAdFoto(input) {
+  if (!input.files || !input.files[0]) return;
+  const scaled = await schaalFoto(input.files[0], 400);
+  document.getElementById('adFotoPreview').innerHTML = `<img src="${scaled.dataUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:19px;"/>`;
+}
+
+async function slaAdvertentieOp() {
+  if (!currentUser) return;
+
+  const naam = document.getElementById('adNaam')?.value.trim();
+  const bio = document.getElementById('adBio')?.value.trim();
+  const niveau = document.getElementById('adNiveau')?.value;
+  const beschikbaarheid = document.getElementById('adBeschikbaarheid')?.value;
+
+  // Type bepalen
+  const adType = document.getElementById('adTypeBand')?.classList.contains('active') ? 'band'
+    : document.getElementById('adTypeSessie')?.classList.contains('active') ? 'sessie'
+    : document.getElementById('adTypeIndustry')?.classList.contains('active') ? 'industry' : 'muzikant';
+
+  const isBand = adType === 'band';
   const instrumenten = isBand
-    ? [...document.querySelectorAll('#adFormWijZoeken .chip.selected')].map(c => c.textContent)
-    : [...document.querySelectorAll('#adFormInstruments .chip.selected')].map(c => c.textContent);
-  const genres = [...document.querySelectorAll('#adFormGenres .chip.selected')].map(c => c.textContent);
-  const niveau = isBand ? null : document.getElementById('adFormLevel')?.value;
-  const beschikbaarheid = isBand ? null : document.getElementById('adFormAvail')?.value;
-  const omschrijving = document.getElementById('adFormDesc')?.value.trim();
-  const muzieklinks = getAdLinks();
+    ? [...document.querySelectorAll('#adWijZoeken .chip.selected')].map(c => c.textContent)
+    : [...document.querySelectorAll('#adInstrumenten .chip.selected')].map(c => c.textContent);
+  const genres = [...document.querySelectorAll('#adGenres .chip.selected')].map(c => c.textContent);
+  const links = [...document.querySelectorAll('#adLinks input')].map(i => i.value.trim()).filter(Boolean).join(', ');
 
-  console.log('Advertentie opslaan:', { titel, type, instrumenten, genres, niveau, beschikbaarheid, omschrijving, muzieklinks });
+  // Validatie
+  const errEl = document.getElementById('adError');
+  if (!naam) { errEl.textContent = 'Vul je naam in.'; errEl.style.display = 'block'; return; }
+  errEl.style.display = 'none';
 
   const { error } = await sb.from('advertenties').insert({
-    user_id: currentUser.id, titel, type, instrumenten, genres, niveau, beschikbaarheid, omschrijving, muzieklinks, actief: true
+    user_id: currentUser.id,
+    titel: naam,
+    type: adType,
+    instrumenten,
+    genres,
+    niveau: isBand ? null : niveau,
+    beschikbaarheid: isBand ? null : beschikbaarheid,
+    omschrijving: bio,
+    muzieklinks: links,
+    actief: true
   });
 
-  console.log('Insert error:', error);
-  if (error) { alert('Opslaan mislukt: ' + error.message); return; }
+  if (error) { errEl.textContent = 'Opslaan mislukt: ' + error.message; errEl.style.display = 'block'; return; }
 
-  hideAdForm();
+  verbergAdFormulier();
   laadMijnAdvertenties();
   const t = document.getElementById('toast');
   t.textContent = 'Advertentie opgeslagen!'; t.classList.add('show');
@@ -2207,19 +2257,11 @@ function schaalFoto(file, maxSize) {
     reader.readAsDataURL(file);
   });
 }
-function voegAdLinkToe() {
-  const container = document.getElementById('adMuzieklinks');
-  if (!container) return;
-  const div = document.createElement('div');
-  div.style.cssText = 'display:flex;gap:8px;align-items:center;';
-  div.innerHTML = `<input class="input-field" style="flex:1;" placeholder="SoundCloud, YouTube, Spotify..."/>
-    <button type="button" onclick="this.parentElement.remove()" style="width:36px;height:44px;border-radius:10px;border:1px solid rgba(229,57,53,0.3);background:rgba(229,57,53,0.1);color:#e53935;cursor:pointer;font-size:20px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">&#215;</button>`;
-  container.appendChild(div);
-}
+function openChat() { showPanel('messages'); }
 
-function getAdLinks() {
-  const inputs = document.querySelectorAll('#adMuzieklinks input');
-  return [...inputs].map(i => i.value.trim()).filter(Boolean).join(', ');
+function selectMsg(el) {
+  document.querySelectorAll('.msg-item').forEach(m => m.classList.remove('active'));
+  el.classList.add('active');
 }
 function voegLinkToe() {
   const container = document.getElementById('muzieklinks');
@@ -2287,142 +2329,6 @@ function showPanel(id) {
   if (id==='liked') laadSwipeHistory();
   if (id==='messages') laadMatches();
   if (id==='ads') laadMijnAdvertenties();
-}
-
-// ═══════════════ ADVERTENTIE PANEL ═══════════════
-let adCounter = 0;
-let currentEditId = null;
-
-function showAdForm(editId) {
-  currentEditId = editId || null;
-  document.getElementById('adFormHeading').textContent = editId ? 'Advertentie bewerken' : 'Nieuwe advertentie';
-  document.getElementById('adFormWrap').style.display = 'block';
-  // Reset form
-  if (!editId) {
-    document.getElementById('adFormTitle').value = '';
-    document.getElementById('adFormDesc').value = '';
-    // Reset links container
-    const adLinks = document.getElementById('adMuzieklinks');
-    if (adLinks) adLinks.innerHTML = `<div style="display:flex;gap:8px;align-items:center;"><input class="input-field" style="flex:1;" placeholder="SoundCloud, YouTube, Spotify, Instagram..."/><button type="button" onclick="voegAdLinkToe()" style="width:36px;height:44px;border-radius:10px;border:1px solid var(--border);background:var(--card2);color:var(--sub);cursor:pointer;font-size:20px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">+</button></div>`;
-    const prev = document.getElementById('adPhotoPreview');
-    if (prev) prev.innerHTML = '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>';
-    document.querySelectorAll('#adFormInstruments .chip, #adFormGenres .chip, #adFormWijZoeken .chip').forEach(c => c.classList.remove('selected'));
-  }
-}
-
-function hideAdForm() {
-  document.getElementById('adFormWrap').style.display = 'none';
-}
-
-function setAdFormType(type) {
-  ['adFormTypeMuz','adFormTypeBand','adFormTypeSessie','adFormTypeIndustry'].forEach(id => {
-    const el = document.getElementById(id);
-    if (!el) return;
-    const t = id === 'adFormTypeMuz' ? 'muzikant' : id === 'adFormTypeBand' ? 'band' : id === 'adFormTypeSessie' ? 'sessie' : 'industry';
-    el.classList.toggle('active', t === type);
-  });
-  const isBand = type === 'band';
-  // Instrument vs Wij zoeken
-  const muzVelden = document.getElementById('adVeldenMuzikant');
-  const bandVelden = document.getElementById('adVeldenBand');
-  if (muzVelden) muzVelden.style.display = isBand ? 'none' : 'block';
-  if (bandVelden) bandVelden.style.display = isBand ? 'block' : 'none';
-  // Niveau/beschikbaarheid
-  const niveauRij = document.getElementById('adNiveauRij');
-  if (niveauRij) niveauRij.style.display = isBand ? 'none' : '';
-  // Titel placeholder
-  const titleInput = document.getElementById('adFormTitle');
-  if (titleInput) titleInput.placeholder = isBand ? 'bijv. Rockband zoekt drummer' : 'bijv. Gitarist zoekt rockband';
-}
-
-function previewAdPhoto(input) {
-  if (input.files && input.files[0]) {
-    const reader = new FileReader();
-    reader.onload = e => {
-      const prev = document.getElementById('adPhotoPreview');
-      if (prev) prev.innerHTML = `<img src="${e.target.result}" style="width:100%;height:100%;object-fit:cover;border-radius:16px;"/>`;
-    };
-    reader.readAsDataURL(input.files[0]);
-  }
-}
-
-function previewPhoto(input) {
-  if (input.files && input.files[0]) {
-    const reader = new FileReader();
-    reader.onload = e => {
-      const prev = document.getElementById('adPhotoPreview');
-      prev.innerHTML = `<img src="${e.target.result}" style="width:100%;height:100%;object-fit:cover;border-radius:16px;"/>`;
-    };
-    reader.readAsDataURL(input.files[0]);
-  }
-}
-
-function saveAdPanel() {
-  const title = document.getElementById('adFormTitle').value.trim();
-  if (!title) { alert('Geef je advertentie een titel.'); return; }
-
-  const name = document.getElementById('adFormName').value.trim() || 'Jan de Vries';
-  const location = document.getElementById('adFormLocation').value.trim() || '';
-  const desc = document.getElementById('adFormDesc').value.trim();
-  const link = document.getElementById('adFormLink').value.trim();
-  const level = document.getElementById('adFormLevel').value;
-  const avail = document.getElementById('adFormAvail').value;
-  const isBand = document.getElementById('adFormTypeBand').classList.contains('active');
-
-  const instruments = [...document.querySelectorAll('#adFormInstruments .chip.selected')].map(c => c.textContent);
-  const genres = [...document.querySelectorAll('#adFormGenres .chip.selected')].map(c => c.textContent);
-  const photoEl = document.getElementById('adPhotoPreview');
-  const photoHTML = photoEl.innerHTML || '';
-  const meta = [...genres.slice(0,2), ...instruments.slice(0,1), level, avail].filter(Boolean).join(' · ');
-  const tags = [...instruments.slice(0,3), ...genres.slice(0,2), location].filter(Boolean);
-
-  if (currentEditId) {
-    // Bewerk bestaande
-    const card = document.getElementById('adcard-' + currentEditId);
-    if (card) {
-      card.querySelector('.ad-card-title').textContent = title;
-      card.querySelector('.ad-card-meta').textContent = meta;
-      if (desc) card.querySelector('.ad-card-desc').textContent = desc;
-    }
-  } else {
-    // Nieuwe card
-    adCounter++;
-    const id = 'ad' + adCounter;
-    const card = document.createElement('div');
-    card.className = 'ad-panel-card';
-    card.id = 'adcard-' + id;
-    card.innerHTML = `
-      <div class="ad-card-top">
-        <div class="ad-card-photo">${photoHTML}</div>
-        <div class="ad-card-info">
-          <div class="ad-card-title">${title}</div>
-          <div class="ad-card-meta">${meta}</div>
-          ${desc ? `<div class="ad-card-desc">${desc}</div>` : ''}
-          ${link ? `<a href="${link.startsWith('http')?link:'https://'+link}" target="_blank" style="font-size:13px;color:var(--neon2);margin-top:6px;display:inline-block;">${link}</a>` : ''}
-          <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;">${tags.map(t=>`<span class="tag">${t}</span>`).join('')}</div>
-        </div>
-      </div>
-      <div class="ad-card-footer">
-        <span class="ad-status-badge">● Actief</span>
-        <div style="display:flex;gap:8px;">
-          <button class="undo-btn" onclick="editAd('${id}')">Bewerken</button>
-          <button class="undo-btn" style="color:#e53935;border-color:rgba(229,57,53,0.3);" onclick="deleteAd('${id}')">Verwijderen</button>
-        </div>
-      </div>`;
-    document.getElementById('adPanelList').appendChild(card);
-  }
-
-  hideAdForm();
-  const t = document.getElementById('toast');
-  t.textContent = currentEditId ? 'Advertentie bijgewerkt!' : 'Advertentie opgeslagen!';
-  t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 2200);
-}
-
-function editAd(id) { showAdForm(id); }
-function deleteAd(id) {
-  const card = document.getElementById('adcard-' + id);
-  if (card) card.remove();
 }
 
 function openChat() { showPanel('messages'); }
