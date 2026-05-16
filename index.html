@@ -1878,20 +1878,23 @@ function setTypeToggle(type) {
   Object.entries(opts).forEach(([t, id]) => {
     document.getElementById(id)?.classList.toggle('active', t === type);
   });
-  const activeEl = document.getElementById(opts[type]);
-  const slider = document.getElementById('toggleSlider');
-  if (slider && activeEl) {
-    slider.style.left = activeEl.offsetLeft + 'px';
-    slider.style.width = activeEl.offsetWidth + 'px';
-  }
+  moveToggleSlider(opts[type]);
   laadAdvertenties();
 }
 
+function moveToggleSlider(elId) {
+  requestAnimationFrame(() => {
+    const el = document.getElementById(elId);
+    const slider = document.getElementById('toggleSlider');
+    if (slider && el) {
+      slider.style.left = el.offsetLeft + 'px';
+      slider.style.width = el.offsetWidth + 'px';
+    }
+  });
+}
+
 function initToggle() {
-  const bandEl = document.getElementById('togBands');
-  if (!bandEl) return;
-  const slider = document.getElementById('toggleSlider');
-  if (slider) { slider.style.left = bandEl.offsetLeft + 'px'; slider.style.width = bandEl.offsetWidth + 'px'; }
+  moveToggleSlider('togBands');
 }
 
 function openDetail(p) { /* no-op */ }
