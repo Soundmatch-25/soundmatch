@@ -1339,6 +1339,8 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
             <div class="type-toggle-slider" id="toggleSlider"></div>
             <div class="type-toggle-opt active" id="togBands" onclick="setTypeToggle('bands')">Bands</div>
             <div class="type-toggle-opt" id="togMuz" onclick="setTypeToggle('muzikanten')">Muzikanten</div>
+            <div class="type-toggle-opt" id="togSessie" onclick="setTypeToggle('sessie')">Sessie</div>
+            <div class="type-toggle-opt" id="togIndustry" onclick="setTypeToggle('industry')">Industry</div>
           </div>
         </div>
 
@@ -1734,18 +1736,20 @@ function profielNaarKaart(p) {
 // ═══════════════ SUPABASE DATA LADEN ═══════════════
 async function laadAdvertenties() {
   const stack = document.getElementById('cardStack');
-  if (stack) stack.innerHTML = `<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--sub);flex-direction:column;gap:12px;"><div style="font-size:32px;">🎵</div><div>Muzikanten laden...</div></div>`;
+  if (stack) stack.innerHTML = `<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--sub);flex-direction:column;gap:12px;"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="opacity:.4"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg><div>Muzikanten laden...</div></div>`;
 
   // Filter op type
   let query = sb.from('profiles').select('*').neq('id', currentUser?.id).not('naam', 'is', null);
   if (activeType === 'bands') query = query.eq('type', 'band');
-  else if (activeType === 'muzikanten') query = query.in('type', ['muzikant', 'sessie', 'industry']);
+  else if (activeType === 'muzikanten') query = query.eq('type', 'muzikant');
+  else if (activeType === 'sessie') query = query.eq('type', 'sessie');
+  else if (activeType === 'industry') query = query.eq('type', 'industry');
 
   const { data, error } = await query.order('actief_op', { ascending: false }).limit(50);
 
   if (error || !data?.length) {
     advertentiesData = [];
-    if (stack) stack.innerHTML = `<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--sub);flex-direction:column;gap:12px;"><div style="font-size:48px;">🔍</div><div style="font-size:16px;font-weight:600;">Niemand gevonden</div><div style="font-size:13px;">Probeer een andere filter</div></div>`;
+    if (stack) stack.innerHTML = `<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--sub);flex-direction:column;gap:12px;"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="opacity:.4"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg><div style="font-size:16px;font-weight:600;">Niemand gevonden</div><div style="font-size:13px;">Probeer een andere filter</div></div>`;
     return;
   }
 
@@ -1808,7 +1812,7 @@ function renderCards() {
   stack.innerHTML = '';
 
   if (!advertentiesData.length || cardIndex >= advertentiesData.length) {
-    stack.innerHTML = `<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--sub);flex-direction:column;gap:12px;"><div style="font-size:48px;">✓</div><div style="font-size:16px;font-weight:600;">Je hebt iedereen gezien!</div><div style="font-size:13px;">Kom later terug voor nieuwe profielen</div></div>`;
+    stack.innerHTML = `<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--sub);flex-direction:column;gap:12px;"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="opacity:.4"><polyline points="20 6 9 17 4 12"/></svg><div style="font-size:16px;font-weight:600;">Je hebt iedereen gezien!</div><div style="font-size:13px;">Kom later terug voor nieuwe profielen</div></div>`;
     return;
   }
 
@@ -1870,13 +1874,16 @@ function closeMatch() { document.getElementById('matchModal').classList.remove('
 // ═══════════════ TYPE TOGGLE ═══════════════
 function setTypeToggle(type) {
   activeType = type;
-  const bandEl = document.getElementById('togBands');
-  const muzEl = document.getElementById('togMuz');
+  const opts = { bands:'togBands', muzikanten:'togMuz', sessie:'togSessie', industry:'togIndustry' };
+  Object.entries(opts).forEach(([t, id]) => {
+    document.getElementById(id)?.classList.toggle('active', t === type);
+  });
+  const activeEl = document.getElementById(opts[type]);
   const slider = document.getElementById('toggleSlider');
-  bandEl.classList.toggle('active', type==='bands');
-  muzEl.classList.toggle('active', type==='muzikanten');
-  const activeEl = type==='bands' ? bandEl : muzEl;
-  if (slider && activeEl) { slider.style.left = activeEl.offsetLeft + 'px'; slider.style.width = activeEl.offsetWidth + 'px'; }
+  if (slider && activeEl) {
+    slider.style.left = activeEl.offsetLeft + 'px';
+    slider.style.width = activeEl.offsetWidth + 'px';
+  }
   laadAdvertenties();
 }
 
@@ -1913,7 +1920,7 @@ function renderLiked() {
 
   if (!filtered.length) {
     grid.innerHTML = `<div style="grid-column:1/-1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 20px;gap:12px;color:var(--sub);">
-      <div style="font-size:48px;opacity:.3;">📋</div>
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="opacity:.4"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
       <div style="font-size:15px;font-weight:600;">Nog niets hier</div>
       <div style="font-size:13px;">Ga swipen om profielen in je lijst te zetten</div>
     </div>`;
@@ -2019,7 +2026,7 @@ async function laadMijnAdvertenties() {
   if (!list) return;
 
   if (!data?.length) {
-    list.innerHTML = `<div style="text-align:center;padding:60px 20px;color:var(--sub);"><div style="font-size:48px;margin-bottom:12px;">📋</div><div style="font-size:15px;font-weight:600;">Nog geen advertenties</div><div style="font-size:13px;margin-top:6px;">Maak je eerste advertentie aan</div></div>`;
+    list.innerHTML = `<div style="text-align:center;padding:60px 20px;color:var(--sub);"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="opacity:.4"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg><div style="font-size:15px;font-weight:600;">Nog geen advertenties</div><div style="font-size:13px;margin-top:6px;">Maak je eerste advertentie aan</div></div>`;
     return;
   }
 
