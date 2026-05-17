@@ -1891,13 +1891,14 @@ function renderCards() {
   }
 
   const remaining = advertentiesData.length - cardIndex;
-  if (remaining >= 3) {
-    stack.appendChild(buildCard(advertentiesData[cardIndex+2], 'stack-2'));
-    stack.appendChild(buildCard(advertentiesData[cardIndex+1], 'stack-1'));
-  } else if (remaining >= 2) {
-    stack.appendChild(buildCard(advertentiesData[cardIndex+1], 'stack-1'));
-  }
-  stack.appendChild(buildCard(advertentiesData[cardIndex], 'top'));
+  if (remaining >= 3) stack.appendChild(buildCard(advertentiesData[cardIndex+2], 'stack-2'));
+  if (remaining >= 2) stack.appendChild(buildCard(advertentiesData[cardIndex+1], 'stack-1'));
+
+  const topCard = buildCard(advertentiesData[cardIndex], 'top');
+  stack.appendChild(topCard);
+
+  // Drag initialiseren op top card
+  initCardDrag(topCard);
 }
 
 // ═══════════════ SWIPE ═══════════════
@@ -1977,7 +1978,68 @@ function initToggle() {
   moveToggleSlider('togMuz');
 }
 
-function openDetail(p) { /* no-op */ }
+// ═══════════════ SWIPE MECHANISME ═══════════════
+let dragState = null;
+
+function initCardDrag(card) {
+  const onStart = (e) => {
+    const touch = e.touches ? e.touches[0] : e;
+    dragState = { startX: touch.clientX, startY: touch.clientY, curX: 0, card };
+    card.classList.add('dragging');
+    e.preventDefault();
+  };
+
+  const onMove = (e) => {
+    if (!dragState || dragState.card !== card) return;
+    const touch = e.touches ? e.touches[0] : e;
+    const dx = touch.clientX - dragState.startX;
+    const dy = touch.clientY - dragState.startY;
+    dragState.curX = dx;
+
+    const rot = dx * 0.08;
+    card.style.transform = `translateX(${dx}px) translateY(${dy * 0.2}px) rotate(${rot}deg)`;
+
+    // Toon like/nope feedback
+    const fbLike = card.querySelector('.fb-like');
+    const fbNope = card.querySelector('.fb-nope');
+    const threshold = 60;
+    if (fbLike) fbLike.style.opacity = dx > threshold ? Math.min((dx - threshold) / 60, 1) : 0;
+    if (fbNope) fbNope.style.opacity = dx < -threshold ? Math.min((-dx - threshold) / 60, 1) : 0;
+    e.preventDefault();
+  };
+
+  const onEnd = (e) => {
+    if (!dragState || dragState.card !== card) return;
+    const dx = dragState.curX;
+    const threshold = 100;
+    card.classList.remove('dragging');
+
+    if (dx > threshold) {
+      doSwipe('like');
+    } else if (dx < -threshold) {
+      doSwipe('nope');
+    } else {
+      // Terug naar midden
+      card.style.transition = 'transform .3s ease';
+      card.style.transform = 'scale(1)';
+      const fbLike = card.querySelector('.fb-like');
+      const fbNope = card.querySelector('.fb-nope');
+      if (fbLike) fbLike.style.opacity = 0;
+      if (fbNope) fbNope.style.opacity = 0;
+    }
+    dragState = null;
+  };
+
+  // Mouse events
+  card.addEventListener('mousedown', onStart);
+  window.addEventListener('mousemove', onMove);
+  window.addEventListener('mouseup', onEnd);
+
+  // Touch events
+  card.addEventListener('touchstart', onStart, { passive: false });
+  window.addEventListener('touchmove', onMove, { passive: false });
+  window.addEventListener('touchend', onEnd);
+}
 
 // ═══════════════ MIJN LIJST ═══════════════
 function switchTab(tab) {
