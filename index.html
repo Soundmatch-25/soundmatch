@@ -1734,13 +1734,17 @@ function profielNaarKaart(p) {
 }
 
 // ═══════════════ SUPABASE DATA LADEN ═══════════════
+const geswipedIds = new Set(); // persistent per sessie
+
 async function laadAdvertenties() {
   const stack = document.getElementById('cardStack');
   if (stack) stack.innerHTML = `<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--sub);flex-direction:column;gap:12px;"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="opacity:.4"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg><div>Muzikanten laden...</div></div>`;
 
-  // Filter al geswiped profielen eruit
-  const { data: swipes } = await sb.from('swipes').select('target_id').eq('swiper_id', currentUser.id);
-  const geswiped = new Set((swipes || []).map(s => s.target_id));
+  // Laad geswiped IDs uit Supabase als nog niet gedaan
+  if (geswipedIds.size === 0 && currentUser) {
+    const { data: swipes } = await sb.from('swipes').select('target_id').eq('swiper_id', currentUser.id);
+    (swipes || []).forEach(s => geswipedIds.add(s.target_id));
+  }
 
   // Laad profielen
   let profielQuery = sb.from('profiles').select('*').neq('id', currentUser?.id).not('naam', 'is', null);
@@ -1766,11 +1770,11 @@ async function laadAdvertenties() {
 
   // Combineer profielen en advertenties
   const profielKaarten = (profielen || [])
-    .filter(p => !geswiped.has(p.id))
+    .filter(p => !geswipedIds.has(p.id))
     .map(p => profielNaarKaart(p));
 
   const adKaarten = (advertenties || [])
-    .filter(a => !geswiped.has(a.id))
+    .filter(a => !geswipedIds.has(a.id))
     .map(a => advertentieNaarKaart(a));
 
   // Mix: spotlight eerst, dan afwisselend profielen en advertenties
@@ -1888,6 +1892,9 @@ async function doSwipe(dir) {
   top.style.transition = 'transform .35s ease';
   top.style.transform = `translateX(${dir==='like'?600:-600}px) rotate(${dir==='like'?15:-15}deg)`;
 
+  // Direct toevoegen aan geswiped set zodat het niet terugkomt bij toggle
+  if (p.id) geswipedIds.add(p.id);
+
   // Opslaan in Supabase
   if (currentUser && p.id) {
     sb.from('swipes').upsert({ swiper_id: currentUser.id, target_id: p.id, richting: dir }, { onConflict: 'swiper_id,target_id' });
@@ -1957,18 +1964,29 @@ function switchTab(tab) {
 }
 
 async function laadSwipeHistory() {
-  if (!currentUser) return;
-  const { data: swipes } = await sb.from('swipes').select('*').eq('swiper_id', currentUser.id).order('aangemaakt_op', { ascending: false });
-  if (!swipes?.length) { swipeHistory = []; renderLiked(); return; }
+  if (!currentUser) { console.log('laadSwipeHistory: geen currentUser'); return; }
+  
+  const grid = document.getElementById('likedGrid');
+  if (grid) grid.innerHTML = '<div style="padding:20px;color:var(--sub);text-align:center;">Laden...</div>';
 
-  // Haal unieke target IDs op
+  const { data: swipes, error: swipeError } = await sb.from('swipes').select('*').eq('swiper_id', currentUser.id).order('aangemaakt_op', { ascending: false });
+  
+  console.log('Swipes geladen:', swipes?.length, swipeError);
+  
+  if (!swipes?.length) { 
+    swipeHistory = []; 
+    renderLiked(); 
+    return; 
+  }
+
   const targetIds = [...new Set(swipes.map(s => s.target_id))];
 
-  // Laad profielen en advertenties parallel
   const [{ data: profielen }, { data: advertenties }] = await Promise.all([
     sb.from('profiles').select('*').in('id', targetIds),
     sb.from('advertenties').select('*').in('id', targetIds)
   ]);
+
+  console.log('Profielen:', profielen?.length, 'Advertenties:', advertenties?.length);
 
   const profielMap = Object.fromEntries((profielen || []).map(p => [p.id, p]));
   const adMap = Object.fromEntries((advertenties || []).map(a => [a.id, a]));
@@ -1981,6 +1999,7 @@ async function laadSwipeHistory() {
     return null;
   }).filter(Boolean);
 
+  console.log('SwipeHistory:', swipeHistory.length);
   renderLiked();
 }
 
@@ -2196,7 +2215,7 @@ async function handleAdFoto(input) {
   document.getElementById('adFotoPreview').parentElement.appendChild(status);
 
   try {
-    const scaled = await schaalFoto(input.files[0], 400);
+    const scaled = await schaalFoto(input.files[0], 800);
     // Preview tonen
     document.getElementById('adFotoPreview').innerHTML = `<img src="${scaled.dataUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:19px;"/>`;
 
@@ -2369,7 +2388,7 @@ async function handleFotoUpload(input) {
 
   try {
     // Client-side schalen naar max 400x400px
-    const scaled = await schaalFoto(file, 400);
+    const scaled = await schaalFoto(file, 800);
 
     // Preview tonen
     const preview = document.getElementById('regFotoPreview');
@@ -2415,7 +2434,7 @@ function schaalFoto(file, maxSize) {
         canvas.width = w; canvas.height = h;
         const ctx = canvas.getContext('2d');
         ctx.drawImage(img, 0, 0, w, h);
-        resolve({ dataUrl: canvas.toDataURL('image/jpeg', 0.85) });
+        resolve({ dataUrl: canvas.toDataURL('image/jpeg', 0.92) });
       };
       img.onerror = reject;
       img.src = e.target.result;
