@@ -1475,8 +1475,8 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
           <h2>Nieuwe advertentie</h2>
         </div>
 
-        <div style="flex:1;overflow-y:auto;">
-          <div style="padding:24px 28px;max-width:600px;display:flex;flex-direction:column;gap:16px;align-self:center;width:100%;">
+        <div style="flex:1;overflow-y:auto;display:flex;flex-direction:column;align-items:center;">
+          <div style="padding:24px 28px;max-width:600px;display:flex;flex-direction:column;gap:16px;width:100%;box-sizing:border-box;">
 
             <!-- Foto -->
             <div style="text-align:center;">
@@ -1569,7 +1569,7 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
 
             <div id="adError" style="font-size:13px;color:#ff8a80;display:none;padding:10px 14px;background:rgba(255,82,82,0.1);border-radius:10px;border:1px solid rgba(255,82,82,0.3);"></div>
 
-            <button type="button" class="btn btn-primary btn-full" style="padding:16px;" onclick="slaAdvertentieOp()">Advertentie opslaan →</button>
+            <button type="button" id="adOpslaanBtn" class="btn btn-primary btn-full" style="padding:16px;" onclick="slaAdvertentieOp()">Advertentie opslaan →</button>
             <div style="height:16px;"></div>
           </div>
         </div>
@@ -2130,7 +2130,12 @@ async function handleAdFoto(input) {
 }
 
 async function slaAdvertentieOp() {
-  if (!currentUser) return;
+  if (!currentUser) { 
+    const errEl = document.getElementById('adError');
+    errEl.textContent = 'Je bent niet ingelogd. Ververs de pagina en probeer opnieuw.';
+    errEl.style.display = 'block';
+    return; 
+  }
 
   const naam = document.getElementById('adNaam')?.value.trim();
   const bio = document.getElementById('adBio')?.value.trim();
@@ -2154,26 +2159,41 @@ async function slaAdvertentieOp() {
   if (!naam) { errEl.textContent = 'Vul je naam in.'; errEl.style.display = 'block'; return; }
   errEl.style.display = 'none';
 
-  const { error } = await sb.from('advertenties').insert({
-    user_id: currentUser.id,
-    titel: naam,
-    type: adType,
-    instrumenten,
-    genres,
-    niveau: isBand ? null : niveau,
-    beschikbaarheid: isBand ? null : beschikbaarheid,
-    omschrijving: bio,
-    muzieklinks: links,
-    actief: true
-  });
+  // Loading state
+  const opslaanBtn = document.getElementById('adOpslaanBtn');
+  if (opslaanBtn) { opslaanBtn.textContent = 'Opslaan...'; opslaanBtn.disabled = true; }
 
-  if (error) { errEl.textContent = 'Opslaan mislukt: ' + error.message; errEl.style.display = 'block'; return; }
+  try {
+    const { error } = await sb.from('advertenties').insert({
+      user_id: currentUser.id,
+      titel: naam,
+      type: adType,
+      instrumenten,
+      genres,
+      niveau: isBand ? null : niveau,
+      beschikbaarheid: isBand ? null : beschikbaarheid,
+      omschrijving: bio,
+      muzieklinks: links,
+      actief: true
+    });
 
-  verbergAdFormulier();
-  laadMijnAdvertenties();
-  const t = document.getElementById('toast');
-  t.textContent = 'Advertentie opgeslagen!'; t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 2200);
+    if (error) { 
+      errEl.textContent = 'Opslaan mislukt: ' + error.message; 
+      errEl.style.display = 'block'; 
+      return; 
+    }
+
+    verbergAdFormulier();
+    laadMijnAdvertenties();
+    const t = document.getElementById('toast');
+    t.textContent = 'Advertentie opgeslagen!'; t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2200);
+  } catch (e) {
+    errEl.textContent = 'Onverwachte fout: ' + e.message;
+    errEl.style.display = 'block';
+  } finally {
+    if (opslaanBtn) { opslaanBtn.textContent = 'Advertentie opslaan →'; opslaanBtn.disabled = false; }
+  }
 }
 
 async function verwijderAd(id) {
