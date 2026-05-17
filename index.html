@@ -41,7 +41,7 @@
   --font-body: 'Inter', sans-serif;
   --radius: 20px;
   --radius-sm: 12px;
-  --sidebar-w: 220px;
+  --sidebar-w: 200px;
   --detail-w: 0px;
 }
 
@@ -197,27 +197,31 @@ html, body {
 /* SIDEBAR */
 .sidebar {
   width: var(--sidebar-w);
+  min-width: var(--sidebar-w);
   flex-shrink: 0;
   background: var(--bg2);
   border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
-  padding: 24px 16px;
+  padding: 24px 12px;
   gap: 4px;
   overflow-y: auto;
   overflow-x: hidden;
+  box-sizing: border-box;
 }
 
 .sidebar-logo {
   font-family: var(--font-head);
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 900;
-  letter-spacing: 1.5px;
+  letter-spacing: 1px;
   text-transform: uppercase;
-  padding: 4px 10px 20px;
+  padding: 4px 4px 20px;
   white-space: nowrap;
   overflow: hidden;
-  text-overflow: clip;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 .sidebar-logo .acc { background: var(--grad); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
 .sidebar-logo .dot { color: var(--neon); -webkit-text-fill-color: var(--neon); }
@@ -1739,7 +1743,7 @@ async function laadAdvertenties() {
   const geswiped = new Set((swipes || []).map(s => s.target_id));
 
   // Laad profielen
-  let profielQuery = sb.from('profiles').select('*').not('naam', 'is', null);
+  let profielQuery = sb.from('profiles').select('*').neq('id', currentUser?.id).not('naam', 'is', null);
   if (activeType === 'bands') profielQuery = profielQuery.eq('type', 'band');
   else if (activeType === 'muzikanten') profielQuery = profielQuery.eq('type', 'muzikant');
   else if (activeType === 'sessie') profielQuery = profielQuery.eq('type', 'sessie');
@@ -1752,7 +1756,7 @@ async function laadAdvertenties() {
   const { data: profielen } = await profielQuery.order('actief_op', { ascending: false }).limit(50);
 
   // Laad advertenties uit de advertenties tabel
-  let adQuery = sb.from('advertenties').select('*, profiel:user_id(*)').eq('actief', true);
+  let adQuery = sb.from('advertenties').select('*, profiel:user_id(*)').neq('user_id', currentUser?.id).eq('actief', true);
   if (activeType === 'bands') adQuery = adQuery.eq('type', 'band');
   else if (activeType === 'muzikanten') adQuery = adQuery.eq('type', 'muzikant');
   else if (activeType === 'sessie') adQuery = adQuery.eq('type', 'sessie');
@@ -1954,8 +1958,29 @@ function switchTab(tab) {
 
 async function laadSwipeHistory() {
   if (!currentUser) return;
-  const { data } = await sb.from('swipes').select('*, target:target_id(*)').eq('swiper_id', currentUser.id);
-  swipeHistory = (data || []).map(s => ({ ...profielNaarKaart(s.target || {}), status: s.richting, swipe_id: s.id }));
+  const { data: swipes } = await sb.from('swipes').select('*').eq('swiper_id', currentUser.id).order('aangemaakt_op', { ascending: false });
+  if (!swipes?.length) { swipeHistory = []; renderLiked(); return; }
+
+  // Haal unieke target IDs op
+  const targetIds = [...new Set(swipes.map(s => s.target_id))];
+
+  // Laad profielen en advertenties parallel
+  const [{ data: profielen }, { data: advertenties }] = await Promise.all([
+    sb.from('profiles').select('*').in('id', targetIds),
+    sb.from('advertenties').select('*').in('id', targetIds)
+  ]);
+
+  const profielMap = Object.fromEntries((profielen || []).map(p => [p.id, p]));
+  const adMap = Object.fromEntries((advertenties || []).map(a => [a.id, a]));
+
+  swipeHistory = swipes.map(s => {
+    const profiel = profielMap[s.target_id];
+    const ad = adMap[s.target_id];
+    if (profiel) return { ...profielNaarKaart(profiel), status: s.richting, swipe_id: s.id };
+    if (ad) return { ...advertentieNaarKaart({ ...ad, profiel: {} }), status: s.richting, swipe_id: s.id };
+    return null;
+  }).filter(Boolean);
+
   renderLiked();
 }
 
