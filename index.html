@@ -1897,14 +1897,17 @@ async function doSwipe(dir) {
 
   // Opslaan in Supabase
   if (currentUser && p.id) {
-    sb.from('swipes').upsert({ swiper_id: currentUser.id, target_id: p.id, richting: dir }, { onConflict: 'swiper_id,target_id' });
+    const { error: swipeError } = await sb.from('swipes').upsert(
+      { swiper_id: currentUser.id, target_id: p.id, richting: dir },
+      { onConflict: 'swiper_id,target_id' }
+    );
+    if (swipeError) console.error('Swipe opslaan mislukt:', swipeError.message);
 
     // Check wederzijdse like
-    if (dir === 'like') {
+    if (dir === 'like' && !swipeError) {
       const { data: wederzijds } = await sb.from('swipes').select('*').eq('swiper_id', p.id).eq('target_id', currentUser.id).eq('richting', 'like').maybeSingle();
       if (wederzijds) {
-        // Echte match!
-        await sb.from('matches').insert({ gebruiker_a: currentUser.id, gebruiker_b: p.id }).select().single();
+        await sb.from('matches').insert({ gebruiker_a: currentUser.id, gebruiker_b: p.id });
         setTimeout(() => showMatch(p), 400);
       }
     }
