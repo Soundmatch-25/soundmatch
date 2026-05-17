@@ -2169,26 +2169,28 @@ function closeLijstDetail() {
 
 async function verwijderUitLijst(swipeId, targetId) {
   if (!currentUser) return;
-  
-  // Verwijder uit database op basis van swiper_id + target_id
+
+  // Optimistisch verwijderen uit UI
+  geswipedIds.delete(targetId);
+  swipeHistory = swipeHistory.filter(p => p.id !== targetId);
+  renderLiked();
+
+  // Dan verwijderen uit database
   const { error } = await sb.from('swipes')
     .delete()
     .eq('swiper_id', currentUser.id)
     .eq('target_id', targetId);
-  
-  if (error) { console.error('Verwijderen mislukt:', error.message); return; }
-  
-  // Verwijder uit geswiped set zodat hij weer in ontdekken komt
-  geswipedIds.delete(targetId);
-  
-  // Verwijder uit lokale lijst
-  swipeHistory = swipeHistory.filter(p => p.id !== targetId);
-  renderLiked();
-  
-  // Herlaad ontdekken zodat item direct weer zichtbaar is
-  if (document.getElementById('panel-discover')?.classList.contains('active')) {
-    laadAdvertenties();
+
+  if (error) {
+    console.error('Verwijderen mislukt:', error.message);
+    // Zet terug in geswiped set als DB delete mislukt
+    geswipedIds.add(targetId);
+    // Herlaad de lijst
+    laadSwipeHistory();
+    return;
   }
+
+  console.log('Swipe verwijderd voor target:', targetId);
 }
 
 async function verwijderHuidigeLijstItem() {
