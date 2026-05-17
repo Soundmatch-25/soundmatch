@@ -1605,7 +1605,29 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
 
 </div><!-- /app -->
 
-<!-- FILTER MODAL -->
+<!-- LIJST DETAIL MODAL -->
+<div class="modal-overlay" id="lijstDetailModal" onclick="if(event.target===this)closeLijstDetail()" style="display:none;align-items:center;justify-content:center;">
+  <div class="modal-box" style="max-width:480px;width:90%;padding:0;overflow:hidden;border-radius:24px;">
+    <div id="lijstDetailFoto" style="height:220px;background:var(--grad);display:flex;align-items:center;justify-content:center;position:relative;">
+    </div>
+    <div style="padding:24px;display:flex;flex-direction:column;gap:16px;">
+      <div>
+        <div style="font-family:var(--font-head);font-size:22px;font-weight:800;" id="lijstDetailNaam"></div>
+        <div style="font-size:14px;color:var(--neon);margin-top:4px;" id="lijstDetailRol"></div>
+      </div>
+      <div id="lijstDetailTags" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
+      <div id="lijstDetailBio" style="font-size:14px;color:var(--sub);line-height:1.6;display:none;"></div>
+      <div id="lijstDetailLinks" style="display:none;"></div>
+      <div style="display:flex;gap:10px;">
+        <button class="btn btn-primary" style="flex:2;" onclick="stuurBerichtNaarLijstItem()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          Bericht sturen
+        </button>
+        <button class="btn" style="flex:1;background:rgba(229,57,53,0.1);border:1px solid rgba(229,57,53,0.3);color:#e53935;" onclick="verwijderHuidigeLijstItem()">Verwijderen</button>
+      </div>
+    </div>
+  </div>
+</div>
 <div class="modal-overlay" id="filterModal" onclick="if(event.target===this)closeFilter()">
   <div class="modal-box">
     <div class="modal-header">
@@ -2022,7 +2044,7 @@ function renderLiked() {
   }
 
   grid.innerHTML = filtered.map(p => `
-    <div class="liked-card">
+    <div class="liked-card" onclick="openLikedDetail('${p.id}', '${p.swipe_id}')" style="cursor:pointer;">
       <div class="liked-avatar">${p.foto_url ? `<img src="${p.foto_url}" style="width:100%;height:100%;object-fit:cover;border-radius:14px;"/>` : `<div style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;">${typeIcon(p.type)}</div>`}</div>
       <div class="liked-card-info">
         <div class="liked-card-name">${p.naam}</div>
@@ -2031,11 +2053,89 @@ function renderLiked() {
       </div>
       <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0;">
         <div class="liked-badge ${p.status==='like'?'badge-liked':'badge-skipped'}">${p.status==='like'?'♥ Like':'✕ Skip'}</div>
+        <button onclick="event.stopPropagation();verwijderUitLijst('${p.swipe_id}','${p.id}')" style="font-size:11px;padding:4px 8px;border-radius:8px;border:1px solid rgba(229,57,53,0.3);background:rgba(229,57,53,0.1);color:#e53935;cursor:pointer;">Verwijderen</button>
       </div>
     </div>`).join('');
 }
 
-// ═══════════════ BERICHTEN ═══════════════
+// ═══════════════ LIJST DETAIL ═══════════════
+let huidigLijstItem = null;
+
+function openLijstDetail(id, swipeId) {
+  const item = swipeHistory.find(p => p.id === id);
+  if (!item) return;
+  huidigLijstItem = item;
+
+  // Foto
+  const fotoEl = document.getElementById('lijstDetailFoto');
+  if (item.foto_url) {
+    fotoEl.innerHTML = `<img src="${item.foto_url}" style="width:100%;height:100%;object-fit:cover;"/>`;
+  } else {
+    fotoEl.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;">${typeIcon(item.type)}</div>`;
+  }
+
+  document.getElementById('lijstDetailNaam').textContent = item.naam;
+  document.getElementById('lijstDetailRol').textContent = item.rol;
+
+  const tagsEl = document.getElementById('lijstDetailTags');
+  tagsEl.innerHTML = (item.tags || []).map(t => `<span class="tag">${t}</span>`).join('');
+
+  const bioEl = document.getElementById('lijstDetailBio');
+  if (item.desc && item.desc !== 'Geen beschrijving beschikbaar.') {
+    bioEl.textContent = item.desc;
+    bioEl.style.display = 'block';
+  } else {
+    bioEl.style.display = 'none';
+  }
+
+  const linksEl = document.getElementById('lijstDetailLinks');
+  if (item.link) {
+    linksEl.innerHTML = `<a href="${item.link.startsWith('http') ? item.link : 'https://'+item.link}" target="_blank" style="font-size:13px;color:var(--neon2);">${item.link}</a>`;
+    linksEl.style.display = 'block';
+  } else {
+    linksEl.style.display = 'none';
+  }
+
+  const modal = document.getElementById('lijstDetailModal');
+  modal.style.display = 'flex';
+}
+
+function closeLijstDetail() {
+  document.getElementById('lijstDetailModal').style.display = 'none';
+  huidigLijstItem = null;
+}
+
+async function verwijderUitLijst(swipeId, targetId) {
+  if (!currentUser) return;
+  await sb.from('swipes').delete().eq('id', swipeId).eq('swiper_id', currentUser.id);
+  // Verwijder uit geswiped set zodat hij weer in ontdekken komt
+  geswipedIds.delete(targetId);
+  // Verwijder uit lokale lijst
+  swipeHistory = swipeHistory.filter(p => p.swipe_id !== swipeId);
+  renderLiked();
+}
+
+async function verwijderHuidigeLijstItem() {
+  if (!huidigLijstItem) return;
+  await verwijderUitLijst(huidigLijstItem.swipe_id, huidigLijstItem.id);
+  closeLijstDetail();
+}
+
+async function stuurBerichtNaarLijstItem() {
+  if (!huidigLijstItem || !currentUser) return;
+  closeLijstDetail();
+  // Check of er al een match is
+  const { data: match } = await sb.from('matches')
+    .select('*')
+    .or(`and(gebruiker_a.eq.${currentUser.id},gebruiker_b.eq.${huidigLijstItem.id}),and(gebruiker_a.eq.${huidigLijstItem.id},gebruiker_b.eq.${currentUser.id})`)
+    .maybeSingle();
+  if (match) {
+    showPanel('messages');
+    setTimeout(() => openMatch(match.id, match.gebruiker_a === currentUser.id ? match.gebruiker_b : match.gebruiker_a), 300);
+  } else {
+    alert('Je hebt nog geen match met deze persoon. Like ze eerst!');
+  }
+}
 let huidigeMatch = null;
 let berichtenInterval = null;
 
