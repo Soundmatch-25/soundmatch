@@ -1338,8 +1338,8 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
         <div class="type-toggle-wrap">
           <div class="type-toggle" id="typeToggle">
             <div class="type-toggle-slider" id="toggleSlider"></div>
-            <div class="type-toggle-opt active" id="togBands" onclick="setTypeToggle('bands')">Bands</div>
-            <div class="type-toggle-opt" id="togMuz" onclick="setTypeToggle('muzikanten')">Muzikanten</div>
+            <div class="type-toggle-opt" id="togBands" onclick="setTypeToggle('bands')">Bands</div>
+            <div class="type-toggle-opt active" id="togMuz" onclick="setTypeToggle('muzikanten')">Muzikanten</div>
             <div class="type-toggle-opt" id="togSessie" onclick="setTypeToggle('sessie')">Sessie</div>
             <div class="type-toggle-opt" id="togIndustry" onclick="setTypeToggle('industry')">Industry</div>
           </div>
@@ -1688,7 +1688,7 @@ let cardIndex = 0;
 let swipeHistory = [];
 let currentTab = 'liked';
 let currentDetail = null;
-let activeType = 'bands';
+let activeType = 'muzikanten';
 
 // ═══════════════ HELPERS ═══════════════
 function typeIcon(type) {
@@ -1734,34 +1734,75 @@ async function laadAdvertenties() {
   const stack = document.getElementById('cardStack');
   if (stack) stack.innerHTML = `<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--sub);flex-direction:column;gap:12px;"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="opacity:.4"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg><div>Muzikanten laden...</div></div>`;
 
-  // Filter op type
-  let query = sb.from('profiles').select('*').neq('id', currentUser?.id).not('naam', 'is', null);
-  if (activeType === 'bands') query = query.eq('type', 'band');
-  else if (activeType === 'muzikanten') query = query.eq('type', 'muzikant');
-  else if (activeType === 'sessie') query = query.eq('type', 'sessie');
-  else if (activeType === 'industry') query = query.eq('type', 'industry');
+  // Filter al geswiped profielen eruit
+  const { data: swipes } = await sb.from('swipes').select('target_id').eq('swiper_id', currentUser.id);
+  const geswiped = new Set((swipes || []).map(s => s.target_id));
 
-  // Leeftijdsfilter
-  if (filterState.minLeeftijd > 16) query = query.gte('leeftijd', filterState.minLeeftijd);
-  if (filterState.maxLeeftijd < 100) query = query.lte('leeftijd', filterState.maxLeeftijd);
+  // Laad profielen
+  let profielQuery = sb.from('profiles').select('*').not('naam', 'is', null);
+  if (activeType === 'bands') profielQuery = profielQuery.eq('type', 'band');
+  else if (activeType === 'muzikanten') profielQuery = profielQuery.eq('type', 'muzikant');
+  else if (activeType === 'sessie') profielQuery = profielQuery.eq('type', 'sessie');
+  else if (activeType === 'industry') profielQuery = profielQuery.eq('type', 'industry');
 
-  // Niveau filter
-  if (filterState.niveau) query = query.eq('niveau', filterState.niveau);
+  if (filterState.minLeeftijd > 16) profielQuery = profielQuery.gte('leeftijd', filterState.minLeeftijd);
+  if (filterState.maxLeeftijd < 100) profielQuery = profielQuery.lte('leeftijd', filterState.maxLeeftijd);
+  if (filterState.niveau) profielQuery = profielQuery.eq('niveau', filterState.niveau);
 
-  const { data, error } = await query.order('actief_op', { ascending: false }).limit(50);
+  const { data: profielen } = await profielQuery.order('actief_op', { ascending: false }).limit(50);
 
-  if (error || !data?.length) {
-    advertentiesData = [];
+  // Laad advertenties uit de advertenties tabel
+  let adQuery = sb.from('advertenties').select('*, profiel:user_id(*)').eq('actief', true);
+  if (activeType === 'bands') adQuery = adQuery.eq('type', 'band');
+  else if (activeType === 'muzikanten') adQuery = adQuery.eq('type', 'muzikant');
+  else if (activeType === 'sessie') adQuery = adQuery.eq('type', 'sessie');
+  else if (activeType === 'industry') adQuery = adQuery.eq('type', 'industry');
+
+  const { data: advertenties } = await adQuery.order('aangemaakt_op', { ascending: false }).limit(50);
+
+  // Combineer profielen en advertenties
+  const profielKaarten = (profielen || [])
+    .filter(p => !geswiped.has(p.id))
+    .map(p => profielNaarKaart(p));
+
+  const adKaarten = (advertenties || [])
+    .filter(a => !geswiped.has(a.id))
+    .map(a => advertentieNaarKaart(a));
+
+  // Mix: spotlight eerst, dan afwisselend profielen en advertenties
+  advertentiesData = [...adKaarten, ...profielKaarten].sort((a, b) => (b.spotlight ? 1 : 0) - (a.spotlight ? 1 : 0));
+
+  if (!advertentiesData.length) {
     if (stack) stack.innerHTML = `<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--sub);flex-direction:column;gap:12px;"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="opacity:.4"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg><div style="font-size:16px;font-weight:600;">Niemand gevonden</div><div style="font-size:13px;">Probeer een andere filter</div></div>`;
     return;
   }
 
-  // Filter al geswiped profielen eruit
-  const { data: swipes } = await sb.from('swipes').select('target_id').eq('swiper_id', currentUser.id);
-  const geswiped = new Set((swipes || []).map(s => s.target_id));
-  advertentiesData = data.filter(p => !geswiped.has(p.id)).map(profielNaarKaart);
   cardIndex = 0;
   renderCards();
+}
+
+function advertentieNaarKaart(a) {
+  const profiel = a.profiel || {};
+  const genres = (a.genres || []).slice(0,2).join(' / ') || 'Muzikant';
+  const naam = a.titel || profiel.naam || 'Onbekend';
+  const type = a.type || 'muzikant';
+  const rol = type === 'band' ? 'Band zoekt muzikant' : type === 'sessie' ? 'Sessiemuzikant' : type === 'industry' ? 'Industry professional' : 'Muzikant zoekt band';
+  const tags = [...(a.instrumenten || []).slice(0,2), ...(a.genres || []).slice(0,1), a.niveau, profiel.stad || profiel.locatie].filter(Boolean);
+  return {
+    id: a.id,
+    naam,
+    rol,
+    genre: genres,
+    type,
+    desc: a.omschrijving || 'Geen beschrijving beschikbaar.',
+    tags,
+    activeMin: 9999,
+    spotlight: a.spotlight || false,
+    foto_url: a.foto_url || profiel.foto_url || null,
+    link: a.muzieklinks || '',
+    isAdvertentie: true,
+    raw: a
+  };
 }
 
 // ═══════════════ CARD RENDERING ═══════════════
@@ -1897,7 +1938,7 @@ function moveToggleSlider(elId) {
 }
 
 function initToggle() {
-  moveToggleSlider('togBands');
+  moveToggleSlider('togMuz');
 }
 
 function openDetail(p) { /* no-op */ }
