@@ -2089,6 +2089,7 @@ function toonAdFormulier() {
   // Reset type naar muzikant
   setAdTypeNieuw('muzikant');
   // Reset foto
+  adFotoUrl = null;
   document.getElementById('adFotoPreview').innerHTML = '<svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>';
   document.getElementById('adError').style.display = 'none';
 }
@@ -2123,10 +2124,36 @@ function voegAdLink() {
   container.appendChild(div);
 }
 
+let adFotoUrl = null;
+
 async function handleAdFoto(input) {
   if (!input.files || !input.files[0]) return;
-  const scaled = await schaalFoto(input.files[0], 400);
-  document.getElementById('adFotoPreview').innerHTML = `<img src="${scaled.dataUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:19px;"/>`;
+  const status = document.createElement('div');
+  status.style.cssText = 'font-size:12px;color:var(--sub);margin-top:4px;';
+  status.textContent = 'Foto verwerken...';
+  document.getElementById('adFotoPreview').parentElement.appendChild(status);
+
+  try {
+    const scaled = await schaalFoto(input.files[0], 400);
+    // Preview tonen
+    document.getElementById('adFotoPreview').innerHTML = `<img src="${scaled.dataUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:19px;"/>`;
+
+    // Uploaden naar Supabase
+    if (currentUser) {
+      status.textContent = 'Uploaden...';
+      const bestandsnaam = `${currentUser.id}/ad_${Date.now()}.jpg`;
+      const blob = await fetch(scaled.dataUrl).then(r => r.blob());
+      const { data, error } = await sb.storage.from('avatars').upload(bestandsnaam, blob, { contentType: 'image/jpeg', upsert: true });
+      if (error) throw error;
+      const { data: urlData } = sb.storage.from('avatars').getPublicUrl(bestandsnaam);
+      adFotoUrl = urlData.publicUrl + '?t=' + Date.now();
+      status.style.color = '#2ecc71';
+      status.textContent = '✓ Foto opgeslagen!';
+    }
+  } catch (err) {
+    status.style.color = '#ff8a80';
+    status.textContent = 'Upload mislukt: ' + err.message;
+  }
 }
 
 async function slaAdvertentieOp() {
@@ -2174,6 +2201,7 @@ async function slaAdvertentieOp() {
       beschikbaarheid: isBand ? null : beschikbaarheid,
       omschrijving: bio,
       muzieklinks: links,
+      foto_url: adFotoUrl || null,
       actief: true
     });
 
