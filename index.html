@@ -41,7 +41,7 @@
   --font-body: 'Inter', sans-serif;
   --radius: 20px;
   --radius-sm: 12px;
-  --sidebar-w: 200px;
+  --sidebar-w: 280px;
   --detail-w: 0px;
 }
 
@@ -1756,7 +1756,7 @@ async function laadAdvertenties() {
   const { data: profielen } = await profielQuery.order('actief_op', { ascending: false }).limit(50);
 
   // Laad advertenties uit de advertenties tabel
-  let adQuery = sb.from('advertenties').select('*, profiel:user_id(*)').neq('user_id', currentUser?.id).eq('actief', true);
+  let adQuery = sb.from('advertenties').select('*, profiel:user_id(*)').eq('actief', true);
   if (activeType === 'bands') adQuery = adQuery.eq('type', 'band');
   else if (activeType === 'muzikanten') adQuery = adQuery.eq('type', 'muzikant');
   else if (activeType === 'sessie') adQuery = adQuery.eq('type', 'sessie');
