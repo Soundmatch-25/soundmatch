@@ -2044,7 +2044,7 @@ function renderLiked() {
   }
 
   grid.innerHTML = filtered.map(p => `
-    <div class="liked-card" onclick="openLikedDetail('${p.id}', '${p.swipe_id}')" style="cursor:pointer;">
+    <div class="liked-card" onclick="openLijstDetail('${p.id}', '${p.swipe_id}')" style="cursor:pointer;">
       <div class="liked-avatar">${p.foto_url ? `<img src="${p.foto_url}" style="width:100%;height:100%;object-fit:cover;border-radius:14px;"/>` : `<div style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;">${typeIcon(p.type)}</div>`}</div>
       <div class="liked-card-info">
         <div class="liked-card-name">${p.naam}</div>
@@ -2107,12 +2107,26 @@ function closeLijstDetail() {
 
 async function verwijderUitLijst(swipeId, targetId) {
   if (!currentUser) return;
-  await sb.from('swipes').delete().eq('id', swipeId).eq('swiper_id', currentUser.id);
+  
+  // Verwijder uit database op basis van swiper_id + target_id
+  const { error } = await sb.from('swipes')
+    .delete()
+    .eq('swiper_id', currentUser.id)
+    .eq('target_id', targetId);
+  
+  if (error) { console.error('Verwijderen mislukt:', error.message); return; }
+  
   // Verwijder uit geswiped set zodat hij weer in ontdekken komt
   geswipedIds.delete(targetId);
+  
   // Verwijder uit lokale lijst
-  swipeHistory = swipeHistory.filter(p => p.swipe_id !== swipeId);
+  swipeHistory = swipeHistory.filter(p => p.id !== targetId);
   renderLiked();
+  
+  // Herlaad ontdekken zodat item direct weer zichtbaar is
+  if (document.getElementById('panel-discover')?.classList.contains('active')) {
+    laadAdvertenties();
+  }
 }
 
 async function verwijderHuidigeLijstItem() {
