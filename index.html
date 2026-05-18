@@ -893,12 +893,15 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
   max-width: 720px;
   margin: 0 auto 14px;
   transition: border-color .15s;
+  display: flex;
+  flex-direction: column;
 }
 .ad-panel-card:hover { border-color: var(--border2); }
 .ad-card-top {
   display: flex;
   gap: 18px;
   padding: 20px;
+  flex: 1;
 }
 .ad-card-photo {
   width: 80px; height: 80px;
