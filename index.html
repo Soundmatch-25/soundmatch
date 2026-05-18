@@ -1927,7 +1927,7 @@ function buildCard(p, cls) {
   const locatieBadge = (p.raw?.stad || p.raw?.locatie) ? `<div style="position:absolute;bottom:14px;right:14px;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:600;background:rgba(0,0,0,0.6);border:1px solid rgba(255,255,255,0.1);color:#fff;backdrop-filter:blur(8px);display:flex;align-items:center;gap:4px;"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>${p.raw?.stad || p.raw?.locatie}</div>` : '';
   const leeftijdBadge = (p.raw?.leeftijd && p.type !== 'band') ? `<div style="position:absolute;bottom:44px;right:14px;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:600;background:rgba(0,0,0,0.6);border:1px solid rgba(255,255,255,0.1);color:#fff;backdrop-filter:blur(8px);">${p.raw.leeftijd} jaar</div>` : '';
   const fotoHTML = p.foto_url
-    ? `<img src="${p.foto_url}" style="width:100%;height:100%;object-fit:cover;" onclick="event.stopPropagation();openLightbox('${p.foto_url}')" style="cursor:zoom-in;" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"/><div style="display:none;width:100%;height:100%;align-items:center;justify-content:center;">${typeIcon(p.type)}</div>`
+    ? `<img src="${p.foto_url}" style="width:100%;height:100%;object-fit:cover;cursor:zoom-in;" onclick="if(!window._wasDragging)openLightbox('${p.foto_url}')" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"/><div style="display:none;width:100%;height:100%;align-items:center;justify-content:center;">${typeIcon(p.type)}</div>`
     : `<div style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;">${typeIcon(p.type)}</div>`;
 
   el.innerHTML = `
@@ -2057,6 +2057,7 @@ function initCardDrag(card) {
     const touch = e.touches ? e.touches[0] : e;
     dragState = { startX: touch.clientX, startY: touch.clientY, curX: 0, card };
     card.classList.add('dragging');
+    window._wasDragging = false;
     e.preventDefault();
   };
 
@@ -2066,6 +2067,11 @@ function initCardDrag(card) {
     const dx = touch.clientX - dragState.startX;
     const dy = touch.clientY - dragState.startY;
     dragState.curX = dx;
+
+    // Markeer als dragging zodra meer dan 5px bewogen
+    if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
+      window._wasDragging = true;
+    }
 
     const rot = dx * 0.08;
     card.style.transform = `translateX(${dx}px) translateY(${dy * 0.2}px) rotate(${rot}deg)`;
@@ -2099,6 +2105,7 @@ function initCardDrag(card) {
       if (fbNope) fbNope.style.opacity = 0;
     }
     dragState = null;
+    setTimeout(() => { window._wasDragging = false; }, 100);
   };
 
   // Mouse events
@@ -2387,20 +2394,22 @@ async function laadMijnAdvertenties() {
     const card = document.createElement('div');
     card.className = 'ad-panel-card';
     card.id = `adcard-${ad.id}`;
+    const meta = [...(ad.genres||[]).slice(0,2), ...(ad.instrumenten||[]).slice(0,1), ad.niveau, ad.beschikbaarheid].filter(Boolean).join(' · ');
     card.innerHTML = `
       <div class="ad-card-top">
-        <div class="ad-card-photo">${ad.foto_url ? `<img src="${ad.foto_url}" style="width:100%;height:100%;object-fit:cover;"/>` : typeIcon(ad.type)}</div>
-        <div class="ad-card-info">
+        <div class="ad-card-photo" style="overflow:hidden;">${ad.foto_url ? `<img src="${ad.foto_url}" style="width:100%;height:100%;object-fit:cover;border-radius:16px;"/>` : `<div style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;">${typeIcon(ad.type)}</div>`}</div>
+        <div class="ad-card-info" style="min-width:0;overflow:hidden;">
           <div class="ad-card-title">${ad.titel}</div>
-          <div class="ad-card-meta">${[...(ad.genres||[]).slice(0,2), ...(ad.instrumenten||[]).slice(0,1), ad.niveau].filter(Boolean).join(' · ')}</div>
-          ${ad.omschrijving ? `<div class="ad-card-desc">${ad.omschrijving}</div>` : ''}
-          ${ad.muzieklinks ? `<a href="${ad.muzieklinks.startsWith('http')?ad.muzieklinks:'https://'+ad.muzieklinks}" target="_blank" style="font-size:13px;color:var(--neon2);margin-top:6px;display:inline-block;">${ad.muzieklinks}</a>` : ''}
+          ${meta ? `<div class="ad-card-meta">${meta}</div>` : ''}
+          ${ad.omschrijving ? `<div class="ad-card-desc" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">${ad.omschrijving}</div>` : ''}
+          ${ad.muzieklinks ? `<div style="font-size:12px;color:var(--sub);margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${ad.muzieklinks}</div>` : ''}
         </div>
       </div>
       <div class="ad-card-footer">
         <span class="ad-status-badge">● ${ad.actief ? 'Actief' : 'Inactief'}</span>
         <div style="display:flex;gap:8px;">
-          <button class="undo-btn" onclick="verwijderAd('${ad.id}')">Verwijderen</button>
+          <button class="undo-btn" onclick="bewerkAd('${ad.id}')" style="color:var(--neon);border-color:rgba(124,77,255,0.3);">Bewerken</button>
+          <button class="undo-btn" onclick="verwijderAd('${ad.id}')" style="color:#e53935;border-color:rgba(229,57,53,0.3);">Verwijderen</button>
         </div>
       </div>`;
     list.appendChild(card);
@@ -2529,25 +2538,28 @@ async function slaAdvertentieOp() {
   if (!naam) { errEl.textContent = 'Vul je naam in.'; errEl.style.display = 'block'; return; }
   errEl.style.display = 'none';
 
-  // Loading state
   const opslaanBtn = document.getElementById('adOpslaanBtn');
+  const editId = opslaanBtn?.dataset.editId;
   if (opslaanBtn) { opslaanBtn.textContent = 'Opslaan...'; opslaanBtn.disabled = true; }
 
   try {
-    const { error } = await sb.from('advertenties').insert({
-      user_id: currentUser.id,
-      titel: naam,
-      type: adType,
-      instrumenten,
-      genres,
+    const adData = {
+      titel: naam, type: adType, instrumenten, genres,
       niveau: isBand ? null : niveau,
       beschikbaarheid: isBand ? null : beschikbaarheid,
-      omschrijving: bio,
-      muzieklinks: links,
+      omschrijving: bio, muzieklinks: links,
       foto_url: adFotoUrl || null,
-      leeftijd: leeftijdInfo,
-      actief: true
-    });
+      leeftijd: leeftijdInfo, actief: true
+    };
+
+    let error;
+    if (editId) {
+      ({ error } = await sb.from('advertenties').update(adData).eq('id', editId).eq('user_id', currentUser.id));
+    } else {
+      ({ error } = await sb.from('advertenties').insert({ ...adData, user_id: currentUser.id }));
+    }
+
+    if (opslaanBtn) { delete opslaanBtn.dataset.editId; }
 
     if (error) { 
       errEl.textContent = 'Opslaan mislukt: ' + error.message; 
@@ -2568,6 +2580,44 @@ async function slaAdvertentieOp() {
   }
 }
 
+async function bewerkAd(id) {
+  const { data: ad } = await sb.from('advertenties').select('*').eq('id', id).single();
+  if (!ad) return;
+
+  toonAdFormulier();
+  // Sla id op voor update
+  document.getElementById('adOpslaanBtn').dataset.editId = id;
+  document.getElementById('adOpslaanBtn').textContent = 'Wijzigingen opslaan →';
+
+  // Vul in
+  document.getElementById('adNaam').value = ad.titel || '';
+  document.getElementById('adBio').value = ad.omschrijving || '';
+  if (!ad.type || ad.type !== 'band') {
+    document.getElementById('adNiveau').value = ad.niveau || 'Gevorderd';
+    document.getElementById('adBeschikbaarheid').value = ad.beschikbaarheid || 'Serieus';
+  }
+
+  setAdTypeNieuw(ad.type || 'muzikant');
+
+  // Chips
+  document.querySelectorAll('#adInstrumenten .chip').forEach(c => c.classList.toggle('selected', (ad.instrumenten||[]).includes(c.textContent)));
+  document.querySelectorAll('#adWijZoeken .chip').forEach(c => c.classList.toggle('selected', (ad.instrumenten||[]).includes(c.textContent)));
+  document.querySelectorAll('#adGenres .chip').forEach(c => c.classList.toggle('selected', (ad.genres||[]).includes(c.textContent)));
+
+  // Links
+  if (ad.muzieklinks) {
+    const container = document.getElementById('adLinks');
+    container.innerHTML = ad.muzieklinks.split(', ').filter(Boolean).map(link =>
+      `<div style="display:flex;gap:8px;align-items:center;"><input class="input-field" style="flex:1;" value="${link}"/><button type="button" onclick="this.parentElement.remove()" style="width:36px;height:44px;border-radius:10px;border:1px solid rgba(229,57,53,0.3);background:rgba(229,57,53,0.1);color:#e53935;cursor:pointer;font-size:20px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">&#215;</button></div>`
+    ).join('') + `<div style="display:flex;gap:8px;align-items:center;"><input class="input-field" style="flex:1;" placeholder="Nog een link..."/><button type="button" onclick="voegAdLink()" style="width:36px;height:44px;border-radius:10px;border:1px solid var(--border);background:var(--card2);color:var(--sub);cursor:pointer;font-size:20px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">+</button></div>`;
+  }
+
+  // Foto
+  if (ad.foto_url) {
+    document.getElementById('adFotoPreview').innerHTML = `<img src="${ad.foto_url}" style="width:100%;height:100%;object-fit:cover;border-radius:19px;"/>`;
+    adFotoUrl = ad.foto_url;
+  }
+}
 async function verwijderAd(id) {
   if (!confirm('Weet je zeker dat je deze advertentie wil verwijderen?')) return;
   await sb.from('advertenties').delete().eq('id', id).eq('user_id', currentUser.id);
