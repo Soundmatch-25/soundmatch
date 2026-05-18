@@ -1835,7 +1835,16 @@ function profielNaarKaart(p) {
 // ═══════════════ SUPABASE DATA LADEN ═══════════════
 const geswipedIds = new Set(); // persistent per sessie
 
+async function checkSessie() {
+  if (currentUser) return true; // al ingelogd
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) { showScreen('onboard'); return false; }
+  currentUser = session.user;
+  return true;
+}
+
 async function laadAdvertenties() {
+  if (!await checkSessie()) return;
   const stack = document.getElementById('cardStack');
   if (stack) stack.innerHTML = `<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--sub);flex-direction:column;gap:12px;">
     <div style="width:40px;height:40px;border:3px solid var(--border);border-top-color:var(--neon);border-radius:50%;animation:spin 0.8s linear infinite;"></div>
@@ -1852,7 +1861,7 @@ async function laadAdvertenties() {
         <button class="btn btn-primary btn-sm" onclick="laadAdvertenties()">Opnieuw proberen</button>
       </div>`;
     }
-  }, 8000);
+  }, 20000);
 
   // Swipes laden als nog niet gedaan
   if (geswipedIds.size === 0 && currentUser) {
@@ -1879,8 +1888,14 @@ async function laadAdvertenties() {
   adQuery = adQuery.order('aangemaakt_op', { ascending: false }).limit(50);
 
   // Parallel uitvoeren
-  const [{ data: profielen }, { data: advertenties }] = await Promise.all([profielQuery, adQuery]);
+  const [profielRes, adRes] = await Promise.all([profielQuery, adQuery]);
   clearTimeout(timeoutId);
+
+  const profielen = profielRes.data;
+  const advertenties = adRes.data;
+
+  if (profielRes.error) console.error('Profielen fout:', profielRes.error.message);
+  if (adRes.error) console.error('Advertenties fout:', adRes.error.message);
 
   // Combineer
   let profielKaarten = (profielen || [])
@@ -2338,6 +2353,7 @@ async function stuurBerichtNaarLijstItem() {
 // ═══════════════ DIRECT BERICHTEN ═══════════════
 let huidigChatUserId = null;
 let berichtenPollInterval = null;
+let gesprekPollInterval = null;
 
 function openDirectBerichtModal() {
   const p = advertentiesData[cardIndex];
@@ -2390,8 +2406,9 @@ async function updateOngelezen() {
 
 function startBerichtenPoll() {
   if (berichtenPollInterval) clearInterval(berichtenPollInterval);
-  berichtenPollInterval = setInterval(checkNieuweBerichten, 10000);
-  checkNieuweBerichten();
+  berichtenPollInterval = setInterval(async () => {
+    if (currentUser) await checkNieuweBerichten();
+  }, 10000);
 }
 
 async function laadDirecteBerichten() {
@@ -2428,8 +2445,8 @@ async function openGesprek(userId, user) {
   await sb.from('directe_berichten').update({ gelezen: true }).eq('van_user_id', userId).eq('naar_user_id', currentUser.id).eq('gelezen', false);
   await laadGesprekBerichten(userId);
   updateOngelezen();
-  if (berichtenPollInterval) clearInterval(berichtenPollInterval);
-  berichtenPollInterval = setInterval(() => laadGesprekBerichten(userId), 5000);
+  if (gesprekPollInterval) clearInterval(gesprekPollInterval);
+  gesprekPollInterval = setInterval(() => laadGesprekBerichten(userId), 5000);
 
   // Op mobiel: verberg lijst, toon chat
   const isMobiel = window.innerWidth <= 768;
@@ -2446,8 +2463,7 @@ function sluitMobieleChat() {
   document.querySelector('.chat-col').style.display = 'none';
   const terugBtn = document.getElementById('chatTerugBtn');
   if (terugBtn) terugBtn.style.display = 'none';
-  if (berichtenPollInterval) clearInterval(berichtenPollInterval);
-  startBerichtenPoll();
+  if (gesprekPollInterval) clearInterval(gesprekPollInterval);
 }
 
 async function laadGesprekBerichten(userId) {
@@ -3236,7 +3252,7 @@ let currentProfile = null;
 
 sb.auth.onAuthStateChange(async (event, session) => {
   console.log('Auth event:', event, session?.user?.email);
-  if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session?.user) {
+  if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION' || event === 'TOKEN_REFRESHED') && session?.user) {
     currentUser = session.user;
     await laadOfMaakProfiel(session.user);
   } else if (event === 'SIGNED_OUT') {
