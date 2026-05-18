@@ -1405,6 +1405,9 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
       </div>
       <div class="chat-col">
         <div class="chat-header-bar">
+          <button id="chatTerugBtn" onclick="sluitMobieleChat()" style="display:none;width:34px;height:34px;border-radius:50%;border:1px solid var(--border);background:transparent;cursor:pointer;align-items:center;justify-content:center;color:var(--sub);flex-shrink:0;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+          </button>
           <div class="chat-av-sm" id="chatAvatar"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
           <div style="flex:1;">
             <div class="chat-name" style="font-size:16px;font-weight:600;color:var(--text)">Selecteer een gesprek</div>
@@ -2427,6 +2430,24 @@ async function openGesprek(userId, user) {
   updateOngelezen();
   if (berichtenPollInterval) clearInterval(berichtenPollInterval);
   berichtenPollInterval = setInterval(() => laadGesprekBerichten(userId), 5000);
+
+  // Op mobiel: verberg lijst, toon chat
+  const isMobiel = window.innerWidth <= 768;
+  if (isMobiel) {
+    document.querySelector('.msg-list-col').style.display = 'none';
+    document.querySelector('.chat-col').style.display = 'flex';
+    const terugBtn = document.getElementById('chatTerugBtn');
+    if (terugBtn) terugBtn.style.display = 'flex';
+  }
+}
+
+function sluitMobieleChat() {
+  document.querySelector('.msg-list-col').style.display = '';
+  document.querySelector('.chat-col').style.display = 'none';
+  const terugBtn = document.getElementById('chatTerugBtn');
+  if (terugBtn) terugBtn.style.display = 'none';
+  if (berichtenPollInterval) clearInterval(berichtenPollInterval);
+  startBerichtenPoll();
 }
 
 async function laadGesprekBerichten(userId) {
