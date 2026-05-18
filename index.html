@@ -2467,11 +2467,19 @@ function sluitMobieleChat() {
 }
 
 async function laadGesprekBerichten(userId) {
-  const { data } = await sb.from('directe_berichten').select('*').or('and(van_user_id.eq.' + currentUser.id + ',naar_user_id.eq.' + userId + '),and(van_user_id.eq.' + userId + ',naar_user_id.eq.' + currentUser.id + ')').order('aangemaakt_op', { ascending: true });
+  const { data, error } = await sb.from('directe_berichten')
+    .select('*')
+    .or(`and(van_user_id.eq.${currentUser.id},naar_user_id.eq.${userId}),and(van_user_id.eq.${userId},naar_user_id.eq.${currentUser.id})`)
+    .order('aangemaakt_op', { ascending: true });
+
+  if (error) { console.error('Berichten laden fout:', error.message); return; }
+
   const msgs = document.getElementById('chatMsgs');
   if (!msgs || !data) return;
   const wasBottom = msgs.scrollHeight - msgs.scrollTop <= msgs.clientHeight + 50;
-  msgs.innerHTML = data.map(b => '<div class="bubble ' + (b.van_user_id === currentUser.id ? 'bubble-me' : 'bubble-them') + '">' + b.inhoud + '</div>').join('');
+  msgs.innerHTML = data.map(b =>
+    '<div class="bubble ' + (b.van_user_id === currentUser.id ? 'bubble-me' : 'bubble-them') + '">' + b.inhoud + '</div>'
+  ).join('');
   if (wasBottom) msgs.scrollTop = msgs.scrollHeight;
 }
 
