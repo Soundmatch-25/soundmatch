@@ -1180,9 +1180,14 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
 <!-- ═══════ REGISTER ═══════ -->
 <div id="screen-register" class="screen">
   <div class="auth-box" style="max-width:520px;gap:16px;">
-    <div class="auth-logo">SOUND<span class="acc">MATCH</span><span class="dot">.</span></div>
-    <div class="auth-title">Maak je profiel</div>
-    <div class="auth-sub">Vertel andere muzikanten wie je bent</div>
+    <div style="display:flex;align-items:center;gap:12px;">
+      <button onclick="currentProfile?.naam ? showScreen('app') : showScreen('onboard')" style="width:36px;height:36px;border-radius:50%;border:1px solid var(--border);background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--sub);flex-shrink:0;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+      <div class="auth-logo">SOUND<span class="acc">MATCH</span><span class="dot">.</span></div>
+    </div>
+    <div class="auth-title" id="regTitel">Maak je profiel</div>
+    <div class="auth-sub" id="regSubtitel">Vertel andere muzikanten wie je bent</div>
 
     <!-- Foto -->
     <div style="text-align:center;">
@@ -1291,7 +1296,7 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
     </div>
 
     <div id="regError" style="font-size:13px;color:#ff8a80;display:none;padding:10px 14px;background:rgba(255,82,82,0.1);border-radius:10px;border:1px solid rgba(255,82,82,0.3);"></div>
-    <button class="btn btn-primary btn-full" style="padding:17px;" onclick="slaProfielOp()">Profiel aanmaken →</button>
+    <button class="btn btn-primary btn-full" style="padding:17px;" id="regOpslaanBtn" onclick="slaProfielOp()">Profiel aanmaken →</button>
     <div style="height:16px;"></div>
   </div>
 </div>
@@ -2781,8 +2786,12 @@ function bewerkProfiel() {
     uploadedFotoUrl = p.foto_url;
   }
 
-  const btn = document.querySelector('#screen-register .btn-primary');
+  const btn = document.getElementById('regOpslaanBtn');
   if (btn) btn.textContent = 'Profiel opslaan →';
+  const titel = document.getElementById('regTitel');
+  if (titel) titel.textContent = 'Bewerk je profiel';
+  const subtitel = document.getElementById('regSubtitel');
+  if (subtitel) subtitel.textContent = 'Pas je gegevens aan';
 
   showScreen('register');
 }
@@ -3189,8 +3198,12 @@ async function slaProfielOp() {
   // Profiel bijwerken in geheugen
   currentProfile = data || { ...currentProfile, naam, type, leeftijd, locatie, provincie, stad, instrument: instrumenten, genres, niveau, beschikbaarheid, muzieklink, bio };
   uploadedFotoUrl = null;
-
-  // UI updaten
+  const regTitel = document.getElementById('regTitel');
+  if (regTitel) regTitel.textContent = 'Maak je profiel';
+  const regSubtitel = document.getElementById('regSubtitel');
+  if (regSubtitel) regSubtitel.textContent = 'Vertel andere muzikanten wie je bent';
+  const regBtn = document.getElementById('regOpslaanBtn');
+  if (regBtn) regBtn.textContent = 'Profiel aanmaken →';
   vulProfielIn(currentProfile);
   showScreen('app');
 }
