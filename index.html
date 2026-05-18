@@ -1377,7 +1377,7 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
           <button class="sw-btn sw-like" onclick="doSwipe('like')" title="Interesse">
             <svg width="32" height="32" viewBox="0 0 30 30" fill="none"><path d="M11 22V8l14-3v14" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/><circle cx="8" cy="22" r="3" stroke="#fff" stroke-width="2.4"/><circle cx="22" cy="19" r="3" stroke="#fff" stroke-width="2.4"/><line x1="11" y1="13" x2="25" y2="10" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/></svg>
           </button>
-          <button class="sw-btn sw-chat" onclick="openChat()" title="Direct bericht">
+          <button class="sw-btn sw-chat" onclick="openDirectBerichtModal()" title="Direct bericht">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </button>
         </div>
@@ -1405,11 +1405,12 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
       </div>
       <div class="chat-col">
         <div class="chat-header-bar">
-          <div class="chat-av-sm"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
-          <div>
+          <div class="chat-av-sm" id="chatAvatar"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
+          <div style="flex:1;">
             <div class="chat-name" style="font-size:16px;font-weight:600;color:var(--text)">Selecteer een gesprek</div>
-            <div style="font-size:12px;color:var(--sub)">Soundmatch</div>
+            <div style="font-size:12px;color:var(--sub)" id="chatSub">Soundmatch</div>
           </div>
+          <button id="blokkeerBtn" onclick="blokkeerGebruiker()" style="display:none;padding:6px 12px;border-radius:10px;border:1px solid rgba(229,57,53,0.3);background:rgba(229,57,53,0.1);color:#e53935;cursor:pointer;font-size:12px;font-weight:600;">Blokkeren</button>
         </div>
         <div class="chat-msgs" id="chatMsgs"></div>
         <div class="chat-input-row">
@@ -1636,6 +1637,23 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
 </div><!-- /screen-app -->
 
 </div><!-- /app -->
+
+<!-- DIRECT BERICHT MODAL -->
+<div class="modal-overlay" id="directBerichtModal" onclick="if(event.target===this)closeDirectBericht()">
+  <div class="modal-box" style="max-width:440px;width:90%;padding:28px;gap:16px;display:flex;flex-direction:column;">
+    <div style="font-family:var(--font-head);font-size:20px;font-weight:800;">Stuur een bericht</div>
+    <div style="font-size:14px;color:var(--sub);" id="directBerichtNaam"></div>
+    <textarea id="directBerichtTekst" class="input-field" rows="4" style="resize:none;" placeholder="Schrijf een bericht..."></textarea>
+    <div id="directBerichtError" style="font-size:13px;color:#ff8a80;display:none;"></div>
+    <div style="display:flex;gap:10px;">
+      <button class="btn btn-ghost" style="flex:1;" onclick="closeDirectBericht()">Annuleren</button>
+      <button class="btn btn-primary" style="flex:2;" onclick="stuurDirectBericht()">Versturen</button>
+    </div>
+  </div>
+</div>
+
+<!-- NOTIFICATIE POPUP -->
+<div id="berichtNotificatie" style="display:none;position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--neon);color:#fff;padding:12px 20px;border-radius:16px;font-size:14px;font-weight:600;z-index:1000;cursor:pointer;box-shadow:0 8px 32px rgba(124,77,255,0.4);max-width:320px;text-align:center;" onclick="klikOpNotificatie()"></div>
 
 <!-- FOTO LIGHTBOX -->
 <div id="fotoLightbox" onclick="closeLightbox()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:1000;align-items:center;justify-content:center;cursor:zoom-out;">
@@ -2314,6 +2332,135 @@ async function stuurBerichtNaarLijstItem() {
     alert('Je hebt nog geen match met deze persoon. Like ze eerst!');
   }
 }
+// ═══════════════ DIRECT BERICHTEN ═══════════════
+let huidigChatUserId = null;
+let berichtenPollInterval = null;
+
+function openDirectBerichtModal() {
+  const p = advertentiesData[cardIndex];
+  if (!p) return;
+  document.getElementById('directBerichtNaam').textContent = 'Aan: ' + p.naam;
+  document.getElementById('directBerichtTekst').value = '';
+  document.getElementById('directBerichtError').style.display = 'none';
+  document.getElementById('directBerichtModal').classList.add('open');
+}
+
+function closeDirectBericht() {
+  document.getElementById('directBerichtModal').classList.remove('open');
+}
+
+async function stuurDirectBericht() {
+  const tekst = document.getElementById('directBerichtTekst').value.trim();
+  if (!tekst) return;
+  const p = advertentiesData[cardIndex];
+  if (!p || !currentUser) return;
+  const ontvangerI = p.raw?.user_id || p.id;
+  const { error } = await sb.from('directe_berichten').insert({ van_user_id: currentUser.id, naar_user_id: ontvangerI, inhoud: tekst });
+  if (error) { document.getElementById('directBerichtError').textContent = 'Versturen mislukt: ' + error.message; document.getElementById('directBerichtError').style.display = 'block'; return; }
+  closeDirectBericht();
+  const t = document.getElementById('toast');
+  t.textContent = 'Bericht verstuurd!'; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+async function checkNieuweBerichten() {
+  if (!currentUser) return;
+  const { data } = await sb.from('directe_berichten').select('*, van:van_user_id(naam, foto_url)').eq('naar_user_id', currentUser.id).eq('gelezen', false).order('aangemaakt_op', { ascending: false }).limit(1);
+  if (data?.length) { toonBerichtNotificatie(data[0].van?.naam || 'Iemand', data[0].inhoud); updateOngelezen(); }
+}
+
+function toonBerichtNotificatie(naam, inhoud) {
+  const notif = document.getElementById('berichtNotificatie');
+  notif.textContent = naam + ': ' + inhoud.substring(0, 50) + (inhoud.length > 50 ? '...' : '');
+  notif.style.display = 'block';
+  setTimeout(() => { notif.style.display = 'none'; }, 5000);
+}
+
+function klikOpNotificatie() { document.getElementById('berichtNotificatie').style.display = 'none'; showPanel('messages'); }
+
+async function updateOngelezen() {
+  if (!currentUser) return;
+  const { count } = await sb.from('directe_berichten').select('*', { count: 'exact', head: true }).eq('naar_user_id', currentUser.id).eq('gelezen', false);
+  const badge = document.getElementById('berichtenBadge');
+  if (badge) { if (count > 0) { badge.textContent = count; badge.style.display = 'inline-block'; } else badge.style.display = 'none'; }
+}
+
+function startBerichtenPoll() {
+  if (berichtenPollInterval) clearInterval(berichtenPollInterval);
+  berichtenPollInterval = setInterval(checkNieuweBerichten, 10000);
+  checkNieuweBerichten();
+}
+
+async function laadDirecteBerichten() {
+  if (!currentUser) return;
+  const scroll = document.getElementById('msgListScroll');
+  if (!scroll) return;
+  const [{ data: ontvangen }, { data: verstuurd }] = await Promise.all([
+    sb.from('directe_berichten').select('*, van:van_user_id(id, naam, foto_url, type)').eq('naar_user_id', currentUser.id).order('aangemaakt_op', { ascending: false }),
+    sb.from('directe_berichten').select('*, naar:naar_user_id(id, naam, foto_url, type)').eq('van_user_id', currentUser.id).order('aangemaakt_op', { ascending: false })
+  ]);
+  const gesprekken = new Map();
+  (ontvangen || []).forEach(b => { if (!gesprekken.has(b.van_user_id)) gesprekken.set(b.van_user_id, { user: b.van, laasteBericht: b.inhoud, ongelezen: !b.gelezen }); });
+  (verstuurd || []).forEach(b => { if (!gesprekken.has(b.naar_user_id)) gesprekken.set(b.naar_user_id, { user: b.naar, laasteBericht: 'Jij: ' + b.inhoud, ongelezen: false }); });
+  if (!gesprekken.size) { scroll.innerHTML = '<div style="padding:32px 20px;text-align:center;color:var(--sub);font-size:14px;">Nog geen berichten.<br>Druk op het chat-icoontje bij een profiel!</div>'; return; }
+  scroll.innerHTML = '';
+  gesprekken.forEach((g, userId) => {
+    const div = document.createElement('div');
+    div.className = 'msg-item';
+    div.onclick = () => openGesprek(userId, g.user);
+    div.innerHTML = '<div class="msg-av" style="overflow:hidden;">' + (g.user?.foto_url ? '<img src="' + g.user.foto_url + '" style="width:100%;height:100%;object-fit:cover;"/>' : '<div style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;">' + typeIcon(g.user?.type) + '</div>') + '</div><div style="flex:1;overflow:hidden;"><div class="msg-name">' + (g.user?.naam || 'Onbekend') + '</div><div class="msg-preview">' + (g.laasteBericht || '').substring(0, 40) + '</div></div>' + (g.ongelezen ? '<div style="width:8px;height:8px;border-radius:50%;background:var(--neon);flex-shrink:0;margin-top:4px;"></div>' : '');
+    scroll.appendChild(div);
+  });
+  updateOngelezen();
+}
+
+async function openGesprek(userId, user) {
+  huidigChatUserId = userId;
+  const naamEl = document.querySelector('.chat-name');
+  if (naamEl) naamEl.textContent = user?.naam || 'Onbekend';
+  const blokkeerBtn = document.getElementById('blokkeerBtn');
+  if (blokkeerBtn) blokkeerBtn.style.display = 'block';
+  const av = document.getElementById('chatAvatar');
+  if (av && user?.foto_url) av.innerHTML = '<img src="' + user.foto_url + '" style="width:100%;height:100%;object-fit:cover;border-radius:50%;"/>';
+  await sb.from('directe_berichten').update({ gelezen: true }).eq('van_user_id', userId).eq('naar_user_id', currentUser.id).eq('gelezen', false);
+  await laadGesprekBerichten(userId);
+  updateOngelezen();
+  if (berichtenPollInterval) clearInterval(berichtenPollInterval);
+  berichtenPollInterval = setInterval(() => laadGesprekBerichten(userId), 5000);
+}
+
+async function laadGesprekBerichten(userId) {
+  const { data } = await sb.from('directe_berichten').select('*').or('and(van_user_id.eq.' + currentUser.id + ',naar_user_id.eq.' + userId + '),and(van_user_id.eq.' + userId + ',naar_user_id.eq.' + currentUser.id + ')').order('aangemaakt_op', { ascending: true });
+  const msgs = document.getElementById('chatMsgs');
+  if (!msgs || !data) return;
+  const wasBottom = msgs.scrollHeight - msgs.scrollTop <= msgs.clientHeight + 50;
+  msgs.innerHTML = data.map(b => '<div class="bubble ' + (b.van_user_id === currentUser.id ? 'bubble-me' : 'bubble-them') + '">' + b.inhoud + '</div>').join('');
+  if (wasBottom) msgs.scrollTop = msgs.scrollHeight;
+}
+
+async function sendMsg() {
+  const inp = document.getElementById('chatInput');
+  const val = inp?.value.trim();
+  if (!val || !huidigChatUserId || !currentUser) return;
+  inp.value = '';
+  await sb.from('directe_berichten').insert({ van_user_id: currentUser.id, naar_user_id: huidigChatUserId, inhoud: val });
+  laadGesprekBerichten(huidigChatUserId);
+}
+
+async function blokkeerGebruiker() {
+  if (!huidigChatUserId || !currentUser) return;
+  if (!confirm('Weet je zeker dat je deze gebruiker wil blokkeren?')) return;
+  await sb.from('blokkades').upsert({ blokkeerder_id: currentUser.id, geblokkeerde_id: huidigChatUserId }, { onConflict: 'blokkeerder_id,geblokkeerde_id' });
+  huidigChatUserId = null;
+  document.getElementById('blokkeerBtn').style.display = 'none';
+  document.querySelector('.chat-name').textContent = 'Selecteer een gesprek';
+  document.getElementById('chatMsgs').innerHTML = '';
+  laadDirecteBerichten();
+  const t = document.getElementById('toast');
+  t.textContent = 'Gebruiker geblokkeerd.'; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+
 let huidigeMatch = null;
 let berichtenInterval = null;
 
@@ -2934,7 +3081,7 @@ function showPanel(id) {
     document.getElementById('mn-'+n)?.classList.toggle('active', n===id);
   });
   if (id==='liked') laadSwipeHistory();
-  if (id==='messages') laadMatches();
+  if (id==='messages') laadDirecteBerichten();
   if (id==='ads') laadMijnAdvertenties();
   if (id==='discover') laadAdvertenties();
 }
@@ -3283,6 +3430,7 @@ function startKeepAlive() {
 updateAge();
 setTimeout(initToggle, 50);
 startKeepAlive();
+startBerichtenPoll();
 </script>
 
 </body>
