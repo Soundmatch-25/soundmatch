@@ -1816,6 +1816,18 @@ async function laadAdvertenties() {
     <div style="font-size:14px;">Laden...</div>
   </div>`;
 
+  // Timeout na 8 seconden
+  const timeoutId = setTimeout(() => {
+    const stack = document.getElementById('cardStack');
+    if (stack && stack.innerHTML.includes('Laden')) {
+      stack.innerHTML = `<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--sub);flex-direction:column;gap:12px;">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="opacity:.4"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <div style="font-size:15px;font-weight:600;">Verbinding traag</div>
+        <button class="btn btn-primary btn-sm" onclick="laadAdvertenties()">Opnieuw proberen</button>
+      </div>`;
+    }
+  }, 8000);
+
   // Swipes laden als nog niet gedaan
   if (geswipedIds.size === 0 && currentUser) {
     const { data: swipes } = await sb.from('swipes').select('target_id').eq('swiper_id', currentUser.id);
@@ -1842,6 +1854,7 @@ async function laadAdvertenties() {
 
   // Parallel uitvoeren
   const [{ data: profielen }, { data: advertenties }] = await Promise.all([profielQuery, adQuery]);
+  clearTimeout(timeoutId);
 
   // Combineer
   let profielKaarten = (profielen || [])
@@ -3246,9 +3259,17 @@ function vulProfielIn(profiel) {
   if (bioEl) bioEl.textContent = profiel.bio || '—';
 }
 
+// ═══════════════ KEEP-ALIVE ═══════════════
+function startKeepAlive() {
+  setInterval(async () => {
+    try { await sb.from('profiles').select('id').limit(1); } catch(e) {}
+  }, 5 * 60 * 1000); // elke 5 minuten
+}
+
 // ═══════════════ INIT ═══════════════
 updateAge();
 setTimeout(initToggle, 50);
+startKeepAlive();
 </script>
 
 </body>
