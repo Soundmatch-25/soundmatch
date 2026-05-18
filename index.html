@@ -919,6 +919,8 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
   padding: 12px 20px;
   border-top: 1px solid var(--border);
   background: var(--card2);
+  flex-wrap: wrap;
+  gap: 8px;
 }
 .ad-status-badge {
   font-size: 12px; font-weight: 700; padding: 4px 12px; border-radius: 20px;
@@ -2397,18 +2399,18 @@ async function laadMijnAdvertenties() {
     const meta = [...(ad.genres||[]).slice(0,2), ...(ad.instrumenten||[]).slice(0,1), ad.niveau, ad.beschikbaarheid].filter(Boolean).join(' · ');
     card.innerHTML = `
       <div class="ad-card-top">
-        <div class="ad-card-photo" style="overflow:hidden;">${ad.foto_url ? `<img src="${ad.foto_url}" style="width:100%;height:100%;object-fit:cover;border-radius:16px;"/>` : `<div style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;">${typeIcon(ad.type)}</div>`}</div>
+        <div class="ad-card-photo" style="overflow:hidden;">${ad.foto_url ? '<img src="' + ad.foto_url + '" style="width:100%;height:100%;object-fit:cover;border-radius:16px;"/>' : '<div style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;">' + typeIcon(ad.type) + '</div>'}</div>
         <div class="ad-card-info" style="min-width:0;overflow:hidden;">
           <div class="ad-card-title">${ad.titel}</div>
-          ${meta ? `<div class="ad-card-meta">${meta}</div>` : ''}
-          ${ad.omschrijving ? `<div class="ad-card-desc" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">${ad.omschrijving}</div>` : ''}
-          ${ad.muzieklinks ? `<div style="font-size:12px;color:var(--sub);margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${ad.muzieklinks}</div>` : ''}
+          ${meta ? '<div class="ad-card-meta">' + meta + '</div>' : ''}
+          ${ad.omschrijving ? '<div class="ad-card-desc" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">' + ad.omschrijving + '</div>' : ''}
+          ${ad.muzieklinks ? '<div style="font-size:12px;color:#888;margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + ad.muzieklinks + '</div>' : ''}
         </div>
       </div>
       <div class="ad-card-footer">
         <span class="ad-status-badge">● ${ad.actief ? 'Actief' : 'Inactief'}</span>
         <div style="display:flex;gap:8px;">
-          <button class="undo-btn" onclick="bewerkAd('${ad.id}')" style="color:var(--neon);border-color:rgba(124,77,255,0.3);">Bewerken</button>
+          <button class="undo-btn" onclick="bewerkAd('${ad.id}')" style="color:#7c4dff;border-color:rgba(124,77,255,0.3);">Bewerken</button>
           <button class="undo-btn" onclick="verwijderAd('${ad.id}')" style="color:#e53935;border-color:rgba(229,57,53,0.3);">Verwijderen</button>
         </div>
       </div>`;
@@ -2417,6 +2419,23 @@ async function laadMijnAdvertenties() {
 }
 
 // ═══════════════ ADVERTENTIE FORMULIER ═══════════════
+function resetLinksHTML() {
+  const div = document.createElement('div');
+  div.style.cssText = 'display:flex;gap:8px;align-items:center;';
+  const input = document.createElement('input');
+  input.className = 'input-field';
+  input.style.flex = '1';
+  input.placeholder = 'SoundCloud, YouTube, Spotify, Instagram...';
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.onclick = voegAdLink;
+  btn.style.cssText = 'width:36px;height:44px;border-radius:10px;border:1px solid #333;background:#1a1a2e;color:#888;cursor:pointer;font-size:20px;display:flex;align-items:center;justify-content:center;flex-shrink:0;';
+  btn.textContent = '+';
+  div.appendChild(input);
+  div.appendChild(btn);
+  return div.outerHTML;
+}
+
 function toonAdFormulier() {
   document.getElementById('adOverzicht').style.display = 'none';
   document.getElementById('adFormulier').style.display = 'flex';
@@ -2427,7 +2446,7 @@ function toonAdFormulier() {
   document.getElementById('adBeschikbaarheid').value = 'Serieus';
   document.querySelectorAll('#adInstrumenten .chip, #adGenres .chip, #adWijZoeken .chip').forEach(c => c.classList.remove('selected'));
   // Reset links
-  document.getElementById('adLinks').innerHTML = `<div style="display:flex;gap:8px;align-items:center;"><input class="input-field" style="flex:1;" placeholder="SoundCloud, YouTube, Spotify, Instagram..."/><button type="button" onclick="voegAdLink()" style="width:36px;height:44px;border-radius:10px;border:1px solid var(--border);background:var(--card2);color:var(--sub);cursor:pointer;font-size:20px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">+</button></div>`;
+  document.getElementById('adLinks').innerHTML = resetLinksHTML();
   // Reset type naar muzikant
   setAdTypeNieuw('muzikant');
   // Reset foto
@@ -2482,12 +2501,12 @@ async function handleAdFoto(input) {
   try {
     const scaled = await schaalFoto(input.files[0], 800);
     // Preview tonen
-    document.getElementById('adFotoPreview').innerHTML = `<img src="${scaled.dataUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:19px;"/>`;
+    document.getElementById('adFotoPreview').innerHTML = '<img src="' + scaled.dataUrl + '" style="width:100%;height:100%;object-fit:cover;border-radius:19px;"/>';
 
     // Uploaden naar Supabase
     if (currentUser) {
       status.textContent = 'Uploaden...';
-      const bestandsnaam = `${currentUser.id}/ad_${Date.now()}.jpg`;
+      const bestandsnaam = currentUser.id + "/ad_" + Date.now() + ".jpg";
       const blob = await fetch(scaled.dataUrl).then(r => r.blob());
       const { data, error } = await sb.storage.from('avatars').upload(bestandsnaam, blob, { contentType: 'image/jpeg', upsert: true });
       if (error) throw error;
@@ -2530,7 +2549,7 @@ async function slaAdvertentieOp() {
   const leeftijdVan = document.getElementById('adLeeftijdVan')?.value;
   const leeftijdTot = document.getElementById('adLeeftijdTot')?.value;
   const leeftijdInfo = isBand
-    ? (leeftijdVan && leeftijdTot ? `${leeftijdVan}-${leeftijdTot}` : null)
+    ? (leeftijdVan && leeftijdTot ? leeftijdVan + "-" + leeftijdTot : null)
     : (leeftijdEnkel || null);
 
   // Validatie
