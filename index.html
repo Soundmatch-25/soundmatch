@@ -544,7 +544,7 @@ html, body {
 .panel-header h2 { font-family: var(--font-head); font-size: 22px; font-weight: 800; }
 
 .liked-tabs { display: flex; gap: 4px; margin-top: 14px; background: var(--card2); border-radius: 12px; padding: 4px; }
-.liked-tab { flex: 1; padding: 9px; text-align: center; font-size: 13px; font-weight: 600; color: var(--sub); cursor: pointer; border-radius: 10px; transition: all .15s; }
+.liked-tab { flex: 1; padding: 10px 8px; text-align: center; font-size: 13px; font-weight: 600; color: var(--sub); cursor: pointer; border-radius: 10px; transition: all .15s; -webkit-tap-highlight-color: transparent; user-select: none; }
 .liked-tab.active { background: var(--neon); color: #fff; }
 
 .liked-grid {
@@ -1373,7 +1373,7 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
         <h2>Mijn Lijst</h2>
         <div class="liked-tabs">
           <div class="liked-tab active" id="tabLiked" onclick="switchTab('liked')">♥ Geliked</div>
-          <div class="liked-tab" id="tabSkipped" onclick="switchTab('skipped')">✕ Geskipt</div>
+          <div class="liked-tab" id="tabSkipped" onclick="switchTab('skipped')">&#215; Geskipt</div>
           <div class="liked-tab" id="tabAll" onclick="switchTab('all')">Alle</div>
         </div>
       </div>
@@ -1550,6 +1550,21 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
               <div><div class="field-label">Beschikbaarheid</div><select class="select-field" id="adBeschikbaarheid"><option>Hobby</option><option selected>Serieus</option><option>Professioneel</option></select></div>
             </div>
 
+            <!-- Leeftijd muzikant/sessie/industry -->
+            <div id="adLeeftijdEnkel">
+              <div class="field-label">Jouw leeftijd</div>
+              <input class="input-field" id="adLeeftijd" type="number" inputmode="numeric" placeholder="bijv. 24" min="16" max="99" onkeypress="return event.charCode>=48&&event.charCode<=57"/>
+            </div>
+
+            <!-- Gewenste leeftijdsrange voor bands -->
+            <div id="adLeeftijdRange" style="display:none;">
+              <div class="field-label">Gewenste leeftijd bandleden</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+                <div><input class="input-field" id="adLeeftijdVan" type="number" inputmode="numeric" placeholder="Van (bijv. 18)" min="16" max="99" onkeypress="return event.charCode>=48&&event.charCode<=57"/></div>
+                <div><input class="input-field" id="adLeeftijdTot" type="number" inputmode="numeric" placeholder="Tot (bijv. 35)" min="16" max="99" onkeypress="return event.charCode>=48&&event.charCode<=57"/></div>
+              </div>
+            </div>
+
             <!-- Links -->
             <div>
               <div class="field-label">Link(s) naar muziek <span style="color:var(--sub);font-weight:400;">(optioneel)</span></div>
@@ -1604,6 +1619,11 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
 </div><!-- /screen-app -->
 
 </div><!-- /app -->
+
+<!-- FOTO LIGHTBOX -->
+<div id="fotoLightbox" onclick="closeLightbox()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:1000;align-items:center;justify-content:center;cursor:zoom-out;">
+  <img id="fotoLightboxImg" style="max-width:90vw;max-height:90vh;border-radius:16px;object-fit:contain;"/>
+</div>
 
 <!-- LIJST DETAIL MODAL -->
 <div class="modal-overlay" id="lijstDetailModal" onclick="if(event.target===this)closeLijstDetail()" style="display:none;align-items:center;justify-content:center;">
@@ -1665,19 +1685,19 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
     </div>
     <div>
       <div class="field-label">Instrument</div>
-      <div class="chip-group">
+      <div class="chip-group" id="filterInstrumenten">
         <div class="chip selected" onclick="tc(this)">Alles</div><div class="chip" onclick="tc(this)">Gitaar</div><div class="chip" onclick="tc(this)">Basgitaar</div><div class="chip" onclick="tc(this)">Drums</div><div class="chip" onclick="tc(this)">Percussie</div><div class="chip" onclick="tc(this)">Zang</div><div class="chip" onclick="tc(this)">Keys / Piano</div><div class="chip" onclick="tc(this)">Synthesizer</div><div class="chip" onclick="tc(this)">Viool</div><div class="chip" onclick="tc(this)">Cello</div><div class="chip" onclick="tc(this)">Trompet</div><div class="chip" onclick="tc(this)">Saxofoon</div><div class="chip" onclick="tc(this)">Trombone</div><div class="chip" onclick="tc(this)">DJ</div><div class="chip" onclick="tc(this)">Producer</div><div class="chip" onclick="tc(this)">Ukulele</div><div class="chip" onclick="tc(this)">Banjo</div><div class="chip" onclick="tc(this)">Overig</div>
       </div>
     </div>
     <div>
       <div class="field-label">Genre</div>
-      <div class="chip-group">
+      <div class="chip-group" id="filterGenres">
         <div class="chip selected" onclick="tc(this)">Alles</div><div class="chip" onclick="tc(this)">Rock</div><div class="chip" onclick="tc(this)">Classic Rock</div><div class="chip" onclick="tc(this)">Alt-Rock</div><div class="chip" onclick="tc(this)">Indie Rock</div><div class="chip" onclick="tc(this)">Prog Rock</div><div class="chip" onclick="tc(this)">Punk</div><div class="chip" onclick="tc(this)">Pop-Punk</div><div class="chip" onclick="tc(this)">Hardcore</div><div class="chip" onclick="tc(this)">Metal</div><div class="chip" onclick="tc(this)">Heavy Metal</div><div class="chip" onclick="tc(this)">Pop</div><div class="chip" onclick="tc(this)">Indie Pop</div><div class="chip" onclick="tc(this)">Jazz</div><div class="chip" onclick="tc(this)">Blues</div><div class="chip" onclick="tc(this)">Soul</div><div class="chip" onclick="tc(this)">R&amp;B</div><div class="chip" onclick="tc(this)">Funk</div><div class="chip" onclick="tc(this)">Hip-hop</div><div class="chip" onclick="tc(this)">Electronic</div><div class="chip" onclick="tc(this)">House</div><div class="chip" onclick="tc(this)">Techno</div><div class="chip" onclick="tc(this)">Folk</div><div class="chip" onclick="tc(this)">Country</div><div class="chip" onclick="tc(this)">Reggae</div><div class="chip" onclick="tc(this)">Ska</div><div class="chip" onclick="tc(this)">Klassiek</div><div class="chip" onclick="tc(this)">Overig</div>
       </div>
     </div>
     <div>
       <div class="field-label">Niveau</div>
-      <div class="chip-group">
+      <div class="chip-group" id="filterNiveau">
         <div class="chip selected" onclick="tc(this)">Alles</div><div class="chip" onclick="tc(this)">Beginner</div><div class="chip" onclick="tc(this)">Gevorderd</div><div class="chip" onclick="tc(this)">Professioneel</div>
       </div>
     </div>
@@ -1791,13 +1811,31 @@ async function laadAdvertenties() {
   const { data: advertenties } = await adQuery.order('aangemaakt_op', { ascending: false }).limit(50);
 
   // Combineer profielen en advertenties
-  const profielKaarten = (profielen || [])
+  let profielKaarten = (profielen || [])
     .filter(p => !geswipedIds.has(p.id))
     .map(p => profielNaarKaart(p));
 
-  const adKaarten = (advertenties || [])
+  let adKaarten = (advertenties || [])
     .filter(a => !geswipedIds.has(a.id))
     .map(a => advertentieNaarKaart(a));
+
+  // Client-side genre/instrument filter toepassen
+  if (filterState.instrumenten.length > 0) {
+    profielKaarten = profielKaarten.filter(p =>
+      filterState.instrumenten.some(i => (p.raw?.instrument || []).includes(i))
+    );
+    adKaarten = adKaarten.filter(a =>
+      filterState.instrumenten.some(i => (a.raw?.instrumenten || []).includes(i))
+    );
+  }
+  if (filterState.genres.length > 0) {
+    profielKaarten = profielKaarten.filter(p =>
+      filterState.genres.some(g => (p.raw?.genres || []).includes(g))
+    );
+    adKaarten = adKaarten.filter(a =>
+      filterState.genres.some(g => (a.raw?.genres || []).includes(g))
+    );
+  }
 
   // Mix: spotlight eerst, dan afwisselend profielen en advertenties
   advertentiesData = [...adKaarten, ...profielKaarten].sort((a, b) => (b.spotlight ? 1 : 0) - (a.spotlight ? 1 : 0));
@@ -1858,7 +1896,7 @@ function buildCard(p, cls) {
 
   const [activeCls, activeLabel] = getActiveLabel(p.activeMin || 9999);
   const fotoHTML = p.foto_url
-    ? `<img src="${p.foto_url}" style="width:100%;height:100%;object-fit:cover;" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"/><div style="display:none;width:100%;height:100%;align-items:center;justify-content:center;">${typeIcon(p.type)}</div>`
+    ? `<img src="${p.foto_url}" style="width:100%;height:100%;object-fit:cover;" onclick="event.stopPropagation();openLightbox('${p.foto_url}')" style="cursor:zoom-in;" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"/><div style="display:none;width:100%;height:100%;align-items:center;justify-content:center;">${typeIcon(p.type)}</div>`
     : `<div style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;">${typeIcon(p.type)}</div>`;
 
   el.innerHTML = `
@@ -2352,6 +2390,8 @@ function toonAdFormulier() {
   setAdTypeNieuw('muzikant');
   // Reset foto
   adFotoUrl = null;
+  const leeftijdEl = document.getElementById('adLeeftijd');
+  if (leeftijdEl) leeftijdEl.value = '';
   document.getElementById('adFotoPreview').innerHTML = '<svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>';
   document.getElementById('adError').style.display = 'none';
 }
@@ -2372,6 +2412,8 @@ function setAdTypeNieuw(adType) {
   document.getElementById('adVeldenMuz').style.display = isBand ? 'none' : 'block';
   document.getElementById('adVeldenBand').style.display = isBand ? 'block' : 'none';
   document.getElementById('adNiveauRij').style.display = isBand ? 'none' : '';
+  document.getElementById('adLeeftijdEnkel').style.display = isBand ? 'none' : 'block';
+  document.getElementById('adLeeftijdRange').style.display = isBand ? 'block' : 'none';
   const label = document.getElementById('adTitelLabel');
   if (label) label.textContent = isBand ? 'Bandnaam *' : 'Naam *';
   const input = document.getElementById('adNaam');
@@ -2442,6 +2484,12 @@ async function slaAdvertentieOp() {
     : [...document.querySelectorAll('#adInstrumenten .chip.selected')].map(c => c.textContent);
   const genres = [...document.querySelectorAll('#adGenres .chip.selected')].map(c => c.textContent);
   const links = [...document.querySelectorAll('#adLinks input')].map(i => i.value.trim()).filter(Boolean).join(', ');
+  const leeftijdEnkel = document.getElementById('adLeeftijd')?.value;
+  const leeftijdVan = document.getElementById('adLeeftijdVan')?.value;
+  const leeftijdTot = document.getElementById('adLeeftijdTot')?.value;
+  const leeftijdInfo = isBand
+    ? (leeftijdVan && leeftijdTot ? `${leeftijdVan}-${leeftijdTot}` : null)
+    : (leeftijdEnkel || null);
 
   // Validatie
   const errEl = document.getElementById('adError');
@@ -2464,6 +2512,7 @@ async function slaAdvertentieOp() {
       omschrijving: bio,
       muzieklinks: links,
       foto_url: adFotoUrl || null,
+      leeftijd: leeftijdInfo,
       actief: true
     });
 
@@ -2711,23 +2760,34 @@ function selectMsg(el) {
 let filterState = { minLeeftijd: 16, maxLeeftijd: 100, instrumenten: [], genres: [], niveau: '' };
 
 function closeFilter() {
-  // Sla filterwaarden op
   filterState.minLeeftijd = parseInt(document.getElementById('ageMin')?.value || 16);
   filterState.maxLeeftijd = parseInt(document.getElementById('ageMax')?.value || 100);
-  filterState.instrumenten = [...document.querySelectorAll('#filterModal .chip-group:nth-of-type(1) .chip.selected')]
-    .map(c => c.textContent).filter(t => t !== 'Alles');
-  filterState.genres = [...document.querySelectorAll('#filterModal .chip-group:nth-of-type(2) .chip.selected')]
-    .map(c => c.textContent).filter(t => t !== 'Alles');
-  const niveauChips = [...document.querySelectorAll('#filterModal .chip-group:nth-of-type(3) .chip.selected')]
-    .map(c => c.textContent).filter(t => t !== 'Alles');
-  filterState.niveau = niveauChips[0] || '';
+
+  const instrChips = [...document.querySelectorAll('#filterInstrumenten .chip.selected')].map(c => c.textContent);
+  filterState.instrumenten = instrChips.includes('Alles') ? [] : instrChips;
+
+  const genreChips = [...document.querySelectorAll('#filterGenres .chip.selected')].map(c => c.textContent);
+  filterState.genres = genreChips.includes('Alles') ? [] : genreChips;
+
+  const niveauChips = [...document.querySelectorAll('#filterNiveau .chip.selected')].map(c => c.textContent);
+  filterState.niveau = niveauChips.includes('Alles') ? '' : (niveauChips[0] || '');
+
   document.getElementById('filterModal').classList.remove('open');
-  // Herlaad met nieuwe filters
   cardIndex = 0;
   laadAdvertenties();
 }
 
-function openFilter() { document.getElementById('filterModal').classList.add('open'); }
+function openLightbox(url) {
+  const lb = document.getElementById('fotoLightbox');
+  const img = document.getElementById('fotoLightboxImg');
+  if (!url || !lb || !img) return;
+  img.src = url;
+  lb.style.display = 'flex';
+}
+
+function closeLightbox() {
+  document.getElementById('fotoLightbox').style.display = 'none';
+}
 function setFR(r) {
   const map = {bands:'fBands', muzikanten:'fMuz', sessie:'fSessie', industry:'fIndustry', alles:'fAll'};
   Object.entries(map).forEach(([type, id]) => {
