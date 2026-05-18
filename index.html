@@ -357,9 +357,11 @@ html, body {
 .card-badge-genre {
   position: absolute; top: 14px; left: 14px;
   padding: 6px 14px; border-radius: 24px;
-  background: rgba(124,77,255,0.35);
-  border: 1px solid rgba(124,77,255,0.55);
-  color: #c4b0ff; font-size: 12px; font-weight: 600;
+  background: rgba(0,0,0,0.6);
+  border: 1px solid rgba(255,255,255,0.15);
+  color: #fff; font-size: 12px; font-weight: 600;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 .card-badge-dist {
   position: absolute; top: 14px; right: 14px;
@@ -369,11 +371,13 @@ html, body {
 .card-badge-type {
   position: absolute; bottom: 14px; left: 14px;
   padding: 5px 12px; border-radius: 20px; font-size: 11px; font-weight: 700;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
-.type-band { background: rgba(255,107,53,0.25); border: 1px solid rgba(255,107,53,0.5); color: #ff9f7a; }
-.type-muzikant { background: rgba(68,138,255,0.25); border: 1px solid rgba(68,138,255,0.5); color: #7ab8ff; }
-.type-sessie { background: rgba(168,85,247,0.25); border: 1px solid rgba(168,85,247,0.5); color: #d4a4ff; }
-.type-industry { background: rgba(251,191,36,0.2); border: 1px solid rgba(251,191,36,0.4); color: #fcd34d; }
+.type-band { background: rgba(0,0,0,0.6); border: 1px solid rgba(255,107,53,0.6); color: #ff9f7a; }
+.type-muzikant { background: rgba(0,0,0,0.6); border: 1px solid rgba(68,138,255,0.6); color: #7ab8ff; }
+.type-sessie { background: rgba(0,0,0,0.6); border: 1px solid rgba(168,85,247,0.6); color: #d4a4ff; }
+.type-industry { background: rgba(0,0,0,0.6); border: 1px solid rgba(251,191,36,0.5); color: #fcd34d; }
 
 /* Actief indicator */
 .active-dot {
@@ -381,11 +385,14 @@ html, body {
   display: flex; align-items: center; gap: 5px;
   padding: 4px 10px; border-radius: 20px;
   font-size: 11px; font-weight: 700;
-  backdrop-filter: blur(4px);
+  background: rgba(0,0,0,0.6);
+  border: 1px solid rgba(255,255,255,0.1);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
-.active-now { background: rgba(34,197,94,0.2); border: 1px solid rgba(34,197,94,0.4); color: #4ade80; }
-.active-today { background: rgba(251,191,36,0.15); border: 1px solid rgba(251,191,36,0.35); color: #fcd34d; }
-.active-old { background: rgba(100,100,120,0.2); border: 1px solid rgba(100,100,120,0.35); color: var(--sub); }
+.active-now { border-color: rgba(34,197,94,0.5); color: #4ade80; }
+.active-today { border-color: rgba(251,191,36,0.4); color: #fcd34d; }
+.active-old { color: var(--sub); }
 .active-dot .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
 
 /* Spotlight badge */
@@ -1726,7 +1733,26 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
 
 <script>
 // ═══════════════ HELPERS ═══════════════
-function tc(el) { el.classList.toggle('selected'); }
+function tc(el) {
+  el.classList.toggle('selected');
+  // Als een gewone chip geselecteerd wordt, Alles deselecteren
+  if (el.classList.contains('selected') && el.textContent !== 'Alles') {
+    const group = el.closest('.chip-group');
+    if (group) {
+      const allesChip = [...group.querySelectorAll('.chip')].find(c => c.textContent === 'Alles');
+      if (allesChip) allesChip.classList.remove('selected');
+    }
+  }
+  // Als Alles geselecteerd wordt, alle andere chips deselecteren
+  if (el.classList.contains('selected') && el.textContent === 'Alles') {
+    const group = el.closest('.chip-group');
+    if (group) {
+      group.querySelectorAll('.chip').forEach(c => {
+        if (c.textContent !== 'Alles') c.classList.remove('selected');
+      });
+    }
+  }
+}
 
 // ═══════════════ DATA ═══════════════
 let advertentiesData = []; // echte profielen/advertenties uit Supabase
@@ -1780,37 +1806,36 @@ const geswipedIds = new Set(); // persistent per sessie
 
 async function laadAdvertenties() {
   const stack = document.getElementById('cardStack');
-  if (stack) stack.innerHTML = `<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--sub);flex-direction:column;gap:12px;"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="opacity:.4"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg><div>Muzikanten laden...</div></div>`;
+  if (stack) stack.innerHTML = `<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--sub);flex-direction:column;gap:12px;"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="opacity:.4"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg><div>Laden...</div></div>`;
 
-  // Laad geswiped IDs uit Supabase als nog niet gedaan
+  // Swipes laden als nog niet gedaan
   if (geswipedIds.size === 0 && currentUser) {
     const { data: swipes } = await sb.from('swipes').select('target_id').eq('swiper_id', currentUser.id);
     (swipes || []).forEach(s => geswipedIds.add(s.target_id));
   }
 
-  // Laad profielen
+  // Bouw queries
   let profielQuery = sb.from('profiles').select('*').neq('id', currentUser?.id).not('naam', 'is', null);
   if (activeType === 'bands') profielQuery = profielQuery.eq('type', 'band');
   else if (activeType === 'muzikanten') profielQuery = profielQuery.eq('type', 'muzikant');
   else if (activeType === 'sessie') profielQuery = profielQuery.eq('type', 'sessie');
   else if (activeType === 'industry') profielQuery = profielQuery.eq('type', 'industry');
-
   if (filterState.minLeeftijd > 16) profielQuery = profielQuery.gte('leeftijd', filterState.minLeeftijd);
   if (filterState.maxLeeftijd < 100) profielQuery = profielQuery.lte('leeftijd', filterState.maxLeeftijd);
   if (filterState.niveau) profielQuery = profielQuery.eq('niveau', filterState.niveau);
+  profielQuery = profielQuery.order('actief_op', { ascending: false }).limit(50);
 
-  const { data: profielen } = await profielQuery.order('actief_op', { ascending: false }).limit(50);
-
-  // Laad advertenties uit de advertenties tabel
   let adQuery = sb.from('advertenties').select('*, profiel:user_id(*)').eq('actief', true);
   if (activeType === 'bands') adQuery = adQuery.eq('type', 'band');
   else if (activeType === 'muzikanten') adQuery = adQuery.eq('type', 'muzikant');
   else if (activeType === 'sessie') adQuery = adQuery.eq('type', 'sessie');
   else if (activeType === 'industry') adQuery = adQuery.eq('type', 'industry');
+  adQuery = adQuery.order('aangemaakt_op', { ascending: false }).limit(50);
 
-  const { data: advertenties } = await adQuery.order('aangemaakt_op', { ascending: false }).limit(50);
+  // Parallel uitvoeren
+  const [{ data: profielen }, { data: advertenties }] = await Promise.all([profielQuery, adQuery]);
 
-  // Combineer profielen en advertenties
+  // Combineer
   let profielKaarten = (profielen || [])
     .filter(p => !geswipedIds.has(p.id))
     .map(p => profielNaarKaart(p));
@@ -1864,7 +1889,7 @@ function advertentieNaarKaart(a) {
     type,
     desc: a.omschrijving || 'Geen beschrijving beschikbaar.',
     tags,
-    activeMin: 9999,
+    activeMin: getActiefMinuten(a.aangemaakt_op),
     spotlight: a.spotlight || false,
     foto_url: a.foto_url || profiel.foto_url || null,
     link: a.muzieklinks || '',
@@ -1895,6 +1920,8 @@ function buildCard(p, cls) {
   if (!p || p.isAd) return el;
 
   const [activeCls, activeLabel] = getActiveLabel(p.activeMin || 9999);
+  const locatieBadge = (p.raw?.stad || p.raw?.locatie) ? `<div style="position:absolute;bottom:14px;right:14px;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:600;background:rgba(0,0,0,0.6);border:1px solid rgba(255,255,255,0.1);color:#fff;backdrop-filter:blur(8px);display:flex;align-items:center;gap:4px;"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>${p.raw?.stad || p.raw?.locatie}</div>` : '';
+  const leeftijdBadge = (p.raw?.leeftijd && p.type !== 'band') ? `<div style="position:absolute;bottom:44px;right:14px;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:600;background:rgba(0,0,0,0.6);border:1px solid rgba(255,255,255,0.1);color:#fff;backdrop-filter:blur(8px);">${p.raw.leeftijd} jaar</div>` : '';
   const fotoHTML = p.foto_url
     ? `<img src="${p.foto_url}" style="width:100%;height:100%;object-fit:cover;" onclick="event.stopPropagation();openLightbox('${p.foto_url}')" style="cursor:zoom-in;" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"/><div style="display:none;width:100%;height:100%;align-items:center;justify-content:center;">${typeIcon(p.type)}</div>`
     : `<div style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;">${typeIcon(p.type)}</div>`;
@@ -1905,6 +1932,8 @@ function buildCard(p, cls) {
       ${getTypeBadge(p.type)}
       <div class="active-dot ${activeCls}"><span class="dot"></span>${activeLabel}</div>
       ${p.spotlight ? `<div class="spotlight-badge"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" style="color:#fcd34d"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> Uitgelicht</div>` : ''}
+      ${locatieBadge}
+      ${leeftijdBadge}
       ${fotoHTML}
     </div>
     <div class="card-body">
@@ -2904,37 +2933,38 @@ async function uitloggen() {
 }
 
 async function laadOfMaakProfiel(user) {
-  console.log('laadOfMaakProfiel voor:', user.email);
   const { data: profiel, error } = await sb
     .from('profiles')
     .select('*')
     .eq('id', user.id)
     .maybeSingle();
 
-  console.log('Profiel data:', profiel, 'Error:', error);
-
   if (profiel && profiel.naam) {
     currentProfile = profiel;
     vulProfielIn(profiel);
+    // actief_op updaten op de achtergrond
+    sb.from('profiles').update({ actief_op: new Date().toISOString() }).eq('id', user.id);
+    // Swipes alvast laden zodat ontdekken snel is
+    voorlaadSwipes();
     showScreen('app');
   } else if (profiel && !profiel.naam) {
     currentProfile = profiel;
     showScreen('register');
   } else {
-    console.log('Nieuw profiel aanmaken...');
-    const { data: nieuwProfiel, error: insertError } = await sb
+    const { data: nieuwProfiel } = await sb
       .from('profiles')
-      .insert({
-        id: user.id,
-        naam: null,
-        foto_url: user.user_metadata?.avatar_url || null,
-      })
+      .insert({ id: user.id, naam: null, foto_url: user.user_metadata?.avatar_url || null })
       .select()
       .single();
-    console.log('Nieuw profiel:', nieuwProfiel, 'Error:', insertError);
     currentProfile = nieuwProfiel;
     showScreen('register');
   }
+}
+
+async function voorlaadSwipes() {
+  if (!currentUser || geswipedIds.size > 0) return;
+  const { data: swipes } = await sb.from('swipes').select('target_id').eq('swiper_id', currentUser.id);
+  (swipes || []).forEach(s => geswipedIds.add(s.target_id));
 }
 
 async function slaProfielOp() {
