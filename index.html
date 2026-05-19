@@ -2384,8 +2384,10 @@ async function laadSwipeHistory() {
   swipeHistory = swipes.map(s => {
     const profiel = profielMap[s.target_id];
     const ad = adMap[s.target_id];
+    console.log('Swipe target:', s.target_id, '→ profiel:', !!profiel, 'ad:', !!ad, 'richting:', s.richting);
     if (profiel) return { ...profielNaarKaart(profiel), status: s.richting, swipe_id: s.id };
     if (ad) return { ...advertentieNaarKaart({ ...ad, profiel: {} }), status: s.richting, swipe_id: s.id };
+    console.warn('Target ID niet gevonden in profielen of advertenties:', s.target_id);
     return null;
   }).filter(Boolean);
 
