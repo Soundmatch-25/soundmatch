@@ -1275,7 +1275,7 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
     </div>
 
     <!-- Niveau + Beschikbaarheid (alleen voor muzikant/sessie/industry) -->
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;" id="regNiveauRij">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;" id="regNiveauRij">
       <div><div class="field-label">Niveau</div><select class="select-field" id="regNiveau"><option>Beginner</option><option selected>Gevorderd</option><option>Professioneel</option></select></div>
       <div><div class="field-label">Beschikbaarheid</div><select class="select-field" id="regBeschikbaarheid"><option>Hobby</option><option selected>Serieus</option><option>Professioneel</option></select></div>
     </div>
@@ -1491,11 +1491,11 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
 
       <!-- FORMULIER (zelfde structuur als profielformulier) -->
       <div id="adFormulier" style="display:none;flex-direction:column;height:100%;overflow:hidden;">
-        <div class="panel-header" style="display:flex;align-items:center;gap:14px;">
+        <div class="panel-header" style="display:flex;align-items:center;gap:14px;position:relative;">
           <button type="button" onclick="verbergAdFormulier()" style="width:36px;height:36px;border-radius:50%;border:1px solid var(--border);background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--sub);flex-shrink:0;">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
           </button>
-          <h2>Nieuwe advertentie</h2>
+          <h2 style="position:absolute;left:50%;transform:translateX(-50%);">Nieuwe advertentie</h2>
         </div>
 
         <div style="flex:1;overflow-y:auto;display:flex;flex-direction:column;align-items:center;">
@@ -1584,7 +1584,7 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
             </div>
 
             <!-- Niveau + beschikbaarheid (niet voor bands) -->
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;" id="adNiveauRij">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;" id="adNiveauRij">
               <div><div class="field-label">Niveau</div><select class="select-field" id="adNiveau"><option>Beginner</option><option selected>Gevorderd</option><option>Professioneel</option></select></div>
               <div><div class="field-label">Beschikbaarheid</div><select class="select-field" id="adBeschikbaarheid"><option>Hobby</option><option selected>Serieus</option><option>Professioneel</option></select></div>
             </div>
@@ -2922,20 +2922,7 @@ async function laadMijnAdvertenties() {
 
 // ═══════════════ ADVERTENTIE FORMULIER ═══════════════
 function resetLinksHTML() {
-  const div = document.createElement('div');
-  div.style.cssText = 'display:flex;gap:8px;align-items:center;';
-  const input = document.createElement('input');
-  input.className = 'input-field';
-  input.style.flex = '1';
-  input.placeholder = 'SoundCloud, YouTube, Spotify, Instagram...';
-  const btn = document.createElement('button');
-  btn.type = 'button';
-  btn.onclick = voegAdLink;
-  btn.style.cssText = 'width:36px;height:44px;border-radius:10px;border:1px solid #333;background:#1a1a2e;color:#888;cursor:pointer;font-size:20px;display:flex;align-items:center;justify-content:center;flex-shrink:0;';
-  btn.textContent = '+';
-  div.appendChild(input);
-  div.appendChild(btn);
-  return div.outerHTML;
+  return '<div style="display:flex;gap:8px;align-items:center;"><input class="input-field" style="flex:1;" placeholder="SoundCloud, YouTube, Spotify, Instagram..."/><button type="button" onclick="voegAdLink()" style="width:36px;height:44px;border-radius:10px;border:1px solid var(--border);background:var(--card2);color:var(--sub);cursor:pointer;font-size:20px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">+</button></div>';
 }
 
 function fixBioHoogte() {
