@@ -2016,60 +2016,33 @@ function buildCard(p, cls) {
   if (!p) return el;
 
   const [activeCls, activeLabel] = getActiveLabel(p.activeMin || 9999);
-
-  // Genres — max 2 rechtsboven
-  const genreTags = (p.raw?.genres || []).slice(0, 2);
-  const genreHTML = genreTags.map(g =>
-    `<div style="padding:4px 10px;border-radius:20px;font-size:11px;font-weight:600;background:rgba(0,0,0,0.6);border:1px solid rgba(255,255,255,0.15);color:#fff;backdrop-filter:blur(8px);">${g}</div>`
-  ).join('');
-
-  // Locatie rechtsonder
-  const locatie = p.raw?.stad || p.raw?.locatie || p.raw?.profiel?.stad || '';
-  const locatieBadge = locatie ? `<div style="position:absolute;bottom:14px;right:14px;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:600;background:rgba(0,0,0,0.6);border:1px solid rgba(255,255,255,0.1);color:#fff;backdrop-filter:blur(8px);display:flex;align-items:center;gap:4px;"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>${locatie}</div>` : '';
-
-  // Leeftijd boven locatie rechtsonder
-  const leeftijd = p.raw?.leeftijd || '';
-  const leeftijdBadge = leeftijd ? `<div style="position:absolute;bottom:${locatie ? 50 : 14}px;right:14px;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:600;background:rgba(0,0,0,0.6);border:1px solid rgba(255,255,255,0.1);color:#fff;backdrop-filter:blur(8px);">${leeftijd} jaar</div>` : '';
-
-  // Foto met reposition support
-  const fotoId = 'foto-' + Math.random().toString(36).substr(2,8);
+  const locatieBadge = (p.raw?.stad || p.raw?.locatie) ? `<div style="position:absolute;bottom:14px;right:14px;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:600;background:rgba(0,0,0,0.6);border:1px solid rgba(255,255,255,0.1);color:#fff;backdrop-filter:blur(8px);display:flex;align-items:center;gap:4px;"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>${p.raw?.stad || p.raw?.locatie}</div>` : '';
+  const leeftijdBadge = (p.raw?.leeftijd && p.type !== 'band') ? `<div style="position:absolute;bottom:44px;right:14px;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:600;background:rgba(0,0,0,0.6);border:1px solid rgba(255,255,255,0.1);color:#fff;backdrop-filter:blur(8px);">${p.raw.leeftijd} jaar</div>` : '';
   const fotoHTML = p.foto_url
-    ? `<img id="${fotoId}" src="${p.foto_url}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center;cursor:grab;" draggable="false" onclick="if(!window._wasDragging)openLightbox('${p.foto_url}')" onerror="this.parentElement.innerHTML='<div style=\'display:flex;align-items:center;justify-content:center;width:100%;height:100%;\'>${typeIcon(p.type).replace(/'/g,'\\\'')}</div>'"/>`
+    ? `<img src="${p.foto_url}" style="width:100%;height:100%;object-fit:cover;cursor:zoom-in;" onclick="if(!window._wasDragging)openLightbox('${p.foto_url}')" onerror="this.style.display='none'"/>`
     : `<div style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;">${typeIcon(p.type)}</div>`;
-
-  const typeMap = { band:['type-band','Band'], muzikant:['type-muzikant','Muzikant'], sessie:['type-sessie','Sessie'], industry:['type-industry','Industry'] };
-  const [typeCls, typeLabel] = typeMap[p.type] || typeMap.muzikant;
 
   el.innerHTML = `
     <div class="card-visual" style="position:relative;overflow:hidden;">
-      ${fotoHTML}
-      <!-- Linksboven: type badge -->
-      <div class="card-badge-type ${typeCls}" style="position:absolute;top:14px;left:14px;z-index:2;">${typeLabel}</div>
-      <!-- Linksonder: online status -->
-      <div class="active-dot ${activeCls}" style="position:absolute;bottom:14px;left:14px;z-index:2;"><span class="dot"></span>${activeLabel}</div>
-      <!-- Rechtsboven: genres -->
-      <div style="position:absolute;top:14px;right:14px;display:flex;flex-direction:column;gap:4px;align-items:flex-end;z-index:2;">${genreHTML}</div>
-      <!-- Rechtsonder: leeftijd + locatie -->
-      ${leeftijdBadge}
+      <div class="card-badge-genre">${p.genre}</div>
+      ${getTypeBadge(p.type)}
+      <div class="active-dot ${activeCls}"><span class="dot"></span>${activeLabel}</div>
+      ${p.spotlight ? `<div class="spotlight-badge"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" style="color:#fcd34d"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> Uitgelicht</div>` : ''}
       ${locatieBadge}
-      ${p.spotlight ? `<div class="spotlight-badge" style="z-index:2;"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" style="color:#fcd34d"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> Uitgelicht</div>` : ''}
+      ${leeftijdBadge}
+      ${fotoHTML}
     </div>
-    <div class="card-body" onclick="openKaartDetail(${cardIndex})" style="cursor:pointer;">
+    <div class="card-body">
       <div class="card-name">${p.naam}</div>
       <div class="card-role">${p.rol}</div>
       <div class="card-desc">${p.desc}</div>
-      <div class="card-tags">${(p.tags||[]).slice(0,3).map(t=>`<div class="tag">${t}</div>`).join('')}<div class="tag" style="opacity:.5;">Tik voor meer info →</div></div>
+      <div class="card-tags">${(p.tags||[]).map(t=>`<div class="tag">${t}</div>`).join('')}</div>
     </div>
     <div class="swipe-fb fb-like">MATCH!</div>
     <div class="swipe-fb fb-nope">NOPE</div>`;
-
-  // Foto herpositionering
-  if (p.foto_url) {
-    initFotoReposition(el.querySelector('img'), el);
-  }
-
   return el;
 }
+
 
 function renderCards() {
   const stack = document.getElementById('cardStack');
