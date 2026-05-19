@@ -1280,6 +1280,12 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
       <div><div class="field-label">Beschikbaarheid</div><select class="select-field" id="regBeschikbaarheid"><option>Hobby</option><option selected>Serieus</option><option>Professioneel</option></select></div>
     </div>
 
+    <!-- Bio -->
+    <div>
+      <div class="field-label">Bio</div>
+      <textarea class="input-field" id="regBio" rows="3" style="resize:none;overflow:hidden;" placeholder="Vertel iets over jezelf en wat je zoekt..." oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"></textarea>
+    </div>
+
     <!-- Links -->
     <div>
       <div class="field-label">Link(s) naar muziek <span style="color:var(--sub);font-weight:400;">(optioneel)</span></div>
@@ -1289,12 +1295,6 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
           <button onclick="voegLinkToe()" style="width:36px;height:44px;border-radius:10px;border:1px solid var(--border);background:var(--card2);color:var(--sub);cursor:pointer;font-size:20px;display:flex;align-items:center;justify-content:center;flex-shrink:0;" title="Voeg link toe">+</button>
         </div>
       </div>
-    </div>
-
-    <!-- Bio -->
-    <div>
-      <div class="field-label">Bio</div>
-      <textarea class="input-field" id="regBio" rows="3" style="resize:none;overflow:hidden;" placeholder="Vertel iets over jezelf en wat je zoekt..." oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"></textarea>
     </div>
 
     <div id="regError" style="font-size:13px;color:#ff8a80;display:none;padding:10px 14px;background:rgba(255,82,82,0.1);border-radius:10px;border:1px solid rgba(255,82,82,0.3);"></div>
@@ -1604,6 +1604,12 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
               </div>
             </div>
 
+            <!-- Bio -->
+            <div>
+              <div class="field-label">Beschrijving</div>
+              <textarea class="input-field" id="adBio" rows="3" style="resize:none;overflow:hidden;" placeholder="Vertel iets over jezelf, wat je zoekt, wanneer je beschikbaar bent..." oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"></textarea>
+            </div>
+
             <!-- Links -->
             <div>
               <div class="field-label">Link(s) naar muziek <span style="color:var(--sub);font-weight:400;">(optioneel)</span></div>
@@ -1613,12 +1619,6 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
                   <button type="button" onclick="voegAdLink()" style="width:36px;height:44px;border-radius:10px;border:1px solid var(--border);background:var(--card2);color:var(--sub);cursor:pointer;font-size:20px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">+</button>
                 </div>
               </div>
-            </div>
-
-            <!-- Bio -->
-            <div>
-              <div class="field-label">Beschrijving</div>
-              <textarea class="input-field" id="adBio" rows="3" style="resize:none;overflow:hidden;" placeholder="Vertel iets over jezelf, wat je zoekt, wanneer je beschikbaar bent..." oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"></textarea>
             </div>
 
             <div id="adError" style="font-size:13px;color:#ff8a80;display:none;padding:10px 14px;background:rgba(255,82,82,0.1);border-radius:10px;border:1px solid rgba(255,82,82,0.3);"></div>
@@ -2938,6 +2938,16 @@ function resetLinksHTML() {
   return div.outerHTML;
 }
 
+function fixBioHoogte() {
+  ['regBio', 'adBio'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el && el.value) {
+      el.style.height = 'auto';
+      el.style.height = el.scrollHeight + 'px';
+    }
+  });
+}
+
 function toonAdFormulier() {
   document.getElementById('adOverzicht').style.display = 'none';
   document.getElementById('adFormulier').style.display = 'flex';
@@ -2957,6 +2967,7 @@ function toonAdFormulier() {
   if (leeftijdEl) leeftijdEl.value = '';
   document.getElementById('adFotoPreview').innerHTML = '<svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>';
   document.getElementById('adError').style.display = 'none';
+  setTimeout(fixBioHoogte, 50);
 }
 
 function verbergAdFormulier() {
@@ -3220,9 +3231,8 @@ function bewerkProfiel() {
   if (subtitel) subtitel.textContent = 'Pas je gegevens aan';
 
   showScreen('register');
+  setTimeout(fixBioHoogte, 100);
 }
-
-// ═══════════════ FOTO UPLOAD ═══════════════
 let uploadedFotoUrl = null;
 
 async function handleFotoUpload(input) {
@@ -3289,18 +3299,18 @@ function getMuzieklinks() {
   return [...inputs].map(i => i.value.trim()).filter(Boolean);
 }
 const stedenPerProvincie = {
-  'Drenthe': ['Assen','Emmen','Hoogeveen','Meppel','Coevorden','Borger','Hardenberg','Roden','Beilen','Klazienaveen','Overig'],
-  'Flevoland': ['Almere','Lelystad','Dronten','Emmeloord','Urk','Zeewolde','Biddinghuizen','Overig'],
-  'Friesland': ['Leeuwarden','Drachten','Sneek','Heerenveen','Franeker','Harlingen','Bolsward','Joure','Dokkum','Overig'],
-  'Gelderland': ['Nijmegen','Arnhem','Apeldoorn','Ede','Doetinchem','Harderwijk','Tiel','Zutphen','Wageningen','Barneveld','Winterswijk','Overig'],
-  'Groningen': ['Groningen','Veendam','Hoogezand','Stadskanaal','Winschoten','Delfzijl','Leek','Zuidhorn','Overig'],
-  'Limburg': ['Maastricht','Venlo','Heerlen','Sittard','Roermond','Weert','Geleen','Kerkrade','Brunssum','Overig'],
-  'Noord-Brabant': ['Eindhoven','Tilburg','Breda','s-Hertogenbosch','Helmond','Oss','Bergen op Zoom','Roosendaal','Waalwijk','Veghel','Overig'],
-  'Noord-Holland': ['Amsterdam','Haarlem','Alkmaar','Zaandam','Hoorn','Purmerend','Heerhugowaard','Hilversum','Amstelveen','Beverwijk','Overig'],
-  'Overijssel': ['Enschede','Zwolle','Deventer','Hengelo','Almelo','Kampen','Hardenberg','Oldenzaal','Borne','Rijssen','Overig'],
-  'Utrecht': ['Utrecht','Amersfoort','Veenendaal','Zeist','Nieuwegein','Houten','IJsselstein','Woerden','Ovig'],
-  'Zeeland': ['Middelburg','Vlissingen','Goes','Terneuzen','Hulst','Zierikzee','Overig'],
-  'Zuid-Holland': ['Rotterdam','Den Haag','Leiden','Dordrecht','Zoetermeer','Delft','Westland','Gouda','Spijkenisse','Alphen aan den Rijn','Overig'],
+  'Drenthe': ['Assen','Emmen','Hoogeveen','Meppel','Coevorden','Borger-Odoorn','Hardenberg','Roden','Beilen','Klazienaveen','Smilde','Westerbork','Nieuw-Amsterdam','Schoonoord','Zuidlaren','Gieten','Annen','Vries','Norg','Diever','Dwingeloo','Havelte','Overig'],
+  'Flevoland': ['Almere','Lelystad','Dronten','Emmeloord','Urk','Zeewolde','Biddinghuizen','Swifterbant','Nagele','Tollebeek','Kraggenburg','Overig'],
+  'Friesland': ['Leeuwarden','Drachten','Sneek','Heerenveen','Franeker','Harlingen','Bolsward','Joure','Dokkum','Gorredijk','Burgum','Wolvega','Lemmer','Balk','Koudum','Makkum','Workum','Stavoren','Sloten','Akkrum','Grou','Beetsterzwaag','Surhuisterveen','Buitenpost','Damwoude','Kollum','Overig'],
+  'Gelderland': ['Nijmegen','Arnhem','Apeldoorn','Ede','Doetinchem','Harderwijk','Tiel','Zutphen','Wageningen','Barneveld','Winterswijk','Zevenaar','Culemborg','Doesburg','Elburg','Groenlo','Lochem','Nunspeet','Oldebroek','Putten','Renkum','Rheden','Scherpenzeel','Voorst','Westervoort','Wijchen','Aalten','Buren','Druten','Duiven','Hattem','Heerde','Overig'],
+  'Groningen': ['Groningen','Veendam','Hoogezand-Sappemeer','Stadskanaal','Winschoten','Delfzijl','Leek','Zuidhorn','Appingedam','Bedum','Loppersum','Pekela','Slochteren','Ten Boer','Vlagtwedde','Zuidbroek','Winsum','Uithuizen','Warffum','Overig'],
+  'Limburg': ['Maastricht','Venlo','Roermond','Sittard','Heerlen','Weert','Geleen','Kerkrade','Brunssum','Landgraaf','Echt','Valkenburg','Gulpen','Eijsden','Meerssen','Stein','Beek','Nuth','Simpelveld','Vaals','Gennep','Bergen','Mook','Horst aan de Maas','Beesel','Overig'],
+  'Noord-Brabant': ['Eindhoven','Tilburg','Breda','s-Hertogenbosch','Helmond','Oss','Bergen op Zoom','Roosendaal','Waalwijk','Veghel','Boxtel','Vught','Drunen','Heusden','Oosterhout','Dongen','Goirle','Hilvarenbeek','Oisterwijk','Schijndel','Sint-Oedenrode','Boxmeer','Cuijk','Grave','Mill','Bernheze','Boekel','Gemert-Bakel','Laarbeek','Deurne','Asten','Someren','Overig'],
+  'Noord-Holland': ['Amsterdam','Haarlem','Alkmaar','Zaandam','Hoorn','Purmerend','Hilversum','Den Helder','Amstelveen','Hoofddorp','Heerhugowaard','Castricum','Beverwijk','Velsen','Heemskerk','Uitgeest','Heiloo','Egmond aan Zee','Bergen aan Zee','Schagen','Texel','Medemblik','Enkhuizen','Blaricum','Bussum','Huizen','Laren','Weesp','Diemen','Landsmeer','Overig'],
+  'Overijssel': ['Enschede','Zwolle','Deventer','Hengelo','Almelo','Oldenzaal','Borne','Haaksbergen','Losser','Dinkelland','Tubbergen','Hellendoorn','Rijssen','Holten','Goor','Delden','Wierden','Enter','Nijverdal','Vriezenveen','Vroomshoop','Staphorst','Kampen','Dalfsen','Hardenberg','Ommen','Raalte','Olst','Wijhe','Hattem','Ootmarsum','Denekamp','De Lutte','Weerselo','Overig'],
+  'Utrecht': ['Utrecht','Amersfoort','Veenendaal','Zeist','Nieuwegein','Houten','IJsselstein','Woerden','De Bilt','Soest','Baarn','Bunnik','Bunschoten','Eemnes','Leusden','Lopik','Montfoort','Oudewater','Renswoude','Rhenen','Wijk bij Duurstede','Woudenberg','Overig'],
+  'Zeeland': ['Middelburg','Vlissingen','Goes','Terneuzen','Hulst','Sluis','Zierikzee','Kapelle','Reimerswaal','Veere','Overig'],
+  'Zuid-Holland': ['Rotterdam','Den Haag','Leiden','Dordrecht','Zoetermeer','Delft','Westland','Alphen aan den Rijn','Gouda','Schiedam','Spijkenisse','Capelle aan den IJssel','Ridderkerk','Barendrecht','Zwijndrecht','Pijnacker','Nootdorp','Waddinxveen','Boskoop','Bodegraven','Lisse','Hillegom','Noordwijk','Sassenheim','Katwijk','Wassenaar','Voorschoten','Leidschendam','Overig'],
 };
 
 function updateSteden() {
