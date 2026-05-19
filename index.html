@@ -416,7 +416,8 @@ html, body {
 }
 .card-name { font-family: var(--font-head); font-size: 20px; font-weight: 600; color: var(--text); }
 .card-role { font-size: 14px; color: var(--neon); font-weight: 600; margin-top: 2px; }
-.card-desc { font-size: 13px; color: var(--sub); line-height: 1.4; margin-top: 6px; }
+.card-desc { font-size: 13px; color: var(--sub); line-height: 1.4; margin-top: 6px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.card-desc-meer { font-size: 12px; color: var(--neon); cursor: pointer; margin-top: 4px; display: inline-block; }
 .card-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
 .tag { font-size: 11px; padding: 3px 10px; border-radius: 20px; border: 1px solid var(--border); color: var(--sub); }
 
@@ -1698,6 +1699,29 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
   </div>
 </div>
 
+<!-- KAART DETAIL MODAL -->
+<div class="modal-overlay" id="kaartDetailModal" onclick="if(event.target===this)closeKaartDetail()">
+  <div class="modal-box" style="max-width:480px;width:90%;padding:0;overflow:hidden;border-radius:24px;">
+    <div id="kdFoto" style="height:220px;background:var(--grad);position:relative;"></div>
+    <div style="padding:24px;display:flex;flex-direction:column;gap:14px;">
+      <div>
+        <div style="font-family:var(--font-head);font-size:22px;font-weight:800;" id="kdNaam"></div>
+        <div style="font-size:14px;color:var(--neon);margin-top:4px;" id="kdRol"></div>
+      </div>
+      <div id="kdBio" style="font-size:14px;color:var(--sub);line-height:1.6;"></div>
+      <div id="kdTags" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
+      <div id="kdLinks"></div>
+      <div style="display:flex;gap:10px;">
+        <button class="btn btn-primary" style="flex:1;" onclick="closeKaartDetail();openDirectBerichtModal()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          Bericht sturen
+        </button>
+        <button class="btn btn-ghost" onclick="closeKaartDetail()">Sluiten</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- DIRECT BERICHT MODAL -->
 <div class="modal-overlay" id="directBerichtModal" onclick="if(event.target===this)closeDirectBericht()">
   <div class="modal-box" style="max-width:440px;width:90%;padding:28px;gap:16px;display:flex;flex-direction:column;">
@@ -2061,6 +2085,7 @@ function buildCard(p, cls) {
       <div class="card-name">${p.naam}</div>
       <div class="card-role">${p.rol}</div>
       <div class="card-desc">${p.desc}</div>
+      ${p.desc && p.desc.length > 100 ? `<span class="card-desc-meer" onclick="event.stopPropagation();openKaartDetail(${advertentiesData.indexOf(p)})">Meer lezen...</span>` : ''}
       <div class="card-tags">${(p.tags||[]).map(t=>`<div class="tag">${t}</div>`).join('')}</div>
     </div>
     <div class="swipe-fb fb-like">MATCH!</div>
@@ -3308,6 +3333,43 @@ function closeFilter() {
 
 function openFilter() { document.getElementById('filterModal').classList.add('open'); }
 
+function openKaartDetail(index) {
+  const p = advertentiesData[index];
+  if (!p) return;
+  const raw = p.raw || {};
+
+  const modal = document.getElementById('kaartDetailModal');
+  document.getElementById('kdNaam').textContent = p.naam;
+  document.getElementById('kdRol').textContent = p.rol;
+  document.getElementById('kdBio').textContent = p.desc || '';
+  document.getElementById('kdBio').style.display = p.desc ? 'block' : 'none';
+
+  const foto = document.getElementById('kdFoto');
+  if (p.foto_url) {
+    foto.innerHTML = '<img src="' + p.foto_url + '" style="width:100%;height:100%;object-fit:cover;"/>';
+  } else {
+    foto.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;">' + typeIcon(p.type) + '</div>';
+  }
+
+  const tags = document.getElementById('kdTags');
+  tags.innerHTML = (p.tags || []).map(t => '<span class="tag">' + t + '</span>').join('');
+
+  const links = document.getElementById('kdLinks');
+  if (p.link) {
+    links.innerHTML = '<a href="' + (p.link.startsWith('http') ? p.link : 'https://' + p.link) + '" target="_blank" style="font-size:13px;color:var(--neon2);">' + p.link + '</a>';
+    links.style.display = 'block';
+  } else {
+    links.style.display = 'none';
+  }
+
+  // Sla index op voor chat knop
+  modal.dataset.index = index;
+  modal.classList.add('open');
+}
+
+function closeKaartDetail() {
+  document.getElementById('kaartDetailModal').classList.remove('open');
+}
 function openLightbox(url) {
   const lb = document.getElementById('fotoLightbox');
   const img = document.getElementById('fotoLightboxImg');
