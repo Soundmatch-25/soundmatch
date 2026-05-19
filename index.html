@@ -1386,7 +1386,7 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
     </div>
 
     <!-- ── LIKED PANEL ── -->
-    <div class="panel" id="panel-liked" style="display:flex;flex-direction:column;overflow:hidden;">
+    <div class="panel" id="panel-liked">
       <div class="panel-header">
         <h2>Bekeken Profielen</h2>
         <div class="liked-tabs">
@@ -3092,7 +3092,7 @@ async function verwijderAd(id) {
   laadMijnAdvertenties();
 }
 
-function openChat() { showPanel('messages'); }
+
 
 // ═══════════════ PROFIEL BEWERKEN ═══════════════
 function bewerkProfiel() {
@@ -3207,12 +3207,7 @@ function schaalFoto(file, maxSize) {
     reader.readAsDataURL(file);
   });
 }
-function openChat() { showPanel('messages'); }
 
-function selectMsg(el) {
-  document.querySelectorAll('.msg-item').forEach(m => m.classList.remove('active'));
-  el.classList.add('active');
-}
 function voegLinkToe() {
   const container = document.getElementById('muzieklinks');
   const div = document.createElement('div');
