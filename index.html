@@ -3736,9 +3736,9 @@ async function bevestigCrop() {
   ctx.drawImage(img, offsetX * scale, offsetY * scale, renderW * scale, renderH * scale);
 
   const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+  const cb = cropState.callback; // sla op voor sluiten
   sluitCropModal();
-
-  if (cropState.callback) cropState.callback(dataUrl);
+  if (cb) cb(dataUrl);
 }
 
 function fotoNaarBlob(dataUrl) {
