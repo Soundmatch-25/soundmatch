@@ -2373,7 +2373,7 @@ async function laadSwipeHistory() {
 
   const [{ data: profielen }, { data: advertenties }] = await Promise.all([
     sb.from('profiles').select('*').in('id', targetIds),
-    sb.from('advertenties').select('*').in('id', targetIds)
+    sb.from('advertenties').select('*, profiel:user_id(*)').in('id', targetIds)
   ]);
 
   console.log('Profielen:', profielen?.length, 'Advertenties:', advertenties?.length);
@@ -2398,8 +2398,10 @@ async function laadSwipeHistory() {
 function renderLiked() {
   const grid = document.getElementById('likedGrid');
   if (!grid) return;
+  console.log('renderLiked: tab=', currentTab, 'total=', swipeHistory.length, 'statussen=', swipeHistory.map(h=>h.status));
   const filtered = currentTab==='liked' ? swipeHistory.filter(h=>h.status==='like')
     : currentTab==='skipped' ? swipeHistory.filter(h=>h.status==='nope') : swipeHistory;
+  console.log('renderLiked filtered:', filtered.length);
 
   if (!filtered.length) {
     grid.innerHTML = `<div style="grid-column:1/-1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 20px;gap:12px;color:var(--sub);">
