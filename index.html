@@ -1641,6 +1641,37 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
 
 </div><!-- /app -->
 
+<!-- KAART DETAIL MODAL -->
+<div class="modal-overlay" id="kaartDetailModal" onclick="if(event.target===this)sluitKaartDetail()">
+  <div class="modal-box" style="max-width:480px;width:90%;padding:0;overflow:hidden;border-radius:24px;max-height:90vh;display:flex;flex-direction:column;">
+    <div id="kdFoto" style="height:200px;background:var(--grad);flex-shrink:0;overflow:hidden;position:relative;">
+      <button onclick="sluitKaartDetail()" style="position:absolute;top:12px;right:12px;width:32px;height:32px;border-radius:50%;border:none;background:rgba(0,0,0,0.5);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:10;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div style="flex:1;overflow-y:auto;padding:20px 24px 24px;display:flex;flex-direction:column;gap:14px;">
+      <div>
+        <div style="font-family:var(--font-head);font-size:22px;font-weight:800;" id="kdNaam"></div>
+        <div style="font-size:14px;color:var(--neon);margin-top:3px;" id="kdRol"></div>
+      </div>
+      <div id="kdTags" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
+      <div id="kdRijen"></div>
+      <div id="kdBio" style="font-size:14px;color:var(--sub);line-height:1.6;"></div>
+      <div id="kdLinks"></div>
+      <div style="display:flex;gap:10px;padding-top:4px;">
+        <button class="btn btn-primary" style="flex:1;" onclick="sluitKaartDetail();openDirectBerichtModal()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          Bericht sturen
+        </button>
+        <button class="btn" style="flex:1;background:rgba(34,197,94,0.15);border:1px solid rgba(34,197,94,0.3);color:#4ade80;" onclick="sluitKaartDetail();doSwipe('like')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+          Like
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- DIRECT BERICHT MODAL -->
 <div class="modal-overlay" id="directBerichtModal" onclick="if(event.target===this)closeDirectBericht()">
   <div class="modal-box" style="max-width:440px;width:90%;padding:28px;gap:16px;display:flex;flex-direction:column;">
@@ -1970,7 +2001,7 @@ function getTypeBadge(type) {
 }
 
 function getActiveLabel(min) {
-  if (min < 10) return ['active-now', '● Nu actief'];
+  if (min < 5) return ['active-now', '● Nu actief'];
   if (min < 60) return ['active-today', `● ${min}m geleden`];
   if (min < 1440) return ['active-today', `● ${Math.floor(min/60)}u geleden`];
   const days = Math.floor(min/1440);
@@ -1981,33 +2012,58 @@ function getActiveLabel(min) {
 function buildCard(p, cls) {
   const el = document.createElement('div');
   el.className = 'profile-card ' + cls;
-  if (!p || p.isAd) return el;
+  if (!p) return el;
 
   const [activeCls, activeLabel] = getActiveLabel(p.activeMin || 9999);
-  const locatieBadge = (p.raw?.stad || p.raw?.locatie) ? `<div style="position:absolute;bottom:14px;right:14px;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:600;background:rgba(0,0,0,0.6);border:1px solid rgba(255,255,255,0.1);color:#fff;backdrop-filter:blur(8px);display:flex;align-items:center;gap:4px;"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>${p.raw?.stad || p.raw?.locatie}</div>` : '';
-  const leeftijdBadge = (p.raw?.leeftijd && p.type !== 'band') ? `<div style="position:absolute;bottom:44px;right:14px;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:600;background:rgba(0,0,0,0.6);border:1px solid rgba(255,255,255,0.1);color:#fff;backdrop-filter:blur(8px);">${p.raw.leeftijd} jaar</div>` : '';
+
+  // Genres — max 2 rechtsboven
+  const genreTags = (p.raw?.genres || []).slice(0, 2);
+  const genreHTML = genreTags.map(g =>
+    `<div style="padding:4px 10px;border-radius:20px;font-size:11px;font-weight:600;background:rgba(0,0,0,0.6);border:1px solid rgba(255,255,255,0.15);color:#fff;backdrop-filter:blur(8px);">${g}</div>`
+  ).join('');
+
+  // Locatie rechtsonder
+  const locatie = p.raw?.stad || p.raw?.locatie || p.raw?.profiel?.stad || '';
+  const locatieBadge = locatie ? `<div style="position:absolute;bottom:14px;right:14px;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:600;background:rgba(0,0,0,0.6);border:1px solid rgba(255,255,255,0.1);color:#fff;backdrop-filter:blur(8px);display:flex;align-items:center;gap:4px;"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>${locatie}</div>` : '';
+
+  // Leeftijd boven locatie rechtsonder
+  const leeftijd = p.raw?.leeftijd || '';
+  const leeftijdBadge = leeftijd ? `<div style="position:absolute;bottom:${locatie ? 50 : 14}px;right:14px;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:600;background:rgba(0,0,0,0.6);border:1px solid rgba(255,255,255,0.1);color:#fff;backdrop-filter:blur(8px);">${leeftijd} jaar</div>` : '';
+
+  // Foto met reposition support
+  const fotoId = 'foto-' + Math.random().toString(36).substr(2,8);
   const fotoHTML = p.foto_url
-    ? `<img src="${p.foto_url}" style="width:100%;height:100%;object-fit:cover;cursor:zoom-in;" onclick="if(!window._wasDragging)openLightbox('${p.foto_url}')" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"/><div style="display:none;width:100%;height:100%;align-items:center;justify-content:center;">${typeIcon(p.type)}</div>`
+    ? `<img id="${fotoId}" src="${p.foto_url}" style="width:100%;height:100%;object-fit:cover;object-position:center;cursor:grab;" draggable="false" onclick="if(!window._wasDragging)openLightbox('${p.foto_url}')" onerror="this.parentElement.innerHTML='<div style=\'display:flex;align-items:center;justify-content:center;width:100%;height:100%;\'>${typeIcon(p.type).replace(/'/g,'\\\'')}</div>'"/>`
     : `<div style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;">${typeIcon(p.type)}</div>`;
 
   el.innerHTML = `
     <div class="card-visual" style="position:relative;overflow:hidden;">
-      <div class="card-badge-genre">${p.genre}</div>
-      ${getTypeBadge(p.type)}
-      <div class="active-dot ${activeCls}"><span class="dot"></span>${activeLabel}</div>
-      ${p.spotlight ? `<div class="spotlight-badge"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" style="color:#fcd34d"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> Uitgelicht</div>` : ''}
-      ${locatieBadge}
-      ${leeftijdBadge}
       ${fotoHTML}
+      <!-- Linksboven: type badge -->
+      ${getTypeBadge(p.type)}
+      <!-- Linksonder: online status -->
+      <div class="active-dot ${activeCls}" style="position:absolute;bottom:14px;left:14px;top:auto;right:auto;"><span class="dot"></span>${activeLabel}</div>
+      <!-- Rechtsboven: genres -->
+      <div style="position:absolute;top:14px;right:14px;display:flex;flex-direction:column;gap:4px;align-items:flex-end;">${genreHTML}</div>
+      <!-- Rechtsonder: leeftijd + locatie -->
+      ${leeftijdBadge}
+      ${locatieBadge}
+      ${p.spotlight ? `<div class="spotlight-badge"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" style="color:#fcd34d"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> Uitgelicht</div>` : ''}
     </div>
-    <div class="card-body">
+    <div class="card-body" onclick="openKaartDetail(${cardIndex})" style="cursor:pointer;">
       <div class="card-name">${p.naam}</div>
       <div class="card-role">${p.rol}</div>
       <div class="card-desc">${p.desc}</div>
-      <div class="card-tags">${(p.tags||[]).map(t=>`<div class="tag">${t}</div>`).join('')}</div>
+      <div class="card-tags">${(p.tags||[]).slice(0,3).map(t=>`<div class="tag">${t}</div>`).join('')}<div class="tag" style="opacity:.5;">Tik voor meer info →</div></div>
     </div>
     <div class="swipe-fb fb-like">MATCH!</div>
     <div class="swipe-fb fb-nope">NOPE</div>`;
+
+  // Foto herpositionering
+  if (p.foto_url) {
+    initFotoReposition(el.querySelector('img'), el);
+  }
+
   return el;
 }
 
@@ -2032,7 +2088,114 @@ function renderCards() {
   initCardDrag(topCard);
 }
 
-// ═══════════════ SWIPE ═══════════════
+// ═══════════════ FOTO HERPOSITIONERING ═══════════════
+function initFotoReposition(img, card) {
+  if (!img) return;
+  let dragging = false, startX, startY, posX = 50, posY = 50;
+
+  img.addEventListener('mousedown', e => {
+    if (window._wasDragging) return;
+    dragging = true;
+    startX = e.clientX;
+    startY = e.clientY;
+    img.style.cursor = 'grabbing';
+    e.stopPropagation();
+  });
+
+  window.addEventListener('mousemove', e => {
+    if (!dragging) return;
+    const dx = (e.clientX - startX) / img.offsetWidth * -100;
+    const dy = (e.clientY - startY) / img.offsetHeight * -100;
+    posX = Math.max(0, Math.min(100, posX + dx));
+    posY = Math.max(0, Math.min(100, posY + dy));
+    img.style.objectPosition = `${posX}% ${posY}%`;
+    startX = e.clientX;
+    startY = e.clientY;
+  });
+
+  window.addEventListener('mouseup', () => {
+    if (dragging) { dragging = false; img.style.cursor = 'grab'; }
+  });
+
+  // Touch
+  img.addEventListener('touchstart', e => {
+    const t = e.touches[0];
+    startX = t.clientX; startY = t.clientY;
+    dragging = true;
+  }, { passive: true });
+
+  img.addEventListener('touchmove', e => {
+    if (!dragging) return;
+    const t = e.touches[0];
+    const dx = (t.clientX - startX) / img.offsetWidth * -100;
+    const dy = (t.clientY - startY) / img.offsetHeight * -100;
+    posX = Math.max(0, Math.min(100, posX + dx));
+    posY = Math.max(0, Math.min(100, posY + dy));
+    img.style.objectPosition = `${posX}% ${posY}%`;
+    startX = t.clientX; startY = t.clientY;
+  }, { passive: true });
+
+  img.addEventListener('touchend', () => { dragging = false; });
+}
+
+// ═══════════════ KAART DETAIL MODAL ═══════════════
+function openKaartDetail(idx) {
+  const p = advertentiesData[idx];
+  if (!p) return;
+  const raw = p.raw || {};
+
+  const modal = document.getElementById('kaartDetailModal');
+  if (!modal) return;
+
+  // Foto
+  document.getElementById('kdFoto').innerHTML = p.foto_url
+    ? `<img src="${p.foto_url}" style="width:100%;height:100%;object-fit:cover;"/>`
+    : `<div style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;">${typeIcon(p.type)}</div>`;
+
+  // Info
+  document.getElementById('kdNaam').textContent = p.naam;
+  document.getElementById('kdRol').textContent = p.rol;
+
+  // Tags
+  const tags = [...(raw.genres || []), ...(raw.instrumenten || raw.instrument || []), raw.niveau, raw.beschikbaarheid].filter(Boolean);
+  document.getElementById('kdTags').innerHTML = tags.map(t => `<span class="tag">${t}</span>`).join('');
+
+  // Rijen
+  const rijen = [
+    ['Type', p.type ? p.type.charAt(0).toUpperCase() + p.type.slice(1) : '—'],
+    ['Locatie', raw.stad || raw.locatie || raw.profiel?.stad || '—'],
+    ['Leeftijd', raw.leeftijd ? raw.leeftijd + ' jaar' : '—'],
+    ['Niveau', raw.niveau || '—'],
+    ['Beschikbaarheid', raw.beschikbaarheid || '—'],
+  ];
+  document.getElementById('kdRijen').innerHTML = rijen.filter(r => r[1] !== '—').map(([label, waarde]) =>
+    `<div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);font-size:14px;">
+      <span style="color:var(--sub);">${label}</span>
+      <span style="font-weight:500;">${waarde}</span>
+    </div>`
+  ).join('');
+
+  // Bio
+  const bioEl = document.getElementById('kdBio');
+  bioEl.textContent = raw.omschrijving || p.desc || '';
+  bioEl.style.display = (raw.omschrijving || p.desc) ? 'block' : 'none';
+
+  // Links
+  const linksEl = document.getElementById('kdLinks');
+  if (raw.muzieklinks || p.link) {
+    const links = (raw.muzieklinks || p.link || '').split(',').map(l => l.trim()).filter(Boolean);
+    linksEl.innerHTML = links.map(l => `<a href="${l.startsWith('http')?l:'https://'+l}" target="_blank" style="color:var(--neon2);font-size:13px;display:block;margin-bottom:4px;">${l}</a>`).join('');
+    linksEl.style.display = 'block';
+  } else {
+    linksEl.style.display = 'none';
+  }
+
+  modal.classList.add('open');
+}
+
+function sluitKaartDetail() {
+  document.getElementById('kaartDetailModal')?.classList.remove('open');
+}
 async function doSwipe(dir) {
   const stack = document.getElementById('cardStack');
   const top = stack?.querySelector('.top');
@@ -3490,8 +3653,14 @@ function vulProfielIn(profiel) {
 // ═══════════════ KEEP-ALIVE ═══════════════
 function startKeepAlive() {
   setAppInterval('keepalive', async () => {
-    try { await sb.from('profiles').select('id').limit(1); } catch(e) {}
-  }, 5 * 60 * 1000);
+    try {
+      await sb.from('profiles').select('id').limit(1);
+      // Update actief_op zodat online status klopt
+      if (currentUser) {
+        sb.from('profiles').update({ actief_op: new Date().toISOString() }).eq('id', currentUser.id);
+      }
+    } catch(e) {}
+  }, 2 * 60 * 1000);
 }
 
 // ═══════════════ INIT ═══════════════
