@@ -282,8 +282,8 @@ html, body {
 }
 
 /* CONTENT PANELS */
-.panel { display: none; flex: 1; overflow: hidden; }
-.panel.active { display: flex; flex-direction: column; }
+.panel { display: none; flex: 1; overflow: hidden; flex-direction: column; }
+.panel.active { display: flex; }
 
 /* ═══════════════════════════════════════════
    SWIPE / DISCOVER PANEL
@@ -1386,7 +1386,7 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
     </div>
 
     <!-- ── LIKED PANEL ── -->
-    <div class="panel" id="panel-liked">
+    <div class="panel" id="panel-liked" style="display:flex;flex-direction:column;overflow:hidden;">
       <div class="panel-header">
         <h2>Bekeken Profielen</h2>
         <div class="liked-tabs">
@@ -2213,6 +2213,7 @@ async function doSwipe(dir) {
 
   // Direct toevoegen aan geswiped set zodat het niet terugkomt bij toggle
   if (p.id) geswipedIds.add(p.id);
+  console.log('doSwipe:', dir, '| id:', p.id, '| isAdvertentie:', p.isAdvertentie, '| naam:', p.naam);
 
   // Opslaan in Supabase
   if (currentUser && p.id) {
@@ -3685,11 +3686,25 @@ function openCropModal(file, callback) {
 
 function updateCrop() {
   const img = document.getElementById('cropImg');
+  const container = document.getElementById('cropContainer');
+  if (!img || !container) return;
   const zoom = parseInt(document.getElementById('cropZoom').value) / 100;
   cropState.zoom = zoom;
+
+  const cw = container.offsetWidth;
+  const imgAspect = img.naturalWidth / img.naturalHeight;
+  let renderW, renderH;
+  if (imgAspect >= 1) {
+    renderW = cw * zoom;
+    renderH = renderW / imgAspect;
+  } else {
+    renderH = cw * zoom;
+    renderW = renderH * imgAspect;
+  }
+
   clampCrop();
-  img.style.width = (zoom * 100) + '%';
-  img.style.height = (zoom * 100) + '%';
+  img.style.width = renderW + 'px';
+  img.style.height = renderH + 'px';
   img.style.left = '50%';
   img.style.top = '50%';
   img.style.transform = `translate(calc(-50% + ${cropState.x}px), calc(-50% + ${cropState.y}px))`;
@@ -3719,7 +3734,6 @@ async function bevestigCrop() {
   const container = document.getElementById('cropContainer');
   if (!img || !container) return;
 
-  // Canvas render
   const size = 800;
   const canvas = document.createElement('canvas');
   canvas.width = size;
@@ -3727,20 +3741,29 @@ async function bevestigCrop() {
   const ctx = canvas.getContext('2d');
 
   const cw = container.offsetWidth;
-  const zoom = cropState.zoom;
   const scale = size / cw;
+  const zoom = cropState.zoom;
 
-  const imgW = img.naturalWidth;
-  const imgH = img.naturalHeight;
-  const renderW = cw * zoom;
-  const renderH = (imgH / imgW) * renderW;
-  const offsetX = (cw / 2 - renderW / 2) + cropState.x;
-  const offsetY = (cw / 2 - renderH / 2) + cropState.y;
+  // Bereken renderen met behoud van aspect ratio
+  const imgAspect = img.naturalWidth / img.naturalHeight;
+  let renderW, renderH;
+  if (imgAspect >= 1) {
+    // Landscape of vierkant - pas op breedte
+    renderW = cw * zoom;
+    renderH = renderW / imgAspect;
+  } else {
+    // Portrait - pas op hoogte
+    renderH = cw * zoom;
+    renderW = renderH * imgAspect;
+  }
+
+  const offsetX = (cw - renderW) / 2 + cropState.x;
+  const offsetY = (cw - renderH) / 2 + cropState.y;
 
   ctx.drawImage(img, offsetX * scale, offsetY * scale, renderW * scale, renderH * scale);
 
   const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
-  const cb = cropState.callback; // sla op voor sluiten
+  const cb = cropState.callback;
   sluitCropModal();
   if (cb) cb(dataUrl);
 }
