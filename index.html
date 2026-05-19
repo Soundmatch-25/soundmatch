@@ -1536,11 +1536,27 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
                 </div>
               </div>
             </div>
+            <div style="font-size:12px;color:var(--sub);margin-top:-8px;padding:8px 12px;background:var(--card2);border-radius:10px;border:1px solid var(--border);" id="adHint">Als muzikant zie je bands en sessiemuzikanten in jouw buurt.</div>
 
-            <!-- Titel -->
+            <!-- Naam -->
             <div>
               <div class="field-label" id="adTitelLabel">Naam *</div>
               <input class="input-field" id="adNaam" placeholder="Jouw naam"/>
+            </div>
+
+            <!-- Locatie -->
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+              <div>
+                <div class="field-label">Provincie</div>
+                <select class="select-field" id="adProvincie" onchange="updateAdSteden()">
+                  <option value="">Selecteer provincie</option>
+                  <option>Drenthe</option><option>Flevoland</option><option>Friesland</option><option>Gelderland</option><option>Groningen</option><option>Limburg</option><option>Noord-Brabant</option><option>Noord-Holland</option><option>Overijssel</option><option>Utrecht</option><option>Zeeland</option><option>Zuid-Holland</option>
+                </select>
+              </div>
+              <div>
+                <div class="field-label">Stad / gemeente</div>
+                <select class="select-field" id="adStad"><option value="">Kies eerst een provincie</option></select>
+              </div>
             </div>
 
             <!-- Instrumenten (muzikant/sessie/industry) -->
@@ -2948,6 +2964,14 @@ function verbergAdFormulier() {
   document.getElementById('adOverzicht').style.display = 'flex';
 }
 
+function updateAdSteden() {
+  const prov = document.getElementById('adProvincie')?.value;
+  const stadSel = document.getElementById('adStad');
+  if (!stadSel) return;
+  if (!prov || !stedenPerProvincie[prov]) { stadSel.innerHTML = '<option value="">Kies eerst een provincie</option>'; return; }
+  stadSel.innerHTML = stedenPerProvincie[prov].map(s => '<option>' + s + '</option>').join('');
+}
+
 function setAdTypeNieuw(adType) {
   ['adTypeMuz','adTypeBand','adTypeSessie','adTypeIndustry'].forEach(id => {
     const el = document.getElementById(id);
@@ -2959,6 +2983,15 @@ function setAdTypeNieuw(adType) {
   document.getElementById('adVeldenMuz').style.display = isBand ? 'none' : 'block';
   document.getElementById('adVeldenBand').style.display = isBand ? 'block' : 'none';
   document.getElementById('adNiveauRij').style.display = isBand ? 'none' : '';
+  const hints = {
+    muzikant: 'Als muzikant zie je bands en sessiemuzikanten in jouw buurt.',
+    band: 'Als band zoek je muzikanten om mee samen te spelen.',
+    sessie: 'Als sessiemuzikant ben je beschikbaar voor losse opdrachten.',
+    industry: 'Als industry professional bied je diensten aan muzikanten.'
+  };
+  const hintEl = document.getElementById('adHint');
+  if (hintEl) hintEl.textContent = hints[adType] || '';
+
   document.getElementById('adLeeftijdEnkel').style.display = isBand ? 'none' : 'block';
   document.getElementById('adLeeftijdRange').style.display = isBand ? 'block' : 'none';
   const label = document.getElementById('adTitelLabel');
@@ -3035,6 +3068,10 @@ async function slaAdvertentieOp() {
   const editId = opslaanBtn?.dataset.editId;
   if (opslaanBtn) { opslaanBtn.textContent = 'Opslaan...'; opslaanBtn.disabled = true; }
 
+  const provincie = document.getElementById('adProvincie')?.value;
+  const stad = document.getElementById('adStad')?.value;
+  const locatie = stad && provincie ? stad + ', ' + provincie : stad || provincie || null;
+
   try {
     const adData = {
       titel: naam, type: adType, instrumenten, genres,
@@ -3042,7 +3079,7 @@ async function slaAdvertentieOp() {
       beschikbaarheid: isBand ? null : beschikbaarheid,
       omschrijving: bio, muzieklinks: links,
       foto_url: adFotoUrl || null,
-      leeftijd: leeftijdInfo, actief: true
+      leeftijd: leeftijdInfo, locatie, actief: true
     };
 
     let error;
