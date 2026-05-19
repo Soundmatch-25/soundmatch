@@ -2352,8 +2352,19 @@ async function stuurBerichtNaarLijstItem() {
 }
 // ═══════════════ DIRECT BERICHTEN ═══════════════
 let huidigChatUserId = null;
-let berichtenPollInterval = null;
-let gesprekPollInterval = null;
+
+// Centrale interval manager - voorkomt opstapeling
+const intervals = {};
+function setAppInterval(naam, fn, ms) {
+  if (intervals[naam]) clearInterval(intervals[naam]);
+  intervals[naam] = setInterval(fn, ms);
+}
+function stopAppInterval(naam) {
+  if (intervals[naam]) { clearInterval(intervals[naam]); delete intervals[naam]; }
+}
+function stopAlleIntervals() {
+  Object.keys(intervals).forEach(k => { clearInterval(intervals[k]); delete intervals[k]; });
+}
 
 function openDirectBerichtModal() {
   const p = advertentiesData[cardIndex];
@@ -2383,9 +2394,11 @@ async function stuurDirectBericht() {
 }
 
 async function checkNieuweBerichten() {
-  if (!currentUser) return;
-  const { data } = await sb.from('directe_berichten').select('*, van:van_user_id(naam, foto_url)').eq('naar_user_id', currentUser.id).eq('gelezen', false).order('aangemaakt_op', { ascending: false }).limit(1);
-  if (data?.length) { toonBerichtNotificatie(data[0].van?.naam || 'Iemand', data[0].inhoud); updateOngelezen(); }
+  try {
+    if (!currentUser) return;
+    const { data } = await sb.from('directe_berichten').select('*, van:van_user_id(naam, foto_url)').eq('naar_user_id', currentUser.id).eq('gelezen', false).order('aangemaakt_op', { ascending: false }).limit(1);
+    if (data?.length) { toonBerichtNotificatie(data[0].van?.naam || 'Iemand', data[0].inhoud); updateOngelezen(); }
+  } catch(e) { console.warn('checkNieuweBerichten fout:', e.message); }
 }
 
 function toonBerichtNotificatie(naam, inhoud) {
@@ -2398,15 +2411,16 @@ function toonBerichtNotificatie(naam, inhoud) {
 function klikOpNotificatie() { document.getElementById('berichtNotificatie').style.display = 'none'; showPanel('messages'); }
 
 async function updateOngelezen() {
-  if (!currentUser) return;
-  const { count } = await sb.from('directe_berichten').select('*', { count: 'exact', head: true }).eq('naar_user_id', currentUser.id).eq('gelezen', false);
-  const badge = document.getElementById('berichtenBadge');
-  if (badge) { if (count > 0) { badge.textContent = count; badge.style.display = 'inline-block'; } else badge.style.display = 'none'; }
+  try {
+    if (!currentUser) return;
+    const { count } = await sb.from('directe_berichten').select('*', { count: 'exact', head: true }).eq('naar_user_id', currentUser.id).eq('gelezen', false);
+    const badge = document.getElementById('berichtenBadge');
+    if (badge) { if (count > 0) { badge.textContent = count; badge.style.display = 'inline-block'; } else badge.style.display = 'none'; }
+  } catch(e) {}
 }
 
 function startBerichtenPoll() {
-  if (berichtenPollInterval) clearInterval(berichtenPollInterval);
-  berichtenPollInterval = setInterval(async () => {
+  setAppInterval('berichten', async () => {
     if (currentUser) await checkNieuweBerichten();
   }, 10000);
 }
@@ -2445,8 +2459,7 @@ async function openGesprek(userId, user) {
   await sb.from('directe_berichten').update({ gelezen: true }).eq('van_user_id', userId).eq('naar_user_id', currentUser.id).eq('gelezen', false);
   await laadGesprekBerichten(userId);
   updateOngelezen();
-  if (gesprekPollInterval) clearInterval(gesprekPollInterval);
-  gesprekPollInterval = setInterval(() => laadGesprekBerichten(userId), 5000);
+  setAppInterval('gesprek', () => laadGesprekBerichten(userId), 5000);
 
   // Op mobiel: verberg lijst, toon chat
   const isMobiel = window.innerWidth <= 768;
@@ -2463,24 +2476,24 @@ function sluitMobieleChat() {
   document.querySelector('.chat-col').style.display = 'none';
   const terugBtn = document.getElementById('chatTerugBtn');
   if (terugBtn) terugBtn.style.display = 'none';
-  if (gesprekPollInterval) clearInterval(gesprekPollInterval);
+  stopAppInterval('gesprek');
 }
 
 async function laadGesprekBerichten(userId) {
-  const { data, error } = await sb.from('directe_berichten')
-    .select('*')
-    .or(`and(van_user_id.eq.${currentUser.id},naar_user_id.eq.${userId}),and(van_user_id.eq.${userId},naar_user_id.eq.${currentUser.id})`)
-    .order('aangemaakt_op', { ascending: true });
-
-  if (error) { console.error('Berichten laden fout:', error.message); return; }
-
-  const msgs = document.getElementById('chatMsgs');
-  if (!msgs || !data) return;
-  const wasBottom = msgs.scrollHeight - msgs.scrollTop <= msgs.clientHeight + 50;
-  msgs.innerHTML = data.map(b =>
-    '<div class="bubble ' + (b.van_user_id === currentUser.id ? 'bubble-me' : 'bubble-them') + '">' + b.inhoud + '</div>'
-  ).join('');
-  if (wasBottom) msgs.scrollTop = msgs.scrollHeight;
+  try {
+    const { data, error } = await sb.from('directe_berichten')
+      .select('*')
+      .or(`and(van_user_id.eq.${currentUser.id},naar_user_id.eq.${userId}),and(van_user_id.eq.${userId},naar_user_id.eq.${currentUser.id})`)
+      .order('aangemaakt_op', { ascending: true });
+    if (error) { console.error('Berichten laden fout:', error.message); return; }
+    const msgs = document.getElementById('chatMsgs');
+    if (!msgs || !data) return;
+    const wasBottom = msgs.scrollHeight - msgs.scrollTop <= msgs.clientHeight + 50;
+    msgs.innerHTML = data.map(b =>
+      '<div class="bubble ' + (b.van_user_id === currentUser.id ? 'bubble-me' : 'bubble-them') + '">' + b.inhoud + '</div>'
+    ).join('');
+    if (wasBottom) msgs.scrollTop = msgs.scrollHeight;
+  } catch(e) { console.warn('laadGesprekBerichten fout:', e.message); }
 }
 
 async function sendMsg() {
@@ -2568,8 +2581,7 @@ async function openMatch(matchId, anderId) {
   await laadBerichten(matchId);
 
   // Refresh berichten elke 5 seconden
-  if (berichtenInterval) clearInterval(berichtenInterval);
-  berichtenInterval = setInterval(() => laadBerichten(matchId), 5000);
+  setAppInterval('gesprek', () => laadBerichten(matchId), 5000);
 }
 
 async function laadBerichten(matchId) {
@@ -3466,9 +3478,9 @@ function vulProfielIn(profiel) {
 
 // ═══════════════ KEEP-ALIVE ═══════════════
 function startKeepAlive() {
-  setInterval(async () => {
+  setAppInterval('keepalive', async () => {
     try { await sb.from('profiles').select('id').limit(1); } catch(e) {}
-  }, 5 * 60 * 1000); // elke 5 minuten
+  }, 5 * 60 * 1000);
 }
 
 // ═══════════════ INIT ═══════════════
