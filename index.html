@@ -3280,13 +3280,16 @@ let currentProfile = null;
 
 sb.auth.onAuthStateChange(async (event, session) => {
   console.log('Auth event:', event, session?.user?.email);
-  if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION' || event === 'TOKEN_REFRESHED') && session?.user) {
-    currentUser = session.user;
-    await laadOfMaakProfiel(session.user);
-  } else if (event === 'SIGNED_OUT') {
+  if (event === 'SIGNED_OUT') {
     currentUser = null;
     currentProfile = null;
     showScreen('onboard');
+  } else if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session?.user) {
+    if (currentUser?.id === session.user.id) return; // al ingelogd, skip
+    currentUser = session.user;
+    await laadOfMaakProfiel(session.user);
+  } else if (event === 'TOKEN_REFRESHED' && session?.user) {
+    currentUser = session.user; // alleen token updaten, niet herladen
   }
 });
 
