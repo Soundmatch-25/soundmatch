@@ -1642,6 +1642,31 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
 
 </div><!-- /app -->
 
+<!-- FOTO CROP MODAL -->
+<div class="modal-overlay" id="fotoCropModal" style="z-index:600;">
+  <div class="modal-box" style="max-width:420px;width:90%;padding:24px;gap:16px;display:flex;flex-direction:column;">
+    <div style="font-family:var(--font-head);font-size:18px;font-weight:800;">Foto aanpassen</div>
+    <div style="font-size:13px;color:var(--sub);">Sleep om te herpositioneren · Gebruik de slider om in te zoomen</div>
+
+    <!-- Preview container -->
+    <div id="cropContainer" style="width:100%;aspect-ratio:1;border-radius:16px;overflow:hidden;position:relative;background:#0d0d20;cursor:grab;">
+      <img id="cropImg" style="position:absolute;transform-origin:center;user-select:none;draggable:false;" draggable="false"/>
+    </div>
+
+    <!-- Zoom slider -->
+    <div style="display:flex;align-items:center;gap:12px;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="opacity:.5;flex-shrink:0;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="range" id="cropZoom" min="100" max="300" value="100" style="flex:1;accent-color:var(--neon);" oninput="updateCrop()"/>
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="flex-shrink:0;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+    </div>
+
+    <div style="display:flex;gap:10px;">
+      <button class="btn btn-ghost" style="flex:1;" onclick="sluitCropModal()">Annuleren</button>
+      <button class="btn btn-primary" style="flex:2;" onclick="bevestigCrop()">Foto opslaan</button>
+    </div>
+  </div>
+</div>
+
 <!-- KAART DETAIL MODAL -->
 <div class="modal-overlay" id="kaartDetailModal" onclick="if(event.target===this)sluitKaartDetail()">
   <div class="modal-box" style="max-width:480px;width:90%;padding:0;overflow:hidden;border-radius:24px;max-height:90vh;display:flex;flex-direction:column;">
@@ -2924,32 +2949,20 @@ let adFotoUrl = null;
 
 async function handleAdFoto(input) {
   if (!input.files || !input.files[0]) return;
-  const status = document.createElement('div');
-  status.style.cssText = 'font-size:12px;color:var(--sub);margin-top:4px;';
-  status.textContent = 'Foto verwerken...';
-  document.getElementById('adFotoPreview').parentElement.appendChild(status);
-
-  try {
-    const scaled = await schaalFoto(input.files[0], 800);
-    // Preview tonen
-    document.getElementById('adFotoPreview').innerHTML = '<img src="' + scaled.dataUrl + '" style="width:100%;height:100%;object-fit:cover;border-radius:19px;"/>';
-
-    // Uploaden naar Supabase
-    if (currentUser) {
-      status.textContent = 'Uploaden...';
-      const bestandsnaam = currentUser.id + "/ad_" + Date.now() + ".jpg";
-      const blob = await fetch(scaled.dataUrl).then(r => r.blob());
-      const { data, error } = await sb.storage.from('avatars').upload(bestandsnaam, blob, { contentType: 'image/jpeg', upsert: true });
+  openCropModal(input.files[0], async (dataUrl) => {
+    document.getElementById('adFotoPreview').innerHTML = '<img src="' + dataUrl + '" style="width:100%;height:100%;object-fit:cover;border-radius:19px;"/>';
+    if (!currentUser) return;
+    try {
+      const bestandsnaam = currentUser.id + '/ad_' + Date.now() + '.jpg';
+      const blob = fotoNaarBlob(dataUrl);
+      const { error } = await sb.storage.from('avatars').upload(bestandsnaam, blob, { contentType: 'image/jpeg', upsert: true });
       if (error) throw error;
       const { data: urlData } = sb.storage.from('avatars').getPublicUrl(bestandsnaam);
       adFotoUrl = urlData.publicUrl + '?t=' + Date.now();
-      status.style.color = '#2ecc71';
-      status.textContent = '✓ Foto opgeslagen!';
+    } catch(err) {
+      console.error('Ad foto upload mislukt:', err.message);
     }
-  } catch (err) {
-    status.style.color = '#ff8a80';
-    status.textContent = 'Upload mislukt: ' + err.message;
-  }
+  });
 }
 
 async function slaAdvertentieOp() {
@@ -3147,45 +3160,24 @@ let uploadedFotoUrl = null;
 
 async function handleFotoUpload(input) {
   if (!input.files || !input.files[0]) return;
-  const file = input.files[0];
-  const status = document.getElementById('fotoUploadStatus');
-  status.style.display = 'block';
-  status.style.color = 'var(--sub)';
-  status.textContent = 'Foto verwerken...';
-
-  try {
-    // Client-side schalen naar max 400x400px
-    const scaled = await schaalFoto(file, 800);
-
-    // Preview tonen
+  openCropModal(input.files[0], async (dataUrl) => {
     const preview = document.getElementById('regFotoPreview');
-    preview.innerHTML = `<img src="${scaled.dataUrl}" style="width:100%;height:100%;object-fit:cover;"/>`;
-
-    // Uploaden naar Supabase Storage
-    if (currentUser) {
-      status.textContent = 'Uploaden...';
-      const bestandsnaam = `${currentUser.id}/avatar.jpg`;
-      const blob = await fetch(scaled.dataUrl).then(r => r.blob());
-
-      const { data, error } = await sb.storage
-        .from('avatars')
-        .upload(bestandsnaam, blob, {
-          contentType: 'image/jpeg',
-          upsert: true // overschrijf bestaande foto
-        });
-
+    if (preview) preview.innerHTML = '<img src="' + dataUrl + '" style="width:100%;height:100%;object-fit:cover;border-radius:19px;"/>';
+    const status = document.getElementById('fotoUploadStatus');
+    if (status) { status.style.display = 'block'; status.style.color = 'var(--sub)'; status.textContent = 'Uploaden...'; }
+    try {
+      if (!currentUser) return;
+      const bestandsnaam = currentUser.id + '/avatar.jpg';
+      const blob = fotoNaarBlob(dataUrl);
+      const { error } = await sb.storage.from('avatars').upload(bestandsnaam, blob, { contentType: 'image/jpeg', upsert: true });
       if (error) throw error;
-
-      // Publieke URL ophalen
       const { data: urlData } = sb.storage.from('avatars').getPublicUrl(bestandsnaam);
-      uploadedFotoUrl = urlData.publicUrl + '?t=' + Date.now(); // cache busting
-      status.style.color = '#2ecc71';
-      status.textContent = '✓ Foto opgeslagen!';
+      uploadedFotoUrl = urlData.publicUrl + '?t=' + Date.now();
+      if (status) { status.style.color = '#2ecc71'; status.textContent = '✓ Foto opgeslagen!'; }
+    } catch(err) {
+      if (status) { status.style.color = '#ff8a80'; status.textContent = 'Upload mislukt: ' + err.message; }
     }
-  } catch (err) {
-    status.style.color = '#ff8a80';
-    status.textContent = 'Upload mislukt: ' + err.message;
-  }
+  });
 }
 
 function schaalFoto(file, maxSize) {
@@ -3627,7 +3619,137 @@ function vulProfielIn(profiel) {
   if (bioEl) bioEl.textContent = profiel.bio || '—';
 }
 
-// ═══════════════ KEEP-ALIVE ═══════════════
+// ═══════════════ FOTO CROP MODAL ═══════════════
+let cropState = { x: 0, y: 0, zoom: 1, dragging: false, startX: 0, startY: 0, callback: null };
+
+function openCropModal(file, callback) {
+  cropState.callback = callback;
+  cropState.x = 0;
+  cropState.y = 0;
+  cropState.zoom = 1;
+  document.getElementById('cropZoom').value = 100;
+
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = document.getElementById('cropImg');
+    img.src = e.target.result;
+    img.onload = () => updateCrop();
+  };
+  reader.readAsDataURL(file);
+  document.getElementById('fotoCropModal').classList.add('open');
+
+  // Drag events
+  const container = document.getElementById('cropContainer');
+  container.onmousedown = e => {
+    cropState.dragging = true;
+    cropState.startX = e.clientX - cropState.x;
+    cropState.startY = e.clientY - cropState.y;
+    container.style.cursor = 'grabbing';
+    e.preventDefault();
+  };
+  window.onmousemove = e => {
+    if (!cropState.dragging) return;
+    cropState.x = e.clientX - cropState.startX;
+    cropState.y = e.clientY - cropState.startY;
+    clampCrop();
+    updateCrop();
+  };
+  window.onmouseup = () => {
+    cropState.dragging = false;
+    container.style.cursor = 'grab';
+  };
+
+  // Touch
+  container.ontouchstart = e => {
+    const t = e.touches[0];
+    cropState.dragging = true;
+    cropState.startX = t.clientX - cropState.x;
+    cropState.startY = t.clientY - cropState.y;
+    e.preventDefault();
+  };
+  container.ontouchmove = e => {
+    if (!cropState.dragging) return;
+    const t = e.touches[0];
+    cropState.x = t.clientX - cropState.startX;
+    cropState.y = t.clientY - cropState.startY;
+    clampCrop();
+    updateCrop();
+    e.preventDefault();
+  };
+  container.ontouchend = () => { cropState.dragging = false; };
+}
+
+function updateCrop() {
+  const img = document.getElementById('cropImg');
+  const zoom = parseInt(document.getElementById('cropZoom').value) / 100;
+  cropState.zoom = zoom;
+  clampCrop();
+  img.style.width = (zoom * 100) + '%';
+  img.style.height = (zoom * 100) + '%';
+  img.style.left = '50%';
+  img.style.top = '50%';
+  img.style.transform = `translate(calc(-50% + ${cropState.x}px), calc(-50% + ${cropState.y}px))`;
+}
+
+function clampCrop() {
+  const container = document.getElementById('cropContainer');
+  const img = document.getElementById('cropImg');
+  if (!container || !img) return;
+  const cw = container.offsetWidth;
+  const ch = container.offsetHeight;
+  const iw = cw * cropState.zoom;
+  const ih = ch * cropState.zoom;
+  const maxX = (iw - cw) / 2;
+  const maxY = (ih - ch) / 2;
+  cropState.x = Math.max(-maxX, Math.min(maxX, cropState.x));
+  cropState.y = Math.max(-maxY, Math.min(maxY, cropState.y));
+}
+
+function sluitCropModal() {
+  document.getElementById('fotoCropModal').classList.remove('open');
+  cropState.callback = null;
+}
+
+async function bevestigCrop() {
+  const img = document.getElementById('cropImg');
+  const container = document.getElementById('cropContainer');
+  if (!img || !container) return;
+
+  // Canvas render
+  const size = 800;
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d');
+
+  const cw = container.offsetWidth;
+  const zoom = cropState.zoom;
+  const scale = size / cw;
+
+  const imgW = img.naturalWidth;
+  const imgH = img.naturalHeight;
+  const renderW = cw * zoom;
+  const renderH = (imgH / imgW) * renderW;
+  const offsetX = (cw / 2 - renderW / 2) + cropState.x;
+  const offsetY = (cw / 2 - renderH / 2) + cropState.y;
+
+  ctx.drawImage(img, offsetX * scale, offsetY * scale, renderW * scale, renderH * scale);
+
+  const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+  sluitCropModal();
+
+  if (cropState.callback) cropState.callback(dataUrl);
+}
+
+function fotoNaarBlob(dataUrl) {
+  const arr = dataUrl.split(',');
+  const mime = arr[0].match(/:(.*?);/)[1];
+  const bstr = atob(arr[1]);
+  let n = bstr.length;
+  const u8arr = new Uint8Array(n);
+  while (n--) u8arr[n] = bstr.charCodeAt(n);
+  return new Blob([u8arr], { type: mime });
+}
 function startKeepAlive() {
   setAppInterval('keepalive', async () => {
     try {
