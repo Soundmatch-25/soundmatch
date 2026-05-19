@@ -2084,7 +2084,7 @@ function buildCard(p, cls) {
     <div class="card-body">
       <div class="card-name">${p.naam}</div>
       <div class="card-role">${p.rol}</div>
-      <div class="card-desc">${p.desc}</div>
+      <div class="card-desc" onclick="event.stopPropagation();openKaartDetail(${advertentiesData.indexOf(p)})" style="cursor:pointer;">${p.desc}</div>
       ${p.desc && p.desc.length > 100 ? `<span class="card-desc-meer" onclick="event.stopPropagation();openKaartDetail(${advertentiesData.indexOf(p)})">Meer lezen...</span>` : ''}
       <div class="card-tags">${(p.tags||[]).map(t=>`<div class="tag">${t}</div>`).join('')}</div>
     </div>
