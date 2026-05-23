@@ -2310,16 +2310,19 @@ async function doSwipe(dir) {
     );
     if (swipeError) console.error('Swipe opslaan mislukt:', swipeError.message);
 
-    // Check wederzijdse like
+    // Check wederzijdse like — ook op onze advertentie IDs
     if (dir === 'like' && !swipeError) {
+      const { data: onzeAds } = await sb.from('advertenties').select('id').eq('user_id', currentUser.id);
+      const onzeTargetIds = [currentUser.id, ...(onzeAds || []).map(a => a.id)];
+
       const { data: wederzijds } = await sb.from('swipes')
         .select('*')
         .eq('swiper_id', targetUserId)
-        .eq('target_id', currentUser.id)
+        .in('target_id', onzeTargetIds)
         .eq('richting', 'like')
-        .maybeSingle();
+        .limit(1);
 
-      if (wederzijds) {
+      if (wederzijds?.length) {
         await sb.from('matches').upsert(
           { gebruiker_a: currentUser.id, gebruiker_b: targetUserId },
           { onConflict: 'gebruiker_a,gebruiker_b' }
