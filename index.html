@@ -2307,12 +2307,27 @@ async function doSwipe(dir) {
     );
     if (swipeError) console.error('Swipe opslaan mislukt:', swipeError.message);
 
-    // Check wederzijdse like
+    // Check wederzijdse like — gebruik user_id van het profiel/advertentie
     if (dir === 'like' && !swipeError) {
-      const { data: wederzijds } = await sb.from('swipes').select('*').eq('swiper_id', p.id).eq('target_id', currentUser.id).eq('richting', 'like').maybeSingle();
+      const doelUserId = p.raw?.user_id || p.id;
+
+      // Zoek of die persoon ooit op ons geliked heeft (profiel of advertentie)
+      const { data: onzeAdvertenties } = await sb.from('advertenties').select('id').eq('user_id', currentUser.id);
+      const onzeIds = [currentUser.id, ...(onzeAdvertenties || []).map(a => a.id)];
+
+      const { data: wederzijds } = await sb.from('swipes')
+        .select('*')
+        .eq('swiper_id', doelUserId)
+        .in('target_id', onzeIds)
+        .eq('richting', 'like')
+        .maybeSingle();
+
       if (wederzijds) {
-        await sb.from('matches').insert({ gebruiker_a: currentUser.id, gebruiker_b: p.id });
-        setTimeout(() => showMatch(p), 400);
+        await sb.from('matches').upsert(
+          { gebruiker_a: currentUser.id, gebruiker_b: doelUserId },
+          { onConflict: 'gebruiker_a,gebruiker_b' }
+        );
+        setTimeout(() => showMatch({ ...p, id: doelUserId }), 400);
       }
     }
   }
