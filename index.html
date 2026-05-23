@@ -4230,8 +4230,6 @@ function startKeepAlive() {
 updateAge();
 setTimeout(initToggle, 50);
 startKeepAlive();
-// Verwijder hash uit URL
-if (window.location.hash) history.replaceState(null, '', window.location.pathname);
 startBerichtenPoll();
 checkNieuweLikes();
 </script>
