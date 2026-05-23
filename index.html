@@ -2643,18 +2643,10 @@ async function verwijderHuidigeLijstItem() {
 
 async function stuurBerichtNaarLijstItem() {
   if (!huidigLijstItem || !currentUser) return;
+  const user = { id: huidigLijstItem.id, naam: huidigLijstItem.naam, type: huidigLijstItem.type, foto_url: huidigLijstItem.foto_url };
   closeLijstDetail();
-  // Check of er al een match is
-  const { data: match } = await sb.from('matches')
-    .select('*')
-    .or(`and(gebruiker_a.eq.${currentUser.id},gebruiker_b.eq.${huidigLijstItem.id}),and(gebruiker_a.eq.${huidigLijstItem.id},gebruiker_b.eq.${currentUser.id})`)
-    .maybeSingle();
-  if (match) {
-    showPanel('messages');
-    setTimeout(() => openMatch(match.id, match.gebruiker_a === currentUser.id ? match.gebruiker_b : match.gebruiker_a), 300);
-  } else {
-    alert('Je hebt nog geen match met deze persoon. Like ze eerst!');
-  }
+  showPanel('messages');
+  setTimeout(() => openGesprek(user.id, user), 300);
 }
 // ═══════════════ DIRECT BERICHTEN ═══════════════
 let huidigChatUserId = null;
@@ -2898,15 +2890,6 @@ async function laadBerichten(matchId) {
   msgs.innerHTML = data.map(b => `
     <div class="bubble ${b.afzender_id === currentUser.id ? 'bubble-me' : 'bubble-them'}">${b.inhoud}</div>`).join('');
   if (wasBottom) msgs.scrollTop = msgs.scrollHeight;
-}
-
-async function sendMsg() {
-  const inp = document.getElementById('chatInput');
-  const val = inp?.value.trim();
-  if (!val || !huidigeMatch || !currentUser) return;
-  inp.value = '';
-  await sb.from('berichten').insert({ match_id: huidigeMatch, afzender_id: currentUser.id, inhoud: val });
-  laadBerichten(huidigeMatch);
 }
 
 // ═══════════════ ADVERTENTIES ═══════════════
@@ -3573,16 +3556,6 @@ function updateAge() {
   const p1=(min-16)/(100-16)*100, p2=(max-16)/(100-16)*100;
   document.getElementById('rangeFill').style.left = p1+'%';
   document.getElementById('rangeFill').style.width = (p2-p1)+'%';
-}
-
-// ═══════════════ CHAT ═══════════════
-function sendMsg() {
-  const inp = document.getElementById('chatInput');
-  const val = inp.value.trim(); if (!val) return;
-  const msgs = document.getElementById('chatMsgs');
-  const b = document.createElement('div');
-  b.className = 'bubble bubble-me'; b.textContent = val;
-  msgs.appendChild(b); inp.value = ''; msgs.scrollTop = msgs.scrollHeight;
 }
 
 // ═══════════════ SUPABASE ═══════════════
