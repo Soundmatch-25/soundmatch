@@ -3853,17 +3853,19 @@ let currentUser = null;
 let currentProfile = null;
 
 sb.auth.onAuthStateChange(async (event, session) => {
-  console.log('Auth event:', event, session?.user?.email);
+  console.log('Auth event:', event, session?.user?.email, 'hash:', window.location.hash.substring(0,50));
   if (event === 'SIGNED_OUT') {
     currentUser = null;
     currentProfile = null;
     showScreen('onboard');
   } else if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session?.user) {
-    if (currentUser?.id === session.user.id) return; // al ingelogd, skip
+    if (currentUser?.id === session.user.id) return;
     currentUser = session.user;
+    // Hash verwijderen NA verwerking
+    if (window.location.hash) history.replaceState(null, '', window.location.pathname);
     await laadOfMaakProfiel(session.user);
   } else if (event === 'TOKEN_REFRESHED' && session?.user) {
-    currentUser = session.user; // alleen token updaten, niet herladen
+    currentUser = session.user;
   }
 });
 
