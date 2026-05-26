@@ -2559,8 +2559,9 @@ async function laadMatchesLijst() {
 
   container.innerHTML = '';
   matches.forEach(match => {
-    const ander = match.gebruiker_a === currentUser.id ? match.a : match.b;
-    if (!ander) return;
+    const anderId = match.gebruiker_a === currentUser.id ? match.gebruiker_b : match.gebruiker_a;
+    const ander = match.gebruiker_a === currentUser.id ? match.b : match.a;
+    if (!ander || !anderId) return;
 
     const card = document.createElement('div');
     card.style.cssText = 'display:flex;align-items:center;gap:14px;padding:14px 16px;background:var(--card2);border-radius:16px;border:1px solid rgba(124,77,255,0.2);';
@@ -2580,13 +2581,13 @@ async function laadMatchesLijst() {
     const chatBtn = document.createElement('button');
     chatBtn.className = 'btn btn-primary btn-sm';
     chatBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>';
-    chatBtn.onclick = () => { showPanel('messages'); setTimeout(() => openGesprek(ander.id, ander), 300); };
+    chatBtn.onclick = () => { showPanel('messages'); setTimeout(() => openGesprek(anderId, ander), 300); };
 
     const verwijderBtn = document.createElement('button');
     verwijderBtn.className = 'btn btn-sm';
     verwijderBtn.style.cssText = 'background:rgba(229,57,53,0.1);border:1px solid rgba(229,57,53,0.3);color:#e53935;';
     verwijderBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>';
-    verwijderBtn.onclick = () => verwijderMatch(match.id, ander.id);
+    verwijderBtn.onclick = () => verwijderMatch(match.id, anderId);
 
     btns.appendChild(chatBtn);
     btns.appendChild(verwijderBtn);
