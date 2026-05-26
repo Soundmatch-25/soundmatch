@@ -2651,13 +2651,20 @@ async function laadOntvangenLikes() {
   const container = document.getElementById('ontvangenLikes');
   if (!container) return;
 
+  // Haal matches op om uit te filteren
+  const { data: matches } = await sb.from('matches')
+    .select('gebruiker_a, gebruiker_b')
+    .or('gebruiker_a.eq.' + currentUser.id + ',gebruiker_b.eq.' + currentUser.id);
+  const matchIds = new Set((matches || []).map(m => m.gebruiker_a === currentUser.id ? m.gebruiker_b : m.gebruiker_a));
+
   const { data: likes } = await sb.from('swipes')
     .select('*, swiper:swiper_id(id, naam, foto_url, type, stad)')
     .eq('target_id', currentUser.id)
     .eq('richting', 'like')
     .order('aangemaakt_op', { ascending: false });
 
-  const uniek = (likes || []).filter(s => s.swiper_id !== currentUser.id);
+  // Filter matches eruit
+  const uniek = (likes || []).filter(s => s.swiper_id !== currentUser.id && !matchIds.has(s.swiper_id));
 
   // Update badge
   const count = uniek.length;
@@ -2754,17 +2761,20 @@ async function laadSwipeHistory() {
   const profielMap = Object.fromEntries((profielen || []).map(p => [p.id, p]));
   const adMap = Object.fromEntries((advertenties || []).map(a => [a.id, a]));
 
+  // Filter matches eruit
+  const { data: matchData } = await sb.from('matches')
+    .select('gebruiker_a, gebruiker_b')
+    .or('gebruiker_a.eq.' + currentUser.id + ',gebruiker_b.eq.' + currentUser.id);
+  const matchIds = new Set((matchData || []).map(m => m.gebruiker_a === currentUser.id ? m.gebruiker_b : m.gebruiker_a));
+
   swipeHistory = swipes.map(s => {
     const profiel = profielMap[s.target_id];
     const ad = adMap[s.target_id];
-    console.log('Swipe target:', s.target_id, '→ profiel:', !!profiel, 'ad:', !!ad, 'richting:', s.richting);
     if (profiel) return { ...profielNaarKaart(profiel), status: s.richting, swipe_id: s.id };
     if (ad) return { ...advertentieNaarKaart({ ...ad, profiel: {} }), status: s.richting, swipe_id: s.id };
-    console.warn('Target ID niet gevonden in profielen of advertenties:', s.target_id);
     return null;
-  }).filter(Boolean);
+  }).filter(Boolean).filter(p => !matchIds.has(p.id));
 
-  console.log('SwipeHistory:', swipeHistory.length);
   renderLiked();
 }
 
