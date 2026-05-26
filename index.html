@@ -2627,12 +2627,14 @@ async function verwijderMatch(matchId, anderUserId) {
     { onConflict: 'swiper_id,target_id' }
   );
 
-  // Chat berichten verwijderen
-  const { error: chatErr } = await sb.from('directe_berichten')
-    .delete()
-    .or('and(van_user_id.eq.' + currentUser.id + ',naar_user_id.eq.' + anderUserId + '),and(van_user_id.eq.' + anderUserId + ',naar_user_id.eq.' + currentUser.id + ')');
+  // Chat berichten verwijderen in beide richtingen
+  const { error: chatErr1 } = await sb.from('directe_berichten').delete()
+    .eq('van_user_id', currentUser.id).eq('naar_user_id', anderUserId);
+  const { error: chatErr2 } = await sb.from('directe_berichten').delete()
+    .eq('van_user_id', anderUserId).eq('naar_user_id', currentUser.id);
   
-  if (chatErr) console.error('Chat verwijderen mislukt:', chatErr.message);
+  if (chatErr1) console.error('Chat verwijderen mislukt (1):', chatErr1.message);
+  if (chatErr2) console.error('Chat verwijderen mislukt (2):', chatErr2.message);
 
   // UI updaten
   geswipedIds.delete(anderUserId); // terug in ontdekken (geskipt)
@@ -2649,6 +2651,9 @@ async function verwijderMatch(matchId, anderUserId) {
     document.querySelector('.chat-name').textContent = 'Selecteer een gesprek';
     document.getElementById('blokkeerBtn').style.display = 'none';
   }
+
+  // Herlaad berichten lijst
+  laadDirecteBerichten();
 
   const t = document.getElementById('toast');
   t.textContent = 'Match verwijderd.'; t.classList.add('show');
@@ -2952,8 +2957,11 @@ async function verwijderUitLijst(swipeId, targetId) {
   if (match) {
     await sb.from('matches').delete().eq('id', match.id);
     // Chat verwijderen
+    // Verwijder berichten in beide richtingen
     await sb.from('directe_berichten').delete()
-      .or('and(van_user_id.eq.' + currentUser.id + ',naar_user_id.eq.' + targetId + '),and(van_user_id.eq.' + targetId + ',naar_user_id.eq.' + currentUser.id + ')');
+      .eq('van_user_id', currentUser.id).eq('naar_user_id', targetId);
+    await sb.from('directe_berichten').delete()
+      .eq('van_user_id', targetId).eq('naar_user_id', currentUser.id);
     laadMatchesLijst();
   }
 
