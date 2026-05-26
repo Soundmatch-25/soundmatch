@@ -3118,11 +3118,15 @@ function klikOpNotificatie() { document.getElementById('berichtNotificatie').sty
 async function updateOngelezen() {
   try {
     if (!currentUser) return;
-    const { count } = await sb.from('directe_berichten').select('*', { count: 'exact', head: true }).eq('naar_user_id', currentUser.id).eq('gelezen', false);
+    const [{ count: berichtenCount }, { count: verzoekCount }] = await Promise.all([
+      sb.from('directe_berichten').select('*', { count: 'exact', head: true }).eq('naar_user_id', currentUser.id).eq('gelezen', false),
+      sb.from('berichtverzoeken').select('*', { count: 'exact', head: true }).eq('naar_user_id', currentUser.id).eq('status', 'wachtend')
+    ]);
+    const total = (berichtenCount || 0) + (verzoekCount || 0);
     ['berichtenBadge', 'berichtenBadgeMob'].forEach(id => {
       const b = document.getElementById(id);
       if (!b) return;
-      if (count > 0) { b.textContent = count; b.style.display = 'inline-block'; }
+      if (total > 0) { b.textContent = total; b.style.display = 'inline-block'; }
       else b.style.display = 'none';
     });
   } catch(e) {}
