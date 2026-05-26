@@ -3059,13 +3059,13 @@ async function checkNieuweBerichten() {
     
     if (data?.length) {
       const bericht = data[0];
-      // Alleen tonen als het een nieuw bericht is
       if (bericht.id !== laatsteNotificatieId) {
         laatsteNotificatieId = bericht.id;
         toonBerichtNotificatie(bericht.van?.naam || 'Iemand', bericht.inhoud, bericht.van?.foto_url);
       }
-      updateOngelezen();
     }
+    // Altijd badge updaten
+    await updateOngelezen();
   } catch(e) { console.warn('checkNieuweBerichten fout:', e.message); }
 }
 
