@@ -2679,8 +2679,19 @@ async function laadOntvangenLikes() {
     .eq('richting', 'like')
     .order('aangemaakt_op', { ascending: false });
 
-  // Filter matches eruit
-  const uniek = (likes || []).filter(s => s.swiper_id !== currentUser.id && !matchIds.has(s.swiper_id));
+  // Haal ook op wie jij genoped hebt (dan tonen we ze niet meer)
+  const { data: mijnnopes } = await sb.from('swipes')
+    .select('target_id')
+    .eq('swiper_id', currentUser.id)
+    .eq('richting', 'nope');
+  const nopeIds = new Set((mijnnopes || []).map(s => s.target_id));
+
+  // Filter matches én genopeden eruit
+  const uniek = (likes || []).filter(s => 
+    s.swiper_id !== currentUser.id && 
+    !matchIds.has(s.swiper_id) &&
+    !nopeIds.has(s.swiper_id)
+  );
 
   // Update badge
   const count = uniek.length;
@@ -2753,7 +2764,18 @@ async function checkNieuweLikes() {
     .eq('target_id', currentUser.id)
     .eq('richting', 'like');
   
-  const count = (likes || []).filter(l => !matchIds.has(l.swiper_id) && l.swiper_id !== currentUser.id).length;
+  // Haal ook nopes op
+  const { data: nopes } = await sb.from('swipes')
+    .select('target_id')
+    .eq('swiper_id', currentUser.id)
+    .eq('richting', 'nope');
+  const nopeIds = new Set((nopes || []).map(s => s.target_id));
+
+  const count = (likes || []).filter(l => 
+    !matchIds.has(l.swiper_id) && 
+    l.swiper_id !== currentUser.id &&
+    !nopeIds.has(l.swiper_id)
+  ).length;
   
   ['likesBadge', 'likesBadgeMob'].forEach(id => {
     const b = document.getElementById(id);
