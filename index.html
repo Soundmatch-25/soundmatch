@@ -2797,11 +2797,13 @@ async function checkNieuweLikes() {
     l.swiper_id !== currentUser.id &&
     !nopeIds.has(l.swiper_id)
   ).length;
+
+  const totalCount = count + matchIds.size;
   
   ['likesBadge', 'likesBadgeMob'].forEach(id => {
     const b = document.getElementById(id);
     if (!b) return;
-    if (count > 0) { b.textContent = count; b.style.display = 'inline-block'; }
+    if (totalCount > 0) { b.textContent = totalCount; b.style.display = 'inline-block'; }
     else b.style.display = 'none';
   });
 }
