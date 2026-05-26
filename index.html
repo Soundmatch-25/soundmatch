@@ -1984,7 +1984,20 @@ function profielNaarKaart(p) {
 }
 
 // ═══════════════ SUPABASE DATA LADEN ═══════════════
-const geswipedIds = new Set(); // persistent per sessie
+const geswipedIds = new Set(); // user IDs die al gezien zijn
+
+async function laadGezienIds() {
+  if (!currentUser) return;
+  // Swipes
+  const { data: swipes } = await sb.from('swipes').select('target_id').eq('swiper_id', currentUser.id);
+  (swipes || []).forEach(s => geswipedIds.add(s.target_id));
+  // Matches
+  const { data: matches } = await sb.from('matches').select('gebruiker_a,gebruiker_b')
+    .or('gebruiker_a.eq.' + currentUser.id + ',gebruiker_b.eq.' + currentUser.id);
+  (matches || []).forEach(m => {
+    geswipedIds.add(m.gebruiker_a === currentUser.id ? m.gebruiker_b : m.gebruiker_a);
+  });
+}
 
 async function checkSessie() {
   if (currentUser) return true; // al ingelogd
@@ -2015,10 +2028,9 @@ async function laadAdvertenties() {
     }
   }, 20000);
 
-  // Swipes laden als nog niet gedaan
+  // Laad gezien IDs als nog niet gedaan (incl. matches)
   if (geswipedIds.size === 0 && currentUser) {
-    const { data: swipes } = await sb.from('swipes').select('target_id').eq('swiper_id', currentUser.id);
-    (swipes || []).forEach(s => geswipedIds.add(s.target_id));
+    await laadGezienIds();
   }
 
   // Bouw queries
@@ -2056,7 +2068,7 @@ async function laadAdvertenties() {
     .map(p => profielNaarKaart(p));
 
   let adKaarten = (advertenties || [])
-    .filter(a => !geswipedIds.has(a.user_id) && !geswipedIds.has(a.id))
+    .filter(a => !geswipedIds.has(a.user_id))
     .map(a => advertentieNaarKaart(a));
 
   // Client-side genre/instrument filter toepassen
@@ -2310,7 +2322,8 @@ async function doSwipe(dir) {
   const targetUserId = p.raw?.user_id || p.id;
 
   // Direct toevoegen aan geswiped set
-  if (targetUserId) geswipedIds.add(p.id); // kaart ID voor de feed
+  if (targetUserId) geswipedIds.add(p.id); // kaart ID
+  if (targetUserId) geswipedIds.add(targetUserId); // user ID
   console.log('doSwipe:', dir, '| targetUserId:', targetUserId, '| naam:', p.naam);
 
   // Opslaan in Supabase
@@ -2622,9 +2635,12 @@ async function verwijderMatch(matchId, anderUserId) {
   if (chatErr) console.error('Chat verwijderen mislukt:', chatErr.message);
 
   // UI updaten
+  geswipedIds.delete(anderUserId); // terug in ontdekken (geskipt)
   laadMatchesLijst();
   laadOntvangenLikes();
   laadSwipeHistory();
+  // Herlaad gezien IDs fresh
+  await laadGezienIds();
 
   // Als dit gesprek open was, sluit het
   if (huidigChatUserId === anderUserId) {
@@ -2915,8 +2931,6 @@ async function verwijderUitLijst(swipeId, targetId) {
   geswipedIds.delete(targetId);
   swipeHistory = swipeHistory.filter(p => p.id !== targetId);
   renderLiked();
-
-  // Swipe verwijderen
   const { error } = await sb.from('swipes')
     .delete()
     .eq('swiper_id', currentUser.id)
@@ -4114,9 +4128,7 @@ async function laadOfMaakProfiel(user) {
 }
 
 async function voorlaadSwipes() {
-  if (!currentUser || geswipedIds.size > 0) return;
-  const { data: swipes } = await sb.from('swipes').select('target_id').eq('swiper_id', currentUser.id);
-  (swipes || []).forEach(s => geswipedIds.add(s.target_id));
+  await laadGezienIds();
 }
 
 async function slaProfielOp() {
