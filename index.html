@@ -2617,15 +2617,16 @@ async function verwijderMatch(matchId, anderUserId) {
   // Match verwijderen
   await sb.from('matches').delete().eq('id', matchId);
 
-  // Swipes naar 'nope' zetten (niet verwijderen, zodat ze in geskipt komen)
+  // Swipes naar 'nope' zetten voor beide partijen
   await sb.from('swipes').upsert(
     { swiper_id: currentUser.id, target_id: anderUserId, richting: 'nope' },
     { onConflict: 'swiper_id,target_id' }
   );
-  await sb.from('swipes').upsert(
-    { swiper_id: anderUserId, target_id: currentUser.id, richting: 'nope' },
-    { onConflict: 'swiper_id,target_id' }
-  );
+  // Swipe van de ander ook naar nope (via target_id policy)
+  await sb.from('swipes')
+    .update({ richting: 'nope' })
+    .eq('swiper_id', anderUserId)
+    .eq('target_id', currentUser.id);
 
   // Chat berichten verwijderen in beide richtingen
   const { error: chatErr1 } = await sb.from('directe_berichten').delete()
@@ -2949,6 +2950,12 @@ async function verwijderUitLijst(swipeId, targetId) {
     laadSwipeHistory();
     return;
   }
+
+  // Swipe van de ander ook naar nope zetten zodat hij niet in "heeft jou geliked" verschijnt
+  await sb.from('swipes')
+    .update({ richting: 'nope' })
+    .eq('swiper_id', targetId)
+    .eq('target_id', currentUser.id);
 
   // Check of er een match is en verwijder die ook
   const { data: match } = await sb.from('matches')
