@@ -2513,12 +2513,23 @@ async function doSwipe(dir) {
       console.log('Wederzijds resultaat:', wederzijds, 'error:', wErr?.message);
 
       if (wederzijds?.length) {
-        const { error: matchErr } = await sb.from('matches').upsert(
+        // Probeer eerst (currentUser, target), dan omgekeerd
+        let matchOk = false;
+        const res1 = await sb.from('matches').upsert(
           { gebruiker_a: currentUser.id, gebruiker_b: targetUserId },
           { onConflict: 'gebruiker_a,gebruiker_b' }
         );
-        console.log('Match aangemaakt, error:', matchErr?.message);
-        setTimeout(() => showMatch({ ...p, id: targetUserId }), 400);
+        if (!res1.error) { matchOk = true; }
+        else {
+          const res2 = await sb.from('matches').upsert(
+            { gebruiker_a: targetUserId, gebruiker_b: currentUser.id },
+            { onConflict: 'gebruiker_a,gebruiker_b' }
+          );
+          if (!res2.error) matchOk = true;
+          else console.error('Match aanmaken mislukt:', res2.error.message);
+        }
+        console.log('Match aangemaakt:', matchOk);
+        if (matchOk) setTimeout(() => showMatch({ ...p, id: targetUserId }), 400);
       }
     }
   }
@@ -3262,7 +3273,6 @@ function speelBerichtGeluid() {
 }
 
 function toonBerichtNotificatie(naam, inhoud, fotoUrl) {
-  // Niet tonen als berichten panel actief is
   if (document.getElementById('panel-messages')?.classList.contains('active')) return;
 
   speelBerichtGeluid();
@@ -3270,12 +3280,15 @@ function toonBerichtNotificatie(naam, inhoud, fotoUrl) {
   const notif = document.getElementById('berichtNotificatie');
   const tekst = document.getElementById('notifTekst');
   const avatar = document.getElementById('notifAvatar');
+  const titel = notif?.querySelector('.notif-titel');
 
+  if (titel) titel.textContent = 'Nieuw bericht';
   if (tekst) tekst.textContent = naam + ': ' + inhoud.substring(0, 40) + (inhoud.length > 40 ? '...' : '');
   if (avatar) avatar.innerHTML = fotoUrl
     ? '<img src="' + fotoUrl + '" style="width:100%;height:100%;object-fit:cover;"/>'
     : '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>';
 
+  delete notif.dataset.isMatch;
   notif.style.display = 'flex';
   clearTimeout(notif._timeout);
   notif._timeout = setTimeout(() => { notif.style.display = 'none'; }, 8000);
@@ -4506,6 +4519,8 @@ sb.auth.onAuthStateChange(async (event, session) => {
   } else if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session?.user) {
     if (currentUser?.id === session.user.id) return;
     currentUser = session.user;
+    // Direct online status updaten
+    sb.from('profiles').update({ online_op: new Date().toISOString() }).eq('id', session.user.id).catch(() => {});
     await laadOfMaakProfiel(session.user);
   } else if (event === 'TOKEN_REFRESHED' && session?.user) {
     currentUser = session.user;
