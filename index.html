@@ -3346,8 +3346,12 @@ function startBerichtenPoll() {
 
 async function updateOnlineStatus() {
   if (!currentUser) return;
-  try { await sb.from('profiles').update({ online_op: new Date().toISOString() }).eq('id', currentUser.id); }
-  catch(e) {}
+  try {
+    const { error } = await sb.from('profiles')
+      .update({ online_op: new Date().toISOString() })
+      .eq('id', currentUser.id);
+    if (error) console.error('online_op update fout:', error.message);
+  } catch(e) { console.error('online_op exception:', e.message); }
 }
 
 async function checkNieuweMatches() {
@@ -3618,6 +3622,7 @@ async function openGesprek(userId, user) {
   await laadGesprekBerichten(userId);
   updateOngelezen();
   setAppInterval('gesprek', () => {
+    if (!huidigChatUserId) return;
     laadGesprekBerichten(userId);
     checkTypingIndicator(userId);
     updateChatOnlineStatus(userId);
@@ -3645,7 +3650,6 @@ async function updateChatOnlineStatus(userId) {
   if (!userId) return;
   try {
     const { data, error } = await sb.from('profiles').select('online_op').eq('id', userId).single();
-    console.log('Online status voor', userId, ':', data?.online_op, 'error:', error?.message);
     const statusEl = document.getElementById('chatOnlineStatus');
     const av = document.getElementById('chatAvatar');
     if (!statusEl || !data?.online_op) return;
@@ -3687,15 +3691,16 @@ let typingTimeout = null;
 
 function stuurTypingIndicator() {
   if (!currentUser || !huidigChatUserId) return;
+  
   sb.from('typing_indicators').upsert({
     user_id: currentUser.id,
     chat_with: huidigChatUserId,
     bijgewerkt_op: new Date().toISOString()
-  }, { onConflict: 'user_id' });
+  }, { onConflict: 'user_id', ignoreDuplicates: false });
   
   clearTimeout(typingTimeout);
-  typingTimeout = setTimeout(() => {
-    sb.from('typing_indicators').delete().eq('user_id', currentUser.id);
+  typingTimeout = setTimeout(async () => {
+    await sb.from('typing_indicators').delete().eq('user_id', currentUser.id);
   }, 3000);
 }
 
@@ -3707,7 +3712,6 @@ async function checkTypingIndicator(userId) {
       .eq('user_id', userId)
       .eq('chat_with', currentUser.id)
       .maybeSingle();
-    console.log('Typing check voor', userId, ':', data, 'error:', error?.message);
     
     const indicator = document.getElementById('typingIndicator');
     const naam = document.getElementById('typingNaam');
