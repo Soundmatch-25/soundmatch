@@ -2530,7 +2530,13 @@ async function doSwipe(dir) {
           else console.error('Match aanmaken mislukt:', res2.error.message);
         }
         console.log('Match aangemaakt:', matchOk);
-        if (matchOk) setTimeout(() => showMatch({ ...p, id: targetUserId }), 400);
+        if (matchOk) {
+          // Haal match ID op voor lastMatchId
+          const { data: newMatch } = await sb.from('matches').select('id')
+            .or('and(gebruiker_a.eq.' + currentUser.id + ',gebruiker_b.eq.' + targetUserId + '),and(gebruiker_a.eq.' + targetUserId + ',gebruiker_b.eq.' + currentUser.id + ')')
+            .maybeSingle();
+          setTimeout(() => showMatch({ ...p, id: targetUserId, matchId: newMatch?.id }), 400);
+        }
       }
     }
   }
@@ -2543,6 +2549,8 @@ let matchPartner = null;
 
 function showMatch(p) {
   matchPartner = p;
+  // Markeer zodat checkNieuweMatches hem niet nogmaals toont
+  if (p.matchId) lastMatchId = p.matchId;
   document.getElementById('matchName').textContent = p.naam || '';
 
   const emojiEl = document.getElementById('matchEmoji');
@@ -3350,24 +3358,25 @@ async function checkNieuweMatches() {
       .or('gebruiker_a.eq.' + currentUser.id + ',gebruiker_b.eq.' + currentUser.id)
       .order('aangemaakt_op', { ascending: false })
       .limit(1);
-    
+
     if (!data?.length) return;
     const match = data[0];
     const matchTime = new Date(match.aangemaakt_op).getTime();
     const nu = Date.now();
-    // Alleen tonen als match minder dan 20 seconden geleden is en nog niet getoond
+
     if (nu - matchTime < 20000 && match.id !== lastMatchId) {
       lastMatchId = match.id;
       const ander = match.gebruiker_a === currentUser.id ? match.b : match.a;
-      // Alleen tonen als je niet op likes of discover pagina zit
-      const actief = document.querySelector('.panel.active')?.id;
-      if (actief !== 'panel-liked' && actief !== 'panel-discover' && ander) {
+      if (!ander) return;
+
+      // Niet tonen als de match popup al open is (net geswipet op ontdekken)
+      const matchModalOpen = document.getElementById('matchModal')?.classList.contains('open');
+      if (!matchModalOpen && ander) {
         toonMatchToaster(ander);
+        checkNieuweLikes();
       }
-      // Badge updaten
-      checkNieuweLikes();
     }
-  } catch(e) {}
+  } catch(e) { console.error('checkNieuweMatches fout:', e.message); }
 }
 
 let lastMatchId = null;
@@ -3635,7 +3644,8 @@ function sluitMobieleChat() {
 async function updateChatOnlineStatus(userId) {
   if (!userId) return;
   try {
-    const { data } = await sb.from('profiles').select('online_op').eq('id', userId).single();
+    const { data, error } = await sb.from('profiles').select('online_op').eq('id', userId).single();
+    console.log('Online status voor', userId, ':', data?.online_op, 'error:', error?.message);
     const statusEl = document.getElementById('chatOnlineStatus');
     const av = document.getElementById('chatAvatar');
     if (!statusEl || !data?.online_op) return;
@@ -3692,11 +3702,12 @@ function stuurTypingIndicator() {
 async function checkTypingIndicator(userId) {
   if (!userId || !currentUser) return;
   try {
-    const { data } = await sb.from('typing_indicators')
+    const { data, error } = await sb.from('typing_indicators')
       .select('bijgewerkt_op')
       .eq('user_id', userId)
       .eq('chat_with', currentUser.id)
       .maybeSingle();
+    console.log('Typing check voor', userId, ':', data, 'error:', error?.message);
     
     const indicator = document.getElementById('typingIndicator');
     const naam = document.getElementById('typingNaam');
