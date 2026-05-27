@@ -3672,11 +3672,11 @@ function stuurTypingIndicator() {
     user_id: currentUser.id,
     chat_with: huidigChatUserId,
     bijgewerkt_op: new Date().toISOString()
-  }, { onConflict: 'user_id' }).catch(() => {});
+  }, { onConflict: 'user_id' });
   
   clearTimeout(typingTimeout);
   typingTimeout = setTimeout(() => {
-    sb.from('typing_indicators').delete().eq('user_id', currentUser.id).catch(() => {});
+    sb.from('typing_indicators').delete().eq('user_id', currentUser.id);
   }, 3000);
 }
 
@@ -4520,7 +4520,7 @@ sb.auth.onAuthStateChange(async (event, session) => {
     if (currentUser?.id === session.user.id) return;
     currentUser = session.user;
     // Direct online status updaten
-    sb.from('profiles').update({ online_op: new Date().toISOString() }).eq('id', session.user.id).catch(() => {});
+    try { await sb.from('profiles').update({ online_op: new Date().toISOString() }).eq('id', session.user.id); } catch(e) {}
     await laadOfMaakProfiel(session.user);
   } else if (event === 'TOKEN_REFRESHED' && session?.user) {
     currentUser = session.user;
