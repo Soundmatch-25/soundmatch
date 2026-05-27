@@ -3654,7 +3654,8 @@ async function updateChatOnlineStatus(userId) {
     const av = document.getElementById('chatAvatar');
     if (!statusEl || !data?.online_op) return;
     
-    const minuten = Math.floor((Date.now() - new Date(data.online_op)) / 60000);
+    const onlineOp = data.online_op.endsWith('Z') ? data.online_op : data.online_op + 'Z';
+    const minuten = Math.floor((Date.now() - new Date(onlineOp)) / 60000);
     
     // Online dot beheren - voeg toe als niet bestaat
     let dot = document.getElementById('onlineDot');
