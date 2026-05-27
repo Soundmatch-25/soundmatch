@@ -1169,7 +1169,7 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
 
     <h1 style="font-family:var(--font-head);font-size:28px;font-weight:900;margin-bottom:4px;">Algemene Voorwaarden</h1>
     <p style="color:var(--sub);font-size:13px;margin-bottom:8px;">Versie 1.0 — Ingangsdatum: 1 juni 2025</p>
-    <p style="color:var(--sub);font-size:13px;margin-bottom:32px;">Soundmatch, gevestigd in Nederland | KvK-nummer: [in te vullen] | contact@soundmatch.nl</p>
+    <p style="color:var(--sub);font-size:13px;margin-bottom:32px;">Soundmatch, gevestigd in Nederland | contact@soundmatch.nl</p>
 
     <div style="display:flex;flex-direction:column;gap:32px;font-size:14px;line-height:1.8;color:var(--text);">
 
@@ -2088,7 +2088,7 @@ let cardIndex = 0;
 let swipeHistory = [];
 let currentTab = 'liked';
 let currentDetail = null;
-let activeType = 'muzikanten';
+let activeType = 'bands';
 
 // ═══════════════ HELPERS ═══════════════
 function typeIcon(type) {
@@ -2604,6 +2604,8 @@ function setTypeToggle(type) {
     document.getElementById(id)?.classList.toggle('active', t === type);
   });
   moveToggleSlider(opts[type]);
+  // Filter chips ook syncen
+  setFR(type);
   laadAdvertenties();
 }
 
@@ -2619,7 +2621,7 @@ function moveToggleSlider(elId) {
 }
 
 function initToggle() {
-  moveToggleSlider('togMuz');
+  moveToggleSlider('togBands');
 }
 
 // ═══════════════ SWIPE MECHANISME ═══════════════
@@ -4194,6 +4196,16 @@ function setFR(r) {
     const el = document.getElementById(id);
     if (el) el.classList.toggle('active', type===r);
   });
+  // Toggle meebewegen (alleen als het van de filter komt, niet van toggle zelf)
+  if (r !== 'alles' && r !== activeType) {
+    setTypeToggle(r);
+  }
+}
+
+function openFilter() {
+  // Zorg dat filter tab overeenkomt met huidige toggle
+  setFR(activeType);
+  document.getElementById('filterModal').classList.add('open');
 }
 
 // ═══════════════ REGISTER ═══════════════
