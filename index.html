@@ -223,6 +223,7 @@ html, body {
   max-width: 100%;
   box-sizing: border-box;
 }
+@keyframes typingDot { 0%,60%,100% { opacity:0.3; transform:scale(0.8); } 30% { opacity:1; transform:scale(1.2); } }
 @keyframes spin { to { transform: rotate(360deg); } }
 .sidebar-logo .acc { background: var(--grad); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
 .sidebar-logo .dot { color:#fff; -webkit-text-fill-color:#fff; }
@@ -1589,16 +1590,28 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
           <button id="chatTerugBtn" onclick="sluitMobieleChat()" style="display:none;width:34px;height:34px;border-radius:50%;border:1px solid var(--border);background:transparent;cursor:pointer;align-items:center;justify-content:center;color:var(--sub);flex-shrink:0;">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
           </button>
-          <div class="chat-av-sm" id="chatAvatar"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
-          <div style="flex:1;">
+          <div class="chat-av-sm" id="chatAvatar" style="position:relative;overflow:hidden;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            <div id="onlineDot" style="display:none;position:absolute;bottom:0;right:0;width:10px;height:10px;border-radius:50%;background:#4ade80;border:2px solid var(--bg2);z-index:2;"></div>
+          </div>
+          <div style="flex:1;min-width:0;">
             <div class="chat-name" style="font-size:16px;font-weight:600;color:var(--text)">Selecteer een gesprek</div>
-            <div style="font-size:12px;color:var(--sub)" id="chatSub">Soundmatch</div>
+            <div style="font-size:11px;color:var(--sub);margin-top:1px;" id="chatOnlineStatus"></div>
           </div>
           <button id="blokkeerBtn" onclick="blokkeerGebruiker()" style="display:none;padding:6px 12px;border-radius:10px;border:1px solid rgba(229,57,53,0.3);background:rgba(229,57,53,0.1);color:#e53935;cursor:pointer;font-size:12px;font-weight:600;">Blokkeren</button>
         </div>
+        <!-- Typing indicator -->
+        <div id="typingIndicator" style="display:none;padding:6px 20px 2px;font-size:12px;color:var(--sub);">
+          <span id="typingNaam"></span> typt
+          <span style="display:inline-flex;gap:2px;margin-left:4px;">
+            <span style="width:4px;height:4px;border-radius:50%;background:var(--sub);animation:typingDot 1.4s infinite;">.</span>
+            <span style="width:4px;height:4px;border-radius:50%;background:var(--sub);animation:typingDot 1.4s infinite 0.2s;">.</span>
+            <span style="width:4px;height:4px;border-radius:50%;background:var(--sub);animation:typingDot 1.4s infinite 0.4s;">.</span>
+          </span>
+        </div>
         <div class="chat-msgs" id="chatMsgs"></div>
         <div class="chat-input-row">
-          <input class="chat-input" id="chatInput" placeholder="Typ een bericht..." onkeydown="if(event.key==='Enter')sendMsg()"/>
+          <input class="chat-input" id="chatInput" placeholder="Typ een bericht..." onkeydown="if(event.key==='Enter')sendMsg()" oninput="stuurTypingIndicator()"/>
           <button class="send-btn" onclick="sendMsg()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button>
         </div>
       </div>
@@ -1938,10 +1951,10 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
 </div>
 
 <!-- NOTIFICATIE POPUP -->
-<div id="berichtNotificatie" style="display:none;position:fixed;top:20px;right:20px;background:var(--card);border:1px solid var(--border2);border-radius:16px;padding:14px 18px;z-index:1000;cursor:pointer;box-shadow:0 8px 32px rgba(0,0,0,0.4);max-width:280px;display:none;align-items:center;gap:12px;" onclick="klikOpNotificatie()">
+<div id="berichtNotificatie" style="display:none;position:fixed;top:20px;right:20px;background:var(--card);border:1px solid var(--border2);border-radius:16px;padding:14px 18px;z-index:1000;cursor:pointer;box-shadow:0 8px 32px rgba(0,0,0,0.4);max-width:280px;align-items:center;gap:12px;" onclick="klikOpNotificatie()">
   <div style="width:40px;height:40px;border-radius:12px;overflow:hidden;flex-shrink:0;background:var(--grad);display:flex;align-items:center;justify-content:center;" id="notifAvatar"></div>
   <div style="flex:1;overflow:hidden;">
-    <div style="font-size:13px;font-weight:700;color:var(--text);">Nieuw bericht</div>
+    <div style="font-size:13px;font-weight:700;color:var(--text);" class="notif-titel">Nieuw bericht</div>
     <div style="font-size:12px;color:var(--sub);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" id="notifTekst"></div>
   </div>
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="color:var(--sub);flex-shrink:0;"><polyline points="9 18 15 12 9 6"/></svg>
@@ -3268,7 +3281,16 @@ function toonBerichtNotificatie(naam, inhoud, fotoUrl) {
   notif._timeout = setTimeout(() => { notif.style.display = 'none'; }, 8000);
 }
 
-function klikOpNotificatie() { document.getElementById('berichtNotificatie').style.display = 'none'; showPanel('messages'); }
+function klikOpNotificatie() {
+  const notif = document.getElementById('berichtNotificatie');
+  notif.style.display = 'none';
+  if (notif.dataset.isMatch === '1') {
+    showPanel('liked');
+  } else {
+    showPanel('messages');
+  }
+  delete notif.dataset.isMatch;
+}
 
 async function updateOngelezen() {
   try {
@@ -3290,7 +3312,120 @@ async function updateOngelezen() {
 function startBerichtenPoll() {
   setAppInterval('berichten', async () => {
     if (currentUser) await checkNieuweBerichten();
-  }, 10000);
+  }, 8000);
+  // Online status bijwerken
+  updateOnlineStatus();
+  setAppInterval('online', updateOnlineStatus, 60000);
+  // Match polling
+  setAppInterval('matchpoll', checkNieuweMatches, 15000);
+  // Chat verwijderd check
+  setAppInterval('chatcheck', checkChatVerwijderd, 5000);
+}
+
+async function updateOnlineStatus() {
+  if (!currentUser) return;
+  try { await sb.from('profiles').update({ online_op: new Date().toISOString() }).eq('id', currentUser.id); }
+  catch(e) {}
+}
+
+async function checkNieuweMatches() {
+  if (!currentUser) return;
+  try {
+    const { data } = await sb.from('matches')
+      .select('*, a:gebruiker_a(id, naam, foto_url, type), b:gebruiker_b(id, naam, foto_url, type)')
+      .or('gebruiker_a.eq.' + currentUser.id + ',gebruiker_b.eq.' + currentUser.id)
+      .order('aangemaakt_op', { ascending: false })
+      .limit(1);
+    
+    if (!data?.length) return;
+    const match = data[0];
+    const matchTime = new Date(match.aangemaakt_op).getTime();
+    const nu = Date.now();
+    // Alleen tonen als match minder dan 20 seconden geleden is
+    if (nu - matchTime < 20000 && match.aangemaakt_op !== lastMatchId) {
+      lastMatchId = match.aangemaakt_op;
+      const ander = match.gebruiker_a === currentUser.id ? match.b : match.a;
+      // Alleen tonen als je niet op likes of discover pagina zit
+      const actief = document.querySelector('.panel.active')?.id;
+      if (actief !== 'panel-liked' && actief !== 'panel-discover' && ander) {
+        toonMatchToaster(ander);
+      }
+      // Badge updaten
+      checkNieuweLikes();
+    }
+  } catch(e) {}
+}
+
+let lastMatchId = null;
+
+function toonMatchToaster(ander) {
+  const notif = document.getElementById('berichtNotificatie');
+  if (!notif) return;
+  const avatar = document.getElementById('notifAvatar');
+  const tekst = document.getElementById('notifTekst');
+  const titel = notif.querySelector('.notif-titel');
+  
+  if (avatar) avatar.innerHTML = ander.foto_url
+    ? '<img src="' + ander.foto_url + '" style="width:100%;height:100%;object-fit:cover;"/>'
+    : typeIcon(ander.type);
+  if (tekst) tekst.textContent = 'Klik om te chatten';
+  if (titel) titel.textContent = '🎉 Match met ' + (ander.naam || 'iemand') + '!';
+  
+  notif.dataset.matchUserId = ander.id;
+  notif.dataset.matchUserNaam = ander.naam;
+  notif.dataset.matchUserFoto = ander.foto_url || '';
+  notif.dataset.isMatch = '1';
+  notif.style.display = 'flex';
+  speelBerichtGeluid();
+  startConfetti();
+  setTimeout(() => { notif.style.display = 'none'; stopConfetti(); }, 8000);
+}
+
+async function checkChatVerwijderd() {
+  if (!currentUser || !huidigChatUserId) return;
+  try {
+    // Check of er nog berichten zijn OF een match bestaat
+    const { data: match } = await sb.from('matches')
+      .select('id')
+      .or('and(gebruiker_a.eq.' + currentUser.id + ',gebruiker_b.eq.' + huidigChatUserId + '),and(gebruiker_a.eq.' + huidigChatUserId + ',gebruiker_b.eq.' + currentUser.id + ')')
+      .maybeSingle();
+    
+    const { count } = await sb.from('directe_berichten')
+      .select('*', { count: 'exact', head: true })
+      .or('and(van_user_id.eq.' + currentUser.id + ',naar_user_id.eq.' + huidigChatUserId + '),and(van_user_id.eq.' + huidigChatUserId + ',naar_user_id.eq.' + currentUser.id + ')');
+    
+    if (!match && (!count || count === 0)) {
+      toonChatNietBeschikbaar();
+    }
+  } catch(e) {}
+}
+
+function toonChatNietBeschikbaar() {
+  const msgs = document.getElementById('chatMsgs');
+  if (!msgs) return;
+  // Voorkom dubbele melding
+  if (msgs.querySelector('.chat-niet-beschikbaar')) return;
+  
+  const overlay = document.createElement('div');
+  overlay.className = 'chat-niet-beschikbaar';
+  overlay.style.cssText = 'position:absolute;inset:0;background:rgba(10,10,20,0.85);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;z-index:10;backdrop-filter:blur(4px);';
+  overlay.innerHTML = '<div style="font-size:32px;">💔</div>' +
+    '<div style="font-family:var(--font-head);font-size:18px;font-weight:800;">Chat niet meer beschikbaar</div>' +
+    '<div style="font-size:14px;color:var(--sub);text-align:center;padding:0 24px;">Deze match is verwijderd door de andere persoon.</div>' +
+    '<button class="btn btn-primary" onclick="sluitNietBeschikbareChat()">OK</button>';
+  
+  const container = msgs.parentElement;
+  if (container) { container.style.position = 'relative'; container.appendChild(overlay); }
+}
+
+function sluitNietBeschikbareChat() {
+  stopAppInterval('gesprek');
+  huidigChatUserId = null;
+  document.getElementById('chatMsgs').innerHTML = '';
+  document.querySelector('.chat-name').textContent = 'Selecteer een gesprek';
+  document.getElementById('blokkeerBtn').style.display = 'none';
+  document.querySelector('.chat-niet-beschikbaar')?.remove();
+  laadDirecteBerichten();
 }
 
 async function laadDirecteBerichten() {
@@ -3452,11 +3587,18 @@ async function openGesprek(userId, user) {
   const blokkeerBtn = document.getElementById('blokkeerBtn');
   if (blokkeerBtn) blokkeerBtn.style.display = 'block';
   const av = document.getElementById('chatAvatar');
-  if (av && user?.foto_url) av.innerHTML = '<img src="' + user.foto_url + '" style="width:100%;height:100%;object-fit:cover;border-radius:50%;"/>';
+  if (av && user?.foto_url) {
+    av.innerHTML = '<img src="' + user.foto_url + '" style="width:100%;height:100%;object-fit:cover;border-radius:50%;"/><div id="onlineDot" style="display:none;position:absolute;bottom:0;right:0;width:10px;height:10px;border-radius:50%;background:#4ade80;border:2px solid var(--bg2);z-index:2;"></div>';
+  }
+  updateChatOnlineStatus(userId);
   await sb.from('directe_berichten').update({ gelezen: true }).eq('van_user_id', userId).eq('naar_user_id', currentUser.id).eq('gelezen', false);
   await laadGesprekBerichten(userId);
   updateOngelezen();
-  setAppInterval('gesprek', () => laadGesprekBerichten(userId), 5000);
+  setAppInterval('gesprek', () => {
+    laadGesprekBerichten(userId);
+    checkTypingIndicator(userId);
+    updateChatOnlineStatus(userId);
+  }, 2000);
 
   // Op mobiel: verberg lijst, toon chat
   const isMobiel = window.innerWidth <= 768;
@@ -3474,6 +3616,80 @@ function sluitMobieleChat() {
   const terugBtn = document.getElementById('chatTerugBtn');
   if (terugBtn) terugBtn.style.display = 'none';
   stopAppInterval('gesprek');
+}
+
+async function updateChatOnlineStatus(userId) {
+  if (!userId) return;
+  try {
+    const { data } = await sb.from('profiles').select('online_op, naam').eq('id', userId).single();
+    const statusEl = document.getElementById('chatOnlineStatus');
+    const dot = document.getElementById('onlineDot');
+    if (!statusEl || !data) return;
+    
+    if (data.online_op) {
+      const minuten = Math.floor((Date.now() - new Date(data.online_op)) / 60000);
+      if (minuten < 3) {
+        statusEl.textContent = 'Online';
+        statusEl.style.color = '#4ade80';
+        if (dot) dot.style.display = 'block';
+      } else if (minuten < 60) {
+        statusEl.textContent = minuten + ' min geleden online';
+        statusEl.style.color = 'var(--sub)';
+        if (dot) dot.style.display = 'none';
+      } else if (minuten < 1440) {
+        const uren = Math.floor(minuten / 60);
+        statusEl.textContent = uren + ' uur geleden online';
+        statusEl.style.color = 'var(--sub)';
+        if (dot) dot.style.display = 'none';
+      } else {
+        const dagen = Math.floor(minuten / 1440);
+        statusEl.textContent = dagen + ' dag' + (dagen > 1 ? 'en' : '') + ' geleden online';
+        statusEl.style.color = 'var(--sub)';
+        if (dot) dot.style.display = 'none';
+      }
+    }
+  } catch(e) {}
+}
+
+let typingTimeout = null;
+
+function stuurTypingIndicator() {
+  if (!currentUser || !huidigChatUserId) return;
+  sb.from('typing_indicators').upsert({
+    user_id: currentUser.id,
+    chat_with: huidigChatUserId,
+    bijgewerkt_op: new Date().toISOString()
+  }, { onConflict: 'user_id' }).catch(() => {});
+  
+  clearTimeout(typingTimeout);
+  typingTimeout = setTimeout(() => {
+    sb.from('typing_indicators').delete().eq('user_id', currentUser.id).catch(() => {});
+  }, 3000);
+}
+
+async function checkTypingIndicator(userId) {
+  if (!userId || !currentUser) return;
+  try {
+    const { data } = await sb.from('typing_indicators')
+      .select('bijgewerkt_op')
+      .eq('user_id', userId)
+      .eq('chat_with', currentUser.id)
+      .maybeSingle();
+    
+    const indicator = document.getElementById('typingIndicator');
+    const naam = document.getElementById('typingNaam');
+    if (!indicator) return;
+    
+    if (data) {
+      const seconden = (Date.now() - new Date(data.bijgewerkt_op)) / 1000;
+      if (seconden < 4) {
+        if (naam) naam.textContent = '';
+        indicator.style.display = 'block';
+        return;
+      }
+    }
+    indicator.style.display = 'none';
+  } catch(e) {}
 }
 
 async function laadGesprekBerichten(userId) {
