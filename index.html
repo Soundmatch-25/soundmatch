@@ -3337,7 +3337,7 @@ function startBerichtenPoll() {
   }, 8000);
   // Online status bijwerken
   updateOnlineStatus();
-  setAppInterval('online', updateOnlineStatus, 60000);
+  setAppInterval('online', updateOnlineStatus, 120000); // elke 2 minuten
   // Match polling
   setAppInterval('matchpoll', checkNieuweMatches, 15000);
   // Chat verwijderd check
@@ -3625,8 +3625,12 @@ async function openGesprek(userId, user) {
     if (!huidigChatUserId) return;
     laadGesprekBerichten(userId);
     checkTypingIndicator(userId);
-    updateChatOnlineStatus(userId);
   }, 2000);
+  // Online status minder frequent
+  setAppInterval('onlinelezen', () => {
+    if (huidigChatUserId) updateChatOnlineStatus(userId);
+  }, 30000);
+  updateChatOnlineStatus(userId); // direct laden
 
   // Op mobiel: verberg lijst, toon chat
   const isMobiel = window.innerWidth <= 768;
@@ -3667,7 +3671,7 @@ async function updateChatOnlineStatus(userId) {
       av.appendChild(dot);
     }
 
-    if (minuten < 3) {
+    if (minuten < 5) {
       statusEl.textContent = 'Online';
       statusEl.style.color = '#4ade80';
       if (dot) dot.style.display = 'block';
