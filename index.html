@@ -1601,13 +1601,14 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
           <button id="blokkeerBtn" onclick="blokkeerGebruiker()" style="display:none;padding:6px 12px;border-radius:10px;border:1px solid rgba(229,57,53,0.3);background:rgba(229,57,53,0.1);color:#e53935;cursor:pointer;font-size:12px;font-weight:600;">Blokkeren</button>
         </div>
         <!-- Typing indicator -->
-        <div id="typingIndicator" style="display:none;padding:6px 20px 2px;font-size:12px;color:var(--sub);">
-          <span id="typingNaam"></span> typt
-          <span style="display:inline-flex;gap:2px;margin-left:4px;">
-            <span style="width:4px;height:4px;border-radius:50%;background:var(--sub);animation:typingDot 1.4s infinite;">.</span>
-            <span style="width:4px;height:4px;border-radius:50%;background:var(--sub);animation:typingDot 1.4s infinite 0.2s;">.</span>
-            <span style="width:4px;height:4px;border-radius:50%;background:var(--sub);animation:typingDot 1.4s infinite 0.4s;">.</span>
+        <div id="typingIndicator" style="display:none;padding:4px 20px 2px;font-size:12px;color:var(--sub);display:none;align-items:center;gap:6px;">
+          <span id="typingNaam"></span>
+          <span style="display:inline-flex;gap:3px;align-items:center;">
+            <span style="width:5px;height:5px;border-radius:50%;background:var(--sub);display:inline-block;animation:typingDot 1.2s infinite 0s;"></span>
+            <span style="width:5px;height:5px;border-radius:50%;background:var(--sub);display:inline-block;animation:typingDot 1.2s infinite 0.2s;"></span>
+            <span style="width:5px;height:5px;border-radius:50%;background:var(--sub);display:inline-block;animation:typingDot 1.2s infinite 0.4s;"></span>
           </span>
+          <span>typt</span>
         </div>
         <div class="chat-msgs" id="chatMsgs"></div>
         <div class="chat-input-row">
@@ -3345,7 +3346,7 @@ async function checkNieuweMatches() {
   if (!currentUser) return;
   try {
     const { data } = await sb.from('matches')
-      .select('*, a:gebruiker_a(id, naam, foto_url, type), b:gebruiker_b(id, naam, foto_url, type)')
+      .select('id, aangemaakt_op, gebruiker_a, gebruiker_b, a:gebruiker_a(id, naam, foto_url, type), b:gebruiker_b(id, naam, foto_url, type)')
       .or('gebruiker_a.eq.' + currentUser.id + ',gebruiker_b.eq.' + currentUser.id)
       .order('aangemaakt_op', { ascending: false })
       .limit(1);
@@ -3354,9 +3355,9 @@ async function checkNieuweMatches() {
     const match = data[0];
     const matchTime = new Date(match.aangemaakt_op).getTime();
     const nu = Date.now();
-    // Alleen tonen als match minder dan 20 seconden geleden is
-    if (nu - matchTime < 20000 && match.aangemaakt_op !== lastMatchId) {
-      lastMatchId = match.aangemaakt_op;
+    // Alleen tonen als match minder dan 20 seconden geleden is en nog niet getoond
+    if (nu - matchTime < 20000 && match.id !== lastMatchId) {
+      lastMatchId = match.id;
       const ander = match.gebruiker_a === currentUser.id ? match.b : match.a;
       // Alleen tonen als je niet op likes of discover pagina zit
       const actief = document.querySelector('.panel.active')?.id;
@@ -3634,32 +3635,40 @@ function sluitMobieleChat() {
 async function updateChatOnlineStatus(userId) {
   if (!userId) return;
   try {
-    const { data } = await sb.from('profiles').select('online_op, naam').eq('id', userId).single();
+    const { data } = await sb.from('profiles').select('online_op').eq('id', userId).single();
     const statusEl = document.getElementById('chatOnlineStatus');
-    const dot = document.getElementById('onlineDot');
-    if (!statusEl || !data) return;
+    const av = document.getElementById('chatAvatar');
+    if (!statusEl || !data?.online_op) return;
     
-    if (data.online_op) {
-      const minuten = Math.floor((Date.now() - new Date(data.online_op)) / 60000);
-      if (minuten < 3) {
-        statusEl.textContent = 'Online';
-        statusEl.style.color = '#4ade80';
-        if (dot) dot.style.display = 'block';
-      } else if (minuten < 60) {
-        statusEl.textContent = minuten + ' min geleden online';
-        statusEl.style.color = 'var(--sub)';
-        if (dot) dot.style.display = 'none';
-      } else if (minuten < 1440) {
-        const uren = Math.floor(minuten / 60);
-        statusEl.textContent = uren + ' uur geleden online';
-        statusEl.style.color = 'var(--sub)';
-        if (dot) dot.style.display = 'none';
-      } else {
-        const dagen = Math.floor(minuten / 1440);
-        statusEl.textContent = dagen + ' dag' + (dagen > 1 ? 'en' : '') + ' geleden online';
-        statusEl.style.color = 'var(--sub)';
-        if (dot) dot.style.display = 'none';
-      }
+    const minuten = Math.floor((Date.now() - new Date(data.online_op)) / 60000);
+    
+    // Online dot beheren - voeg toe als niet bestaat
+    let dot = document.getElementById('onlineDot');
+    if (!dot && av) {
+      dot = document.createElement('div');
+      dot.id = 'onlineDot';
+      dot.style.cssText = 'position:absolute;bottom:0;right:0;width:10px;height:10px;border-radius:50%;background:#4ade80;border:2px solid var(--bg2);z-index:2;display:none;';
+      av.style.position = 'relative';
+      av.appendChild(dot);
+    }
+
+    if (minuten < 3) {
+      statusEl.textContent = 'Online';
+      statusEl.style.color = '#4ade80';
+      if (dot) dot.style.display = 'block';
+    } else if (minuten < 60) {
+      statusEl.textContent = minuten + ' min geleden online';
+      statusEl.style.color = 'var(--sub)';
+      if (dot) dot.style.display = 'none';
+    } else if (minuten < 1440) {
+      statusEl.textContent = Math.floor(minuten / 60) + ' uur geleden online';
+      statusEl.style.color = 'var(--sub)';
+      if (dot) dot.style.display = 'none';
+    } else {
+      const dagen = Math.floor(minuten / 1440);
+      statusEl.textContent = dagen + ' dag' + (dagen > 1 ? 'en' : '') + ' geleden online';
+      statusEl.style.color = 'var(--sub)';
+      if (dot) dot.style.display = 'none';
     }
   } catch(e) {}
 }
@@ -3697,7 +3706,7 @@ async function checkTypingIndicator(userId) {
       const seconden = (Date.now() - new Date(data.bijgewerkt_op)) / 1000;
       if (seconden < 4) {
         if (naam) naam.textContent = '';
-        indicator.style.display = 'block';
+        indicator.style.display = 'flex';
         return;
       }
     }
