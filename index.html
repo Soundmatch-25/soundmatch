@@ -2946,37 +2946,45 @@ async function laadOntvangenLikes() {
 async function checkNieuweLikes() {
   if (!currentUser) return;
   
-  // Haal match IDs op
-  const { data: matches } = await sb.from('matches')
-    .select('gebruiker_a, gebruiker_b')
+  const laaatsBekeken = localStorage.getItem('likesLaatstBekeken');
+  
+  // Matches na laatste bezoek
+  const matchQuery = sb.from('matches')
+    .select('gebruiker_a, gebruiker_b, aangemaakt_op')
     .or('gebruiker_a.eq.' + currentUser.id + ',gebruiker_b.eq.' + currentUser.id);
-  const matchIds = new Set((matches || []).map(m => m.gebruiker_a === currentUser.id ? m.gebruiker_b : m.gebruiker_a));
+  if (laaatsBekeken) matchQuery.gt('aangemaakt_op', laaatsBekeken);
+  const { data: nieuweMatches } = await matchQuery;
 
-  // Tel likes zonder match
-  const { data: likes } = await sb.from('swipes')
-    .select('swiper_id')
+  // Likes na laatste bezoek
+  const likesQuery = sb.from('swipes')
+    .select('swiper_id, aangemaakt_op')
     .eq('target_id', currentUser.id)
     .eq('richting', 'like');
-  
-  // Haal ook nopes op
+  if (laaatsBekeken) likesQuery.gt('aangemaakt_op', laaatsBekeken);
+  const { data: nieuweLikes } = await likesQuery;
+
+  // Nopes uitsluiten
   const { data: nopes } = await sb.from('swipes')
     .select('target_id')
     .eq('swiper_id', currentUser.id)
     .eq('richting', 'nope');
   const nopeIds = new Set((nopes || []).map(s => s.target_id));
+  const matchUserIds = new Set((nieuweMatches || []).map(m => m.gebruiker_a === currentUser.id ? m.gebruiker_b : m.gebruiker_a));
 
-  const count = (likes || []).filter(l => 
-    !matchIds.has(l.swiper_id) && 
-    l.swiper_id !== currentUser.id &&
-    !nopeIds.has(l.swiper_id)
+  const likeCount = (nieuweLikes || []).filter(l => 
+    l.swiper_id !== currentUser.id && !nopeIds.has(l.swiper_id) && !matchUserIds.has(l.swiper_id)
   ).length;
 
-  const totalCount = count + matchIds.size;
-  
+  const totalCount = likeCount + (nieuweMatches?.length || 0);
+
+  updateLikesBadge(totalCount);
+}
+
+function updateLikesBadge(count) {
   ['likesBadge', 'likesBadgeMob'].forEach(id => {
     const b = document.getElementById(id);
     if (!b) return;
-    if (totalCount > 0) { b.textContent = totalCount; b.style.display = 'inline-block'; }
+    if (count > 0) { b.textContent = count; b.style.display = 'inline-block'; }
     else b.style.display = 'none';
   });
 }
@@ -4298,7 +4306,11 @@ function showPanel(id) {
     document.getElementById('nl-'+n)?.classList.toggle('active', n===id);
     document.getElementById('mn-'+n)?.classList.toggle('active', n===id);
   });
-  if (id==='liked') { laadMatchesLijst(); laadOntvangenLikes(); laadSwipeHistory(); }
+  if (id==='liked') { 
+    localStorage.setItem('likesLaatstBekeken', new Date().toISOString());
+    updateLikesBadge();
+    laadMatchesLijst(); laadOntvangenLikes(); laadSwipeHistory(); 
+  }
   if (id==='messages') laadDirecteBerichten();
   if (id==='ads') laadMijnAdvertenties();
   if (id==='discover') laadAdvertenties();
