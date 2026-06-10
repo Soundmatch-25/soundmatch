@@ -1653,6 +1653,9 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
             <div class="chat-name" style="font-size:16px;font-weight:600;color:var(--text)">Selecteer een gesprek</div>
             <div style="font-size:11px;color:var(--sub);margin-top:1px;" id="chatOnlineStatus"></div>
           </div>
+          <button id="meldBtn" onclick="meldGebruiker()" style="display:none;width:34px;height:34px;border-radius:10px;border:1px solid var(--border);background:transparent;cursor:pointer;align-items:center;justify-content:center;color:var(--sub);flex-shrink:0;margin-right:6px;" title="Melden">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
+          </button>
           <button id="blokkeerBtn" onclick="blokkeerGebruiker()" style="display:none;padding:6px 12px;border-radius:10px;border:1px solid rgba(229,57,53,0.3);background:rgba(229,57,53,0.1);color:#e53935;cursor:pointer;font-size:12px;font-weight:600;">Blokkeren</button>
         </div>
 
@@ -1666,6 +1669,14 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
 
     <!-- ── PROFILE PANEL ── -->
     <div class="panel" id="panel-profile">
+      <div id="profielIncompleetBanner" style="display:none;background:rgba(255,193,7,0.1);border:1px solid rgba(255,193,7,0.3);border-radius:14px;padding:14px 16px;display:none;align-items:flex-start;gap:12px;">
+        <div style="font-size:20px;">⚠️</div>
+        <div style="flex:1;">
+          <div style="font-size:14px;font-weight:700;color:#ffc107;">Profiel niet compleet</div>
+          <div style="font-size:12px;color:var(--sub);margin-top:4px;" id="profielIncompleetTekst"></div>
+        </div>
+        <button class="btn btn-sm" style="background:#ffc107;color:#000;border:none;flex-shrink:0;" onclick="bewerkProfiel()">Aanvullen</button>
+      </div>
       <div class="profile-hero">
         <div class="profile-big-av" id="profileAvatar"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
         <div style="flex:1;min-width:0;">
@@ -1706,6 +1717,7 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
         </div>
         <div class="profile-row"><div class="profile-row-label"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:var(--sub)"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg> Muzieklinks</div><div class="profile-row-value">SoundCloud</div></div>
         <div class="profile-row" style="cursor:pointer;" onclick="uitloggen()"><div class="profile-row-label" style="color:#e53935;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#e53935" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg> Uitloggen</div></div>
+        <div class="profile-row" style="cursor:pointer;" onclick="verwijderAccount()"><div class="profile-row-label" style="color:#e53935;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#e53935" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg> Account verwijderen</div></div>
       </div>
       <div style="height:32px;"></div>
     </div>
@@ -1951,6 +1963,28 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
     <button class="btn btn-primary btn-full" onclick="infoSluit()">OK</button>
   </div>
 </div>
+
+<!-- MELD MODAL -->
+<div class="modal-overlay" id="meldModal" onclick="if(event.target===this)sluitMeldModal()">
+  <div class="modal-box" style="max-width:400px;gap:14px;">
+    <div style="font-family:var(--font-head);font-size:18px;font-weight:800;">Gebruiker melden</div>
+    <div style="font-size:13px;color:var(--sub);">Waarom meld je dit profiel? We bekijken elke melding handmatig.</div>
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      <label class="meld-reden-row"><input type="radio" name="meldReden" value="Nepprofiel" checked/> Nepprofiel of catfishing</label>
+      <label class="meld-reden-row"><input type="radio" name="meldReden" value="Ongepast gedrag"/> Ongepast of beledigend gedrag</label>
+      <label class="meld-reden-row"><input type="radio" name="meldReden" value="Spam"/> Spam of reclame</label>
+      <label class="meld-reden-row"><input type="radio" name="meldReden" value="Intimidatie"/> Intimidatie of bedreiging</label>
+      <label class="meld-reden-row"><input type="radio" name="meldReden" value="Anders"/> Anders</label>
+    </div>
+    <textarea id="meldContext" placeholder="Toelichting (optioneel)" style="width:100%;min-height:70px;padding:12px;border-radius:12px;border:1px solid var(--border);background:var(--card2);color:var(--text);font-family:inherit;font-size:13px;resize:vertical;box-sizing:border-box;"></textarea>
+    <div style="display:flex;gap:10px;">
+      <button class="btn btn-ghost" style="flex:1;" onclick="sluitMeldModal()">Annuleren</button>
+      <button class="btn btn-primary" style="flex:1;" onclick="verstuurMelding()">Melden</button>
+    </div>
+  </div>
+</div>
+<style>.meld-reden-row { display:flex; align-items:center; gap:10px; padding:10px 12px; border:1px solid var(--border); border-radius:12px; cursor:pointer; font-size:13px; }
+.meld-reden-row:has(input:checked) { border-color: var(--neon); background: rgba(124,77,255,0.08); }</style>
 
 <!-- KAART DETAIL MODAL -->
 <div class="modal-overlay" id="kaartDetailModal" onclick="if(event.target===this)sluitKaartDetail()">
@@ -2474,7 +2508,76 @@ function initFotoReposition(img, card) {
   img.addEventListener('touchend', () => { dragging = false; });
 }
 
-// ═══════════════ MODAL HELPERS ═══════════════
+// ═══════════════ MELDEN ═══════════════
+function meldGebruiker() {
+  if (!huidigChatUserId) return;
+  document.getElementById('meldContext').value = '';
+  document.querySelector('input[name="meldReden"]').checked = true;
+  document.getElementById('meldModal').classList.add('open');
+}
+
+function sluitMeldModal() {
+  document.getElementById('meldModal').classList.remove('open');
+}
+
+async function verstuurMelding() {
+  if (!currentUser || !huidigChatUserId) return;
+  const reden = document.querySelector('input[name="meldReden"]:checked')?.value || 'Anders';
+  const context = document.getElementById('meldContext')?.value.trim() || null;
+
+  const { error } = await sb.from('meldingen').insert({
+    melder_id: currentUser.id,
+    gemelde_id: huidigChatUserId,
+    reden, context
+  });
+
+  sluitMeldModal();
+  if (error) {
+    toonInfo('Mislukt', 'Melding kon niet worden verstuurd. Probeer het later opnieuw.', '⚠️');
+  } else {
+    toonInfo('Melding ontvangen', 'Bedankt voor je melding. We bekijken dit zo snel mogelijk.', '✅');
+  }
+}
+
+// ═══════════════ ACCOUNT VERWIJDEREN ═══════════════
+function verwijderAccount() {
+  toonBevestig(
+    'Account verwijderen',
+    'Dit verwijdert permanent je profiel, advertenties, matches en berichten. Dit kan niet ongedaan worden gemaakt.',
+    '⚠️', 'Verwijderen',
+    () => _verwijderAccountStap2()
+  );
+}
+
+function _verwijderAccountStap2() {
+  setTimeout(() => {
+    toonBevestig(
+      'Weet je het zeker?',
+      'Laatste kans — je account en alle gegevens worden definitief verwijderd.',
+      '🗑️', 'Ja, definitief verwijderen',
+      () => _verwijderAccountBevestigd()
+    );
+  }, 200);
+}
+
+async function _verwijderAccountBevestigd() {
+  if (!currentUser) return;
+  const uid = currentUser.id;
+  try {
+    await sb.from('directe_berichten').delete().or('van_user_id.eq.' + uid + ',naar_user_id.eq.' + uid);
+    await sb.from('berichtverzoeken').delete().or('van_user_id.eq.' + uid + ',naar_user_id.eq.' + uid);
+    await sb.from('matches').delete().or('gebruiker_a.eq.' + uid + ',gebruiker_b.eq.' + uid);
+    await sb.from('swipes').delete().or('swiper_id.eq.' + uid + ',target_id.eq.' + uid);
+    await sb.from('advertenties').delete().eq('user_id', uid);
+    await sb.from('blokkades').delete().or('blokkeerder_id.eq.' + uid + ',geblokkeerde_id.eq.' + uid);
+    await sb.from('profiles').delete().eq('id', uid);
+    await sb.auth.signOut();
+    toonInfo('Account verwijderd', 'Je account en alle gegevens zijn verwijderd. Bedankt dat je Soundmatch hebt geprobeerd.', '👋');
+    setTimeout(() => { window.location.reload(); }, 2500);
+  } catch(e) {
+    toonInfo('Mislukt', 'Er ging iets mis bij het verwijderen. Probeer het later opnieuw of neem contact op.', '⚠️');
+  }
+}
 let bevestigCallback = null;
 
 function toonBevestig(titel, tekst, icon, okTekst, callback) {
@@ -2902,7 +3005,7 @@ async function _verwijderMatchBevestigd(matchId, anderUserId) {
     huidigChatUserId = null;
     document.getElementById('chatMsgs').innerHTML = '';
     document.querySelector('.chat-name').textContent = 'Selecteer een gesprek';
-    document.getElementById('blokkeerBtn').style.display = 'none';
+    document.getElementById('blokkeerBtn').style.display = 'none'; document.getElementById('meldBtn').style.display = 'none';
   }
   const t = document.getElementById('toast');
   t.textContent = 'Match verwijderd.'; t.classList.add('show');
@@ -3460,7 +3563,7 @@ function sluitNietBeschikbareChat() {
   huidigChatUserId = null;
   document.getElementById('chatMsgs').innerHTML = '';
   document.querySelector('.chat-name').textContent = 'Selecteer een gesprek';
-  document.getElementById('blokkeerBtn').style.display = 'none';
+  document.getElementById('blokkeerBtn').style.display = 'none'; document.getElementById('meldBtn').style.display = 'none';
   document.querySelector('.chat-niet-beschikbaar')?.remove();
   laadDirecteBerichten();
 }
@@ -3569,7 +3672,7 @@ async function laadDirecteBerichten() {
           huidigChatUserId = null;
           document.getElementById('chatMsgs').innerHTML = '';
           document.querySelector('.chat-name').textContent = 'Selecteer een gesprek';
-          document.getElementById('blokkeerBtn').style.display = 'none';
+          document.getElementById('blokkeerBtn').style.display = 'none'; document.getElementById('meldBtn').style.display = 'none';
         }
         laadDirecteBerichten();
       });
@@ -3625,6 +3728,8 @@ async function openGesprek(userId, user) {
   if (naamEl) naamEl.textContent = user?.naam || 'Onbekend';
   const blokkeerBtn = document.getElementById('blokkeerBtn');
   if (blokkeerBtn) blokkeerBtn.style.display = 'block';
+  const meldBtn = document.getElementById('meldBtn');
+  if (meldBtn) meldBtn.style.display = 'flex';
   const av = document.getElementById('chatAvatar');
   if (av && user?.foto_url) {
     av.innerHTML = '<img src="' + user.foto_url + '" style="width:100%;height:100%;object-fit:cover;border-radius:50%;"/><div id="onlineDot" style="display:none;position:absolute;bottom:0;right:0;width:10px;height:10px;border-radius:50%;background:#4ade80;border:2px solid var(--bg2);z-index:2;"></div>';
@@ -3779,7 +3884,7 @@ async function blokkeerGebruiker() {
 async function _blokkeerBevestigd() {
   await sb.from('blokkades').upsert({ blokkeerder_id: currentUser.id, geblokkeerde_id: huidigChatUserId }, { onConflict: 'blokkeerder_id,geblokkeerde_id' });
   huidigChatUserId = null;
-  document.getElementById('blokkeerBtn').style.display = 'none';
+  document.getElementById('blokkeerBtn').style.display = 'none'; document.getElementById('meldBtn').style.display = 'none';
   document.querySelector('.chat-name').textContent = 'Selecteer een gesprek';
   document.getElementById('chatMsgs').innerHTML = '';
   laadDirecteBerichten();
@@ -4117,6 +4222,7 @@ async function slaAdvertentieOp() {
   // Validatie
   const errEl = document.getElementById('adError');
   if (!naam) { errEl.textContent = 'Vul je naam in.'; errEl.style.display = 'block'; return; }
+  if (!adFotoUrl) { errEl.textContent = 'Voeg een foto toe aan je advertentie.'; errEl.style.display = 'block'; return; }
   errEl.style.display = 'none';
 
   const opslaanBtn = document.getElementById('adOpslaanBtn');
@@ -4847,6 +4953,28 @@ function vulProfielIn(profiel) {
   // Bio
   const bioEl = document.getElementById('profileBioText');
   if (bioEl) bioEl.textContent = profiel.bio || '—';
+
+  // Compleetheid check
+  checkProfielCompleet(profiel);
+}
+
+function checkProfielCompleet(profiel) {
+  const banner = document.getElementById('profielIncompleetBanner');
+  const tekstEl = document.getElementById('profielIncompleetTekst');
+  if (!banner || !tekstEl) return;
+
+  const ontbreekt = [];
+  if (!profiel.foto_url) ontbreekt.push('profielfoto');
+  if (!profiel.bio || profiel.bio.trim().length < 10) ontbreekt.push('bio');
+  if (!profiel.instrument || profiel.instrument.length === 0) ontbreekt.push('instrument');
+  if (!profiel.genres || profiel.genres.length === 0) ontbreekt.push('genres');
+
+  if (ontbreekt.length > 0) {
+    tekstEl.textContent = 'Vul nog toe: ' + ontbreekt.join(', ') + '. Een compleet profiel krijgt veel meer matches!';
+    banner.style.display = 'flex';
+  } else {
+    banner.style.display = 'none';
+  }
 }
 
 // ═══════════════ FOTO CROP MODAL ═══════════════
