@@ -3170,30 +3170,22 @@ async function verwijderUitLijst(swipeId, targetId) {
     return;
   }
 
-  // Swipe van de ander ook naar nope zetten zodat hij niet in "heeft jou geliked" verschijnt
-  await sb.from('swipes')
-    .update({ richting: 'nope' })
-    .eq('swiper_id', targetId)
-    .eq('target_id', currentUser.id);
-
-  // Check of er een match is en verwijder die ook
+  // Check of er een match is
   const { data: match } = await sb.from('matches')
     .select('id')
     .or('and(gebruiker_a.eq.' + currentUser.id + ',gebruiker_b.eq.' + targetId + '),and(gebruiker_a.eq.' + targetId + ',gebruiker_b.eq.' + currentUser.id + ')')
     .maybeSingle();
 
   if (match) {
+    // Match bestaat — alleen uit bekeken lijst verwijderen, niet de swipe van de ander aanpassen
     await sb.from('matches').delete().eq('id', match.id);
-    // Chat verwijderen
-    // Verwijder berichten in beide richtingen
-    await sb.from('directe_berichten').delete()
-      .eq('van_user_id', currentUser.id).eq('naar_user_id', targetId);
-    await sb.from('directe_berichten').delete()
-      .eq('van_user_id', targetId).eq('naar_user_id', currentUser.id);
+    await sb.from('directe_berichten').delete().eq('van_user_id', currentUser.id).eq('naar_user_id', targetId);
+    await sb.from('directe_berichten').delete().eq('van_user_id', targetId).eq('naar_user_id', currentUser.id);
     laadMatchesLijst();
+  } else {
+    // Geen match — swipe van de ander ook naar nope zodat hij niet in "heeft jou geliked" verschijnt
+    await sb.from('swipes').update({ richting: 'nope' }).eq('swiper_id', targetId).eq('target_id', currentUser.id);
   }
-
-  console.log('Swipe verwijderd voor target:', targetId);
 }
 
 async function verwijderHuidigeLijstItem() {
