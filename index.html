@@ -3394,7 +3394,6 @@ async function updateOnlineStatus() {
 async function checkChatVerwijderd() {
   if (!currentUser || !huidigChatUserId) return;
   try {
-    // Check of er nog berichten zijn OF een match bestaat
     const { data: match } = await sb.from('matches')
       .select('id')
       .or('and(gebruiker_a.eq.' + currentUser.id + ',gebruiker_b.eq.' + huidigChatUserId + '),and(gebruiker_a.eq.' + huidigChatUserId + ',gebruiker_b.eq.' + currentUser.id + ')')
@@ -3406,6 +3405,9 @@ async function checkChatVerwijderd() {
     
     if (!match && (!count || count === 0)) {
       toonChatNietBeschikbaar();
+    } else {
+      // Match bestaat weer — overlay weghalen als die er is
+      document.querySelector('.chat-niet-beschikbaar')?.remove();
     }
   } catch(e) {}
 }
