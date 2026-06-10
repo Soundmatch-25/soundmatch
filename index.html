@@ -4,7 +4,8 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
 <meta name="theme-color" content="#0d0d14"/>
-<meta name="description" content="Soundmatch — Vind je perfecte bandgenoot in Nederland"/>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><defs><linearGradient id='g' x1='0%25' y1='0%25' x2='100%25' y2='100%25'><stop offset='0%25' stop-color='%237c4dff'/><stop offset='100%25' stop-color='%2300b4d8'/></linearGradient></defs><rect width='100' height='100' rx='22' fill='url(%23g)'/><text y='.9em' font-size='70' x='15'>🎵</text></svg>">
+<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><defs><linearGradient id='g' x1='0%25' y1='0%25' x2='100%25' y2='100%25'><stop offset='0%25' stop-color='%237c4dff'/><stop offset='100%25' stop-color='%2300b4d8'/></linearGradient></defs><rect width='100' height='100' rx='22' fill='url(%23g)'/><text y='.9em' font-size='70' x='15'>🎵</text></svg>">
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 <meta name="apple-mobile-web-app-title" content="Soundmatch"/>
@@ -1134,7 +1135,12 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
         <!-- Email login -->
         <div id="emailLoginForm" style="display:flex;flex-direction:column;gap:10px;">
           <input class="input-field" id="loginEmail" type="email" placeholder="E-mailadres" style="background:rgba(255,255,255,0.08);border-color:rgba(255,255,255,0.15);color:#fff;"/>
-          <input class="input-field" id="loginWachtwoord" type="password" placeholder="Wachtwoord" style="background:rgba(255,255,255,0.08);border-color:rgba(255,255,255,0.15);color:#fff;" onkeydown="if(event.key==='Enter')loginMetEmail()"/>
+          <div style="position:relative;">
+            <input class="input-field" id="loginWachtwoord" type="password" placeholder="Wachtwoord" style="background:rgba(255,255,255,0.08);border-color:rgba(255,255,255,0.15);color:#fff;padding-right:48px;" onkeydown="if(event.key==='Enter')loginMetEmail()"/>
+            <button type="button" onclick="toggleWachtwoord('loginWachtwoord',this)" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:rgba(255,255,255,0.4);padding:4px;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
           <button class="btn btn-primary btn-full" style="padding:18px;font-size:16px;border-radius:16px;gap:10px;" onclick="loginMetEmail()">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
             Login met email
@@ -1331,8 +1337,18 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
     <div class="auth-title">Account aanmaken</div>
     <div class="auth-sub">Vul je gegevens in om te registreren</div>
     <input class="input-field" id="regEmailNieuw" type="email" placeholder="E-mailadres"/>
-    <input class="input-field" id="regWachtwoordNieuw" type="password" placeholder="Wachtwoord (min. 6 tekens)"/>
-    <input class="input-field" id="regWachtwoordBevestig" type="password" placeholder="Wachtwoord bevestigen" onkeydown="if(event.key==='Enter')registreerMetEmail()"/>
+    <div style="position:relative;">
+      <input class="input-field" id="regWachtwoordNieuw" type="password" placeholder="Wachtwoord (min. 6 tekens)" style="padding-right:48px;"/>
+      <button type="button" onclick="toggleWachtwoord('regWachtwoordNieuw',this)" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--sub);padding:4px;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+      </button>
+    </div>
+    <div style="position:relative;">
+      <input class="input-field" id="regWachtwoordBevestig" type="password" placeholder="Wachtwoord bevestigen" style="padding-right:48px;" onkeydown="if(event.key==='Enter')registreerMetEmail()"/>
+      <button type="button" onclick="toggleWachtwoord('regWachtwoordBevestig',this)" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--sub);padding:4px;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+      </button>
+    </div>
     <div id="regEmailError" style="font-size:13px;color:#ff8a80;display:none;"></div>
     <button class="btn btn-primary btn-full" style="padding:17px;" onclick="registreerMetEmail()">Account aanmaken</button>
     <div style="text-align:center;font-size:13px;color:var(--sub);">Al een account? <span onclick="showScreen('onboard')" style="color:var(--neon);cursor:pointer;">Inloggen</span></div>
@@ -1913,6 +1929,29 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
   </div>
 </div>
 
+<!-- BEVESTIGINGS MODAL -->
+<div class="modal-overlay" id="bevestigModal" onclick="if(event.target===this)bevestigAnnuleer()">
+  <div class="modal-box" style="max-width:380px;text-align:center;gap:16px;">
+    <div style="font-size:32px;" id="bevestigIcon">⚠️</div>
+    <div style="font-family:var(--font-head);font-size:18px;font-weight:800;" id="bevestigTitel"></div>
+    <div style="font-size:14px;color:var(--sub);line-height:1.6;" id="bevestigTekst"></div>
+    <div style="display:flex;gap:10px;width:100%;">
+      <button class="btn btn-ghost" style="flex:1;" onclick="bevestigAnnuleer()">Annuleren</button>
+      <button class="btn btn-primary" style="flex:1;" id="bevestigOkBtn" onclick="bevestigOk()">Bevestigen</button>
+    </div>
+  </div>
+</div>
+
+<!-- INFO MODAL -->
+<div class="modal-overlay" id="infoModal" onclick="if(event.target===this)infoSluit()">
+  <div class="modal-box" style="max-width:380px;text-align:center;gap:16px;">
+    <div style="font-size:32px;" id="infoIcon">ℹ️</div>
+    <div style="font-family:var(--font-head);font-size:18px;font-weight:800;" id="infoTitel"></div>
+    <div style="font-size:14px;color:var(--sub);line-height:1.6;" id="infoTekst"></div>
+    <button class="btn btn-primary btn-full" onclick="infoSluit()">OK</button>
+  </div>
+</div>
+
 <!-- KAART DETAIL MODAL -->
 <div class="modal-overlay" id="kaartDetailModal" onclick="if(event.target===this)sluitKaartDetail()">
   <div class="modal-box" style="max-width:480px;width:90%;padding:0;overflow:hidden;border-radius:24px;max-height:90vh;display:flex;flex-direction:column;">
@@ -2198,7 +2237,6 @@ async function checkSessie() {
 }
 
 async function laadAdvertenties() {
-  console.log('laadAdvertenties start, currentUser:', currentUser?.id);
   if (!await checkSessie()) { console.log('checkSessie faalde'); return; }
   const stack = document.getElementById('cardStack');
   if (stack) stack.innerHTML = `<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--sub);flex-direction:column;gap:12px;">
@@ -2244,7 +2282,6 @@ async function laadAdvertenties() {
   // Parallel uitvoeren
   const [profielRes, adRes] = await Promise.all([profielQuery, adQuery]);
   clearTimeout(timeoutId);
-  console.log('Queries klaar - profielen:', profielRes.data?.length, 'fouten:', profielRes.error?.message, '| ads:', adRes.data?.length, adRes.error?.message);
 
   const profielen = profielRes.data;
   const advertenties = adRes.data;
@@ -2437,7 +2474,38 @@ function initFotoReposition(img, card) {
   img.addEventListener('touchend', () => { dragging = false; });
 }
 
-// ═══════════════ KAART DETAIL MODAL ═══════════════
+// ═══════════════ MODAL HELPERS ═══════════════
+let bevestigCallback = null;
+
+function toonBevestig(titel, tekst, icon, okTekst, callback) {
+  document.getElementById('bevestigTitel').textContent = titel;
+  document.getElementById('bevestigTekst').textContent = tekst;
+  document.getElementById('bevestigIcon').textContent = icon || '⚠️';
+  document.getElementById('bevestigOkBtn').textContent = okTekst || 'Bevestigen';
+  bevestigCallback = callback;
+  document.getElementById('bevestigModal').classList.add('open');
+}
+
+function bevestigOk() {
+  document.getElementById('bevestigModal').classList.remove('open');
+  if (bevestigCallback) { bevestigCallback(); bevestigCallback = null; }
+}
+
+function bevestigAnnuleer() {
+  document.getElementById('bevestigModal').classList.remove('open');
+  bevestigCallback = null;
+}
+
+function toonInfo(titel, tekst, icon) {
+  document.getElementById('infoTitel').textContent = titel;
+  document.getElementById('infoTekst').textContent = tekst;
+  document.getElementById('infoIcon').textContent = icon || 'ℹ️';
+  document.getElementById('infoModal').classList.add('open');
+}
+
+function infoSluit() {
+  document.getElementById('infoModal').classList.remove('open');
+}
 function openKaartDetail(idx) {
   const p = advertentiesData[idx];
   if (!p) return;
@@ -2514,7 +2582,6 @@ async function doSwipe(dir) {
   // Direct toevoegen aan geswiped set
   if (targetUserId) geswipedIds.add(p.id); // kaart ID
   if (targetUserId) geswipedIds.add(targetUserId); // user ID
-  console.log('doSwipe:', dir, '| targetUserId:', targetUserId, '| naam:', p.naam);
 
   // Opslaan in Supabase
   if (currentUser && targetUserId && targetUserId !== currentUser.id) {
@@ -2526,13 +2593,11 @@ async function doSwipe(dir) {
       console.error('Swipe opslaan mislukt:', swipeError.message, swipeError.code, swipeError.details);
       return;
     }
-    console.log('Swipe opgeslagen, ga wederzijds checken...');
 
     // Check wederzijdse like — ook op onze advertentie IDs
     if (dir === 'like' && !swipeError) {
       const { data: onzeAds } = await sb.from('advertenties').select('id').eq('user_id', currentUser.id);
       const onzeTargetIds = [currentUser.id, ...(onzeAds || []).map(a => a.id)];
-      console.log('Wederzijds check: swiper=', targetUserId, 'target_ids=', onzeTargetIds);
 
       const { data: wederzijds, error: wErr } = await sb.from('swipes')
         .select('*')
@@ -2541,7 +2606,6 @@ async function doSwipe(dir) {
         .eq('richting', 'like')
         .limit(1);
 
-      console.log('Wederzijds resultaat:', wederzijds, 'error:', wErr?.message);
 
       if (wederzijds?.length) {
         // Probeer eerst (currentUser, target), dan omgekeerd
@@ -2559,7 +2623,6 @@ async function doSwipe(dir) {
           if (!res2.error) matchOk = true;
           else console.error('Match aanmaken mislukt:', res2.error.message);
         }
-        console.log('Match aangemaakt:', matchOk);
         if (matchOk) {
           // Haal match ID op voor lastMatchId
           const { data: newMatch } = await sb.from('matches').select('id')
@@ -2823,50 +2886,24 @@ async function laadMatchesLijst() {
 }
 
 async function verwijderMatch(matchId, anderUserId) {
-  if (!confirm('Match verwijderen? Je ziet elkaar terug in Geskipt.')) return;
+  toonBevestig('Match verwijderen', 'Je ziet elkaar terug in Geskipt. De chat wordt ook verwijderd.', '💔', 'Verwijderen', () => _verwijderMatchBevestigd(matchId, anderUserId));
+}
 
-  // Match verwijderen
+async function _verwijderMatchBevestigd(matchId, anderUserId) {
   await sb.from('matches').delete().eq('id', matchId);
-
-  // Swipes naar 'nope' zetten voor beide partijen
-  await sb.from('swipes').upsert(
-    { swiper_id: currentUser.id, target_id: anderUserId, richting: 'nope' },
-    { onConflict: 'swiper_id,target_id' }
-  );
-  // Swipe van de ander ook naar nope (via target_id policy)
-  await sb.from('swipes')
-    .update({ richting: 'nope' })
-    .eq('swiper_id', anderUserId)
-    .eq('target_id', currentUser.id);
-
-  // Chat berichten verwijderen in beide richtingen
-  const { error: chatErr1 } = await sb.from('directe_berichten').delete()
-    .eq('van_user_id', currentUser.id).eq('naar_user_id', anderUserId);
-  const { error: chatErr2 } = await sb.from('directe_berichten').delete()
-    .eq('van_user_id', anderUserId).eq('naar_user_id', currentUser.id);
-  
-  if (chatErr1) console.error('Chat verwijderen mislukt (1):', chatErr1.message);
-  if (chatErr2) console.error('Chat verwijderen mislukt (2):', chatErr2.message);
-
-  // UI updaten
-  geswipedIds.delete(anderUserId); // terug in ontdekken (geskipt)
-  laadMatchesLijst();
-  laadOntvangenLikes();
-  laadSwipeHistory();
-  // Herlaad gezien IDs fresh
+  await sb.from('swipes').upsert({ swiper_id: currentUser.id, target_id: anderUserId, richting: 'nope' }, { onConflict: 'swiper_id,target_id' });
+  await sb.from('swipes').update({ richting: 'nope' }).eq('swiper_id', anderUserId).eq('target_id', currentUser.id);
+  await sb.from('directe_berichten').delete().eq('van_user_id', currentUser.id).eq('naar_user_id', anderUserId);
+  await sb.from('directe_berichten').delete().eq('van_user_id', anderUserId).eq('naar_user_id', currentUser.id);
+  geswipedIds.delete(anderUserId);
+  laadMatchesLijst(); laadOntvangenLikes(); laadSwipeHistory(); laadDirecteBerichten();
   await laadGezienIds();
-
-  // Als dit gesprek open was, sluit het
   if (huidigChatUserId === anderUserId) {
     huidigChatUserId = null;
     document.getElementById('chatMsgs').innerHTML = '';
     document.querySelector('.chat-name').textContent = 'Selecteer een gesprek';
     document.getElementById('blokkeerBtn').style.display = 'none';
   }
-
-  // Herlaad berichten lijst
-  laadDirecteBerichten();
-
   const t = document.getElementById('toast');
   t.textContent = 'Match verwijderd.'; t.classList.add('show');
   setTimeout(() => t.classList.remove('show'), 2200);
@@ -3035,7 +3072,6 @@ async function laadSwipeHistory() {
 
   const { data: swipes, error: swipeError } = await sb.from('swipes').select('*').eq('swiper_id', currentUser.id).order('aangemaakt_op', { ascending: false });
   
-  console.log('Swipes geladen:', swipes?.length, swipeError);
   
   if (!swipes?.length) { 
     swipeHistory = []; 
@@ -3050,7 +3086,6 @@ async function laadSwipeHistory() {
     sb.from('advertenties').select('*, profiel:user_id(*)').in('id', targetIds)
   ]);
 
-  console.log('Profielen:', profielen?.length, 'Advertenties:', advertenties?.length);
 
   const profielMap = Object.fromEntries((profielen || []).map(p => [p.id, p]));
   const adMap = Object.fromEntries((advertenties || []).map(a => [a.id, a]));
@@ -3075,10 +3110,8 @@ async function laadSwipeHistory() {
 function renderLiked() {
   const grid = document.getElementById('likedGrid');
   if (!grid) return;
-  console.log('renderLiked: tab=', currentTab, 'total=', swipeHistory.length, 'statussen=', swipeHistory.map(h=>h.status));
   const filtered = currentTab==='liked' ? swipeHistory.filter(h=>h.status==='like')
     : swipeHistory.filter(h=>h.status==='nope');
-  console.log('renderLiked filtered:', filtered.length);
 
   if (!filtered.length) {
     grid.innerHTML = `<div style="grid-column:1/-1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 20px;gap:12px;color:var(--sub);">
@@ -3528,16 +3561,18 @@ async function laadDirecteBerichten() {
     delBtn.textContent = 'Verwijder';
     delBtn.onclick = async (e) => {
       e.stopPropagation();
-      if (!confirm('Chat verwijderen?')) return;
-      await sb.from('directe_berichten').delete().eq('van_user_id', currentUser.id).eq('naar_user_id', userId);
-      await sb.from('directe_berichten').delete().eq('van_user_id', userId).eq('naar_user_id', currentUser.id);
-      if (huidigChatUserId === userId) {
-        huidigChatUserId = null;
-        document.getElementById('chatMsgs').innerHTML = '';
-        document.querySelector('.chat-name').textContent = 'Selecteer een gesprek';
-        document.getElementById('blokkeerBtn').style.display = 'none';
-      }
-      laadDirecteBerichten();
+      const uid = userId;
+      toonBevestig('Chat verwijderen', 'Weet je zeker dat je dit gesprek wil verwijderen?', '🗑️', 'Verwijderen', async () => {
+        await sb.from('directe_berichten').delete().eq('van_user_id', currentUser.id).eq('naar_user_id', uid);
+        await sb.from('directe_berichten').delete().eq('van_user_id', uid).eq('naar_user_id', currentUser.id);
+        if (huidigChatUserId === uid) {
+          huidigChatUserId = null;
+          document.getElementById('chatMsgs').innerHTML = '';
+          document.querySelector('.chat-name').textContent = 'Selecteer een gesprek';
+          document.getElementById('blokkeerBtn').style.display = 'none';
+        }
+        laadDirecteBerichten();
+      });
     };
     rightEl.appendChild(delBtn);
 
@@ -3738,7 +3773,10 @@ async function sendMsg() {
 
 async function blokkeerGebruiker() {
   if (!huidigChatUserId || !currentUser) return;
-  if (!confirm('Weet je zeker dat je deze gebruiker wil blokkeren?')) return;
+  toonBevestig('Gebruiker blokkeren', 'Je ziet elkaar dan niet meer in de app.', '🚫', 'Blokkeren', () => _blokkeerBevestigd());
+}
+
+async function _blokkeerBevestigd() {
   await sb.from('blokkades').upsert({ blokkeerder_id: currentUser.id, geblokkeerde_id: huidigChatUserId }, { onConflict: 'blokkeerder_id,geblokkeerde_id' });
   huidigChatUserId = null;
   document.getElementById('blokkeerBtn').style.display = 'none';
@@ -4020,7 +4058,14 @@ let adFotoUrl = null;
 async function handleAdFoto(input) {
   if (!input.files || !input.files[0]) return;
   openCropModal(input.files[0], async (dataUrl) => {
-    document.getElementById('adFotoPreview').innerHTML = '<img src="' + dataUrl + '" style="width:100%;height:100%;object-fit:cover;border-radius:19px;"/>';
+    const preview = document.getElementById('adFotoPreview');
+    preview.innerHTML = '<img src="' + dataUrl + '" style="width:100%;height:100%;object-fit:cover;border-radius:19px;"/>';
+    // Laadindicator
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:absolute;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;border-radius:19px;font-size:12px;color:#fff;';
+    overlay.textContent = 'Uploaden...';
+    preview.style.position = 'relative';
+    preview.appendChild(overlay);
     if (!currentUser) return;
     try {
       const bestandsnaam = currentUser.id + '/ad_' + Date.now() + '.jpg';
@@ -4029,8 +4074,11 @@ async function handleAdFoto(input) {
       if (error) throw error;
       const { data: urlData } = sb.storage.from('avatars').getPublicUrl(bestandsnaam);
       adFotoUrl = urlData.publicUrl + '?t=' + Date.now();
+      overlay.textContent = '✓';
+      setTimeout(() => overlay.remove(), 1000);
     } catch(err) {
-      console.error('Ad foto upload mislukt:', err.message);
+      overlay.style.background = 'rgba(229,57,53,0.7)';
+      overlay.textContent = 'Mislukt';
     }
   });
 }
@@ -4156,9 +4204,10 @@ async function bewerkAd(id) {
   }
 }
 async function verwijderAd(id) {
-  if (!confirm('Weet je zeker dat je deze advertentie wil verwijderen?')) return;
-  await sb.from('advertenties').delete().eq('id', id).eq('user_id', currentUser.id);
-  laadMijnAdvertenties();
+  toonBevestig('Advertentie verwijderen', 'Deze advertentie wordt permanent verwijderd.', '🗑️', 'Verwijderen', async () => {
+    await sb.from('advertenties').delete().eq('id', id).eq('user_id', currentUser.id);
+    laadMijnAdvertenties();
+  });
 }
 
 
@@ -4520,7 +4569,6 @@ let currentUser = null;
 let currentProfile = null;
 
 sb.auth.onAuthStateChange(async (event, session) => {
-  console.log('Auth event:', event, session?.user?.email);
   if (event === 'SIGNED_OUT') {
     currentUser = null;
     currentProfile = null;
@@ -4545,6 +4593,14 @@ async function loginMetFacebook() {
     const el = document.getElementById('authError');
     if (el) { el.textContent = 'Facebook login mislukt: ' + error.message; el.style.display = 'block'; }
   }
+}
+
+function toggleWachtwoord(inputId, btn) {
+  const inp = document.getElementById(inputId);
+  if (!inp) return;
+  const zichtbaar = inp.type === 'text';
+  inp.type = zichtbaar ? 'password' : 'text';
+  btn.style.opacity = zichtbaar ? '0.4' : '1';
 }
 
 function showEmailRegistratie() {
@@ -4585,7 +4641,7 @@ async function registreerMetEmail() {
     document.getElementById('regEmailNieuw').value = '';
     document.getElementById('regWachtwoordNieuw').value = '';
     document.getElementById('regWachtwoordBevestig').value = '';
-    alert('Account aangemaakt! Check je email om je account te bevestigen, dan kun je inloggen.');
+    toonInfo('Account aangemaakt!', 'Check je email om je account te bevestigen. Daarna kun je inloggen.', '✅');
     showScreen('onboard');
   }
 }
@@ -4596,11 +4652,11 @@ async function wachtwoordVergeten() {
     const inp = prompt('Vul je e-mailadres in:');
     if (!inp) return;
     await sb.auth.resetPasswordForEmail(inp, { redirectTo: window.location.origin });
-    alert('Reset link verstuurd! Check je email.');
+    toonInfo('Email verstuurd!', 'Check je email voor de reset link.', '📧');
     return;
   }
   await sb.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin });
-  alert('Reset link verstuurd naar ' + email);
+  toonInfo('Email verstuurd!', 'Check ' + email + ' voor de reset link.', '📧');
 }
 
 async function loginMetGoogle() {
@@ -4686,7 +4742,6 @@ async function slaProfielOp() {
   if (!stad) { err.textContent = 'Selecteer een stad.'; err.style.display = 'block'; return; }
   err.style.display = 'none';
 
-  console.log('Opslaan voor user:', currentUser.id, 'naam:', naam);
 
   const { data, error } = await sb
     .from('profiles')
@@ -4710,7 +4765,6 @@ async function slaProfielOp() {
     .select()
     .single();
 
-  console.log('Update resultaat:', data, 'Error:', error);
 
   if (error) {
     const err = document.getElementById('regError');
