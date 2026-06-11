@@ -4598,7 +4598,12 @@ function juridischTerugGa() { showScreen(juridischTerug); }
 // Cookiemelding (NL: informatieplicht, ook bij alleen functionele cookies)
 function initCookieMelding() {
   if (localStorage.getItem('cookieMeldingGezien')) return;
-  document.getElementById('cookieMelding')?.classList.add('zichtbaar');
+  const toon = () => document.getElementById('cookieMelding')?.classList.add('zichtbaar');
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', toon);
+  } else {
+    setTimeout(toon, 0);
+  }
 }
 function sluitCookieMelding() {
   localStorage.setItem('cookieMeldingGezien', '1');
