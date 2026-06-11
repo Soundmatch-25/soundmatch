@@ -2302,9 +2302,16 @@ function typeIcon(type) {
   return icons[type] || icons.muzikant;
 }
 
+// HTML escapen — ALTIJD toepassen op gebruikersinvoer die in innerHTML/templates komt (XSS)
+function esc(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+// Database timestamps missen Z-suffix — altijd corrigeren vóór Date-parsing
 function getActiefMinuten(actief_op) {
   if (!actief_op) return 9999;
-  return Math.floor((Date.now() - new Date(actief_op)) / 60000);
+  const ts = (typeof actief_op === 'string' && !actief_op.endsWith('Z') && !actief_op.includes('+')) ? actief_op + 'Z' : actief_op;
+  return Math.floor((Date.now() - new Date(ts)) / 60000);
 }
 
 function profielNaarKaart(p) {
@@ -2333,8 +2340,26 @@ function profielNaarKaart(p) {
 // ═══════════════ SUPABASE DATA LADEN ═══════════════
 const geswipedIds = new Set(); // user IDs die al gezien zijn
 
+// Geblokkeerde gebruikers (beide richtingen: door mij geblokkeerd + mij geblokkeerd)
+const geblokkeerdeIds = new Set();
+let blokkadesGeladen = false;
+async function laadBlokkades(forceer = false) {
+  if (!currentUser || (blokkadesGeladen && !forceer)) return;
+  try {
+    const { data } = await sb.from('blokkades')
+      .select('blokkeerder_id, geblokkeerde_id')
+      .or('blokkeerder_id.eq.' + currentUser.id + ',geblokkeerde_id.eq.' + currentUser.id);
+    geblokkeerdeIds.clear();
+    (data || []).forEach(b => {
+      geblokkeerdeIds.add(b.blokkeerder_id === currentUser.id ? b.geblokkeerde_id : b.blokkeerder_id);
+    });
+    blokkadesGeladen = true;
+  } catch(e) { console.warn('Blokkades laden fout:', e.message); }
+}
+
 async function laadGezienIds() {
   if (!currentUser) return;
+  await laadBlokkades();
   // Swipes
   const { data: swipes } = await sb.from('swipes').select('target_id').eq('swiper_id', currentUser.id);
   (swipes || []).forEach(s => geswipedIds.add(s.target_id));
@@ -2408,12 +2433,13 @@ async function laadAdvertenties() {
   if (adRes.error) console.error('Advertenties fout:', adRes.error.message);
 
   // Combineer
+  await laadBlokkades();
   let profielKaarten = (profielen || [])
-    .filter(p => !geswipedIds.has(p.id))
+    .filter(p => !geswipedIds.has(p.id) && !geblokkeerdeIds.has(p.id))
     .map(p => profielNaarKaart(p));
 
   let adKaarten = (advertenties || [])
-    .filter(a => !geswipedIds.has(a.user_id))
+    .filter(a => !geswipedIds.has(a.user_id) && !geblokkeerdeIds.has(a.user_id))
     .map(a => advertentieNaarKaart(a));
 
   // Client-side genre/instrument filter toepassen
@@ -2492,15 +2518,15 @@ function buildCard(p, cls) {
   if (!p) return el;
 
   const [activeCls, activeLabel] = getActiveLabel(p.activeMin || 9999);
-  const locatieBadge = (p.raw?.stad || p.raw?.locatie) ? `<div style="position:absolute;bottom:14px;right:14px;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:600;background:rgba(0,0,0,0.6);border:1px solid rgba(255,255,255,0.1);color:#fff;backdrop-filter:blur(8px);display:flex;align-items:center;gap:4px;"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>${p.raw?.stad || p.raw?.locatie}</div>` : '';
+  const locatieBadge = (p.raw?.stad || p.raw?.locatie) ? `<div style="position:absolute;bottom:14px;right:14px;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:600;background:rgba(0,0,0,0.6);border:1px solid rgba(255,255,255,0.1);color:#fff;backdrop-filter:blur(8px);display:flex;align-items:center;gap:4px;"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>${esc(p.raw?.stad || p.raw?.locatie)}</div>` : '';
   const leeftijdBadge = (p.raw?.leeftijd && p.type !== 'band') ? `<div style="position:absolute;bottom:44px;right:14px;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:600;background:rgba(0,0,0,0.6);border:1px solid rgba(255,255,255,0.1);color:#fff;backdrop-filter:blur(8px);">${p.raw.leeftijd} jaar</div>` : '';
   const fotoHTML = p.foto_url
-    ? `<img src="${p.foto_url}" style="width:100%;height:100%;object-fit:cover;cursor:zoom-in;" onclick="if(!window._wasDragging)openLightbox('${p.foto_url}')" onerror="this.style.display='none'"/>`
+    ? `<img src="${esc(p.foto_url)}" style="width:100%;height:100%;object-fit:cover;cursor:zoom-in;" onclick="if(!window._wasDragging)openLightbox(this.src)" onerror="this.style.display='none'"/>`
     : `<div style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;">${typeIcon(p.type)}</div>`;
 
   el.innerHTML = `
     <div class="card-visual" style="position:relative;overflow:hidden;">
-      <div class="card-badge-genre">${p.genre}</div>
+      <div class="card-badge-genre">${esc(p.genre)}</div>
       ${getTypeBadge(p.type)}
       <div class="active-dot ${activeCls}"><span class="dot"></span>${activeLabel}</div>
       ${p.spotlight ? `<div class="spotlight-badge"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" style="color:#fcd34d"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> Uitgelicht</div>` : ''}
@@ -2509,11 +2535,11 @@ function buildCard(p, cls) {
       ${fotoHTML}
     </div>
     <div class="card-body">
-      <div class="card-name">${p.naam}</div>
+      <div class="card-name">${esc(p.naam)}</div>
       <div class="card-role">${p.rol}</div>
-      <div class="card-desc" onclick="event.stopPropagation();openKaartDetail(${advertentiesData.indexOf(p)})" style="cursor:pointer;">${p.desc}</div>
+      <div class="card-desc" onclick="event.stopPropagation();openKaartDetail(${advertentiesData.indexOf(p)})" style="cursor:pointer;">${esc(p.desc)}</div>
       ${p.desc && p.desc.length > 100 ? `<span class="card-desc-meer" onclick="event.stopPropagation();openKaartDetail(${advertentiesData.indexOf(p)})">Meer lezen...</span>` : ''}
-      <div class="card-tags">${(p.tags||[]).map(t=>`<div class="tag">${t}</div>`).join('')}</div>
+      <div class="card-tags">${(p.tags||[]).map(t=>`<div class="tag">${esc(t)}</div>`).join('')}</div>
     </div>
     <div class="swipe-fb fb-like">LIKE!</div>
     <div class="swipe-fb fb-nope">NOPE</div>`;
@@ -2717,7 +2743,7 @@ function openKaartDetail(idx) {
 
   // Foto
   document.getElementById('kdFoto').innerHTML = p.foto_url
-    ? `<img src="${p.foto_url}" style="width:100%;height:100%;object-fit:cover;"/>`
+    ? `<img src="${esc(p.foto_url)}" style="width:100%;height:100%;object-fit:cover;"/>`
     : `<div style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;">${typeIcon(p.type)}</div>`;
 
   // Info
@@ -2726,7 +2752,7 @@ function openKaartDetail(idx) {
 
   // Tags
   const tags = [...(raw.genres || []), ...(raw.instrumenten || raw.instrument || []), raw.niveau, raw.beschikbaarheid].filter(Boolean);
-  document.getElementById('kdTags').innerHTML = tags.map(t => `<span class="tag">${t}</span>`).join('');
+  document.getElementById('kdTags').innerHTML = tags.map(t => `<span class="tag">${esc(t)}</span>`).join('');
 
   // Rijen
   const rijen = [
@@ -2739,7 +2765,7 @@ function openKaartDetail(idx) {
   document.getElementById('kdRijen').innerHTML = rijen.filter(r => r[1] !== '—').map(([label, waarde]) =>
     `<div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);font-size:14px;">
       <span style="color:var(--sub);">${label}</span>
-      <span style="font-weight:500;">${waarde}</span>
+      <span style="font-weight:500;">${esc(waarde)}</span>
     </div>`
   ).join('');
 
@@ -2752,7 +2778,7 @@ function openKaartDetail(idx) {
   const linksEl = document.getElementById('kdLinks');
   if (raw.muzieklinks || p.link) {
     const links = (raw.muzieklinks || p.link || '').split(',').map(l => l.trim()).filter(Boolean);
-    linksEl.innerHTML = links.map(l => `<a href="${l.startsWith('http')?l:'https://'+l}" target="_blank" style="color:var(--neon2);font-size:13px;display:block;margin-bottom:4px;">${l}</a>`).join('');
+    linksEl.innerHTML = links.map(l => `<a href="${esc(l.startsWith('http')?l:'https://'+l)}" target="_blank" rel="noopener" style="color:var(--neon2);font-size:13px;display:block;margin-bottom:4px;">${esc(l)}</a>`).join('');
     linksEl.style.display = 'block';
   } else {
     linksEl.style.display = 'none';
@@ -2849,13 +2875,13 @@ function showMatch(p) {
 
   const emojiEl = document.getElementById('matchEmoji');
   if (emojiEl) {
-    if (p.foto_url) emojiEl.innerHTML = '<img src="' + p.foto_url + '" style="width:100%;height:100%;object-fit:cover;"/>';
+    if (p.foto_url) emojiEl.innerHTML = '<img src="' + esc(p.foto_url) + '" style="width:100%;height:100%;object-fit:cover;"/>';
     else emojiEl.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;">' + typeIcon(p.type) + '</div>';
   }
 
   const mijEl = document.getElementById('matchEmojiMij');
   if (mijEl && currentProfile?.foto_url) {
-    mijEl.innerHTML = '<img src="' + currentProfile.foto_url + '" style="width:100%;height:100%;object-fit:cover;"/>';
+    mijEl.innerHTML = '<img src="' + esc(currentProfile.foto_url) + '" style="width:100%;height:100%;object-fit:cover;"/>';
   }
 
   document.getElementById('matchModal').classList.add('open');
@@ -3031,6 +3057,7 @@ function switchTab(tab) {
 }
 
 async function laadMatchesLijst() {
+  await laadBlokkades();
   if (!currentUser) return;
   const container = document.getElementById('matchesLijst');
   if (!container) return;
@@ -3056,11 +3083,11 @@ async function laadMatchesLijst() {
 
     const av = document.createElement('div');
     av.style.cssText = 'width:48px;height:48px;border-radius:14px;overflow:hidden;flex-shrink:0;background:var(--grad);display:flex;align-items:center;justify-content:center;';
-    av.innerHTML = ander.foto_url ? '<img src="' + ander.foto_url + '" style="width:100%;height:100%;object-fit:cover;"/>' : typeIcon(ander.type);
+    av.innerHTML = ander.foto_url ? '<img src="' + esc(ander.foto_url) + '" style="width:100%;height:100%;object-fit:cover;"/>' : typeIcon(ander.type);
 
     const info = document.createElement('div');
     info.style.cssText = 'flex:1;overflow:hidden;';
-    info.innerHTML = '<div style="font-weight:700;font-size:14px;">' + (ander.naam || 'Onbekend') + '</div>' +
+    info.innerHTML = '<div style="font-weight:700;font-size:14px;">' + esc(ander.naam || 'Onbekend') + '</div>' +
       '<div style="font-size:12px;color:var(--neon);margin-top:2px;">✓ Match</div>';
 
     const btns = document.createElement('div');
@@ -3158,10 +3185,12 @@ async function laadOntvangenLikes() {
   const nopeIds = new Set((mijnnopes || []).map(s => s.target_id));
 
   // Filter matches én genopeden eruit
+  await laadBlokkades();
   const uniek = (likes || []).filter(s => 
     s.swiper_id !== currentUser.id && 
     !matchIds.has(s.swiper_id) &&
-    !nopeIds.has(s.swiper_id)
+    !nopeIds.has(s.swiper_id) &&
+    !geblokkeerdeIds.has(s.swiper_id)
   );
 
   // Update badge
@@ -3185,12 +3214,12 @@ async function laadOntvangenLikes() {
 
     const av = document.createElement('div');
     av.style.cssText = 'width:48px;height:48px;border-radius:14px;overflow:hidden;flex-shrink:0;background:var(--grad);display:flex;align-items:center;justify-content:center;';
-    av.innerHTML = u.foto_url ? '<img src="' + u.foto_url + '" style="width:100%;height:100%;object-fit:cover;"/>' : typeIcon(u.type);
+    av.innerHTML = u.foto_url ? '<img src="' + esc(u.foto_url) + '" style="width:100%;height:100%;object-fit:cover;"/>' : typeIcon(u.type);
 
     const info = document.createElement('div');
     info.style.cssText = 'flex:1;overflow:hidden;';
-    info.innerHTML = '<div style="font-weight:700;font-size:14px;">' + (u.naam || 'Onbekend') + '</div>' +
-      '<div style="font-size:12px;color:var(--sub);margin-top:2px;">' + (u.type ? u.type.charAt(0).toUpperCase()+u.type.slice(1) : '') + (u.stad ? ' · ' + u.stad : '') + '</div>';
+    info.innerHTML = '<div style="font-weight:700;font-size:14px;">' + esc(u.naam || 'Onbekend') + '</div>' +
+      '<div style="font-size:12px;color:var(--sub);margin-top:2px;">' + (u.type ? esc(u.type.charAt(0).toUpperCase()+u.type.slice(1)) : '') + (u.stad ? ' · ' + esc(u.stad) : '') + '</div>';
 
     const btn = document.createElement('button');
     btn.className = 'btn btn-primary btn-sm';
@@ -3325,11 +3354,11 @@ function renderLiked() {
 
   grid.innerHTML = filtered.map(p => `
     <div class="liked-card" onclick="openLijstDetail('${p.id}', '${p.swipe_id}')" style="cursor:pointer;">
-      <div class="liked-avatar">${p.foto_url ? `<img src="${p.foto_url}" style="width:100%;height:100%;object-fit:cover;border-radius:14px;"/>` : `<div style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;">${typeIcon(p.type)}</div>`}</div>
+      <div class="liked-avatar">${p.foto_url ? `<img src="${esc(p.foto_url)}" style="width:100%;height:100%;object-fit:cover;border-radius:14px;"/>` : `<div style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;">${typeIcon(p.type)}</div>`}</div>
       <div class="liked-card-info">
-        <div class="liked-card-name">${p.naam}</div>
+        <div class="liked-card-name">${esc(p.naam)}</div>
         <div class="liked-card-role">${p.rol}</div>
-        <div class="liked-card-meta">${(p.tags||[]).slice(0,2).join(' · ')}</div>
+        <div class="liked-card-meta">${esc((p.tags||[]).slice(0,2).join(' · '))}</div>
       </div>
       <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0;">
         <div class="liked-badge ${p.status==='like'?'badge-liked':'badge-skipped'}">${p.status==='like'?'♥ Like':'✕ Skip'}</div>
@@ -3349,7 +3378,7 @@ function openLijstDetail(id, swipeId) {
   // Foto
   const fotoEl = document.getElementById('lijstDetailFoto');
   if (item.foto_url) {
-    fotoEl.innerHTML = `<img src="${item.foto_url}" style="width:100%;height:100%;object-fit:cover;"/>`;
+    fotoEl.innerHTML = `<img src="${esc(item.foto_url)}" style="width:100%;height:100%;object-fit:cover;"/>`;
   } else {
     fotoEl.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;">${typeIcon(item.type)}</div>`;
   }
@@ -3358,7 +3387,7 @@ function openLijstDetail(id, swipeId) {
   document.getElementById('lijstDetailRol').textContent = item.rol;
 
   const tagsEl = document.getElementById('lijstDetailTags');
-  tagsEl.innerHTML = (item.tags || []).map(t => `<span class="tag">${t}</span>`).join('');
+  tagsEl.innerHTML = (item.tags || []).map(t => `<span class="tag">${esc(t)}</span>`).join('');
 
   const bioEl = document.getElementById('lijstDetailBio');
   if (item.desc && item.desc !== 'Geen beschrijving beschikbaar.') {
@@ -3370,7 +3399,7 @@ function openLijstDetail(id, swipeId) {
 
   const linksEl = document.getElementById('lijstDetailLinks');
   if (item.link) {
-    linksEl.innerHTML = `<a href="${item.link.startsWith('http') ? item.link : 'https://'+item.link}" target="_blank" style="font-size:13px;color:var(--neon2);">${item.link}</a>`;
+    linksEl.innerHTML = `<a href="${esc(item.link.startsWith('http') ? item.link : 'https://'+item.link)}" target="_blank" rel="noopener" style="font-size:13px;color:var(--neon2);">${esc(item.link)}</a>`;
     linksEl.style.display = 'block';
   } else {
     linksEl.style.display = 'none';
@@ -3471,6 +3500,13 @@ async function stuurDirectBericht() {
   if (!p || !currentUser) return;
   const ontvangerI = p.raw?.user_id || p.id;
 
+  await laadBlokkades();
+  if (geblokkeerdeIds.has(ontvangerI)) {
+    document.getElementById('directBerichtError').textContent = 'Je kunt geen bericht sturen naar deze gebruiker.';
+    document.getElementById('directBerichtError').style.display = 'block';
+    return;
+  }
+
   // Eerst checken of er al een match is
   const { data: match } = await sb.from('matches')
     .select('id')
@@ -3511,6 +3547,7 @@ async function checkNieuweBerichten() {
     
     if (data?.length) {
       const bericht = data[0];
+      if (geblokkeerdeIds.has(bericht.van_user_id)) return;
       if (bericht.id !== laatsteNotificatieId) {
         laatsteNotificatieId = bericht.id;
         toonBerichtNotificatie(bericht.van?.naam || 'Iemand', bericht.inhoud, bericht.van?.foto_url);
@@ -3558,7 +3595,7 @@ function toonBerichtNotificatie(naam, inhoud, fotoUrl) {
   if (titel) titel.textContent = 'Nieuw bericht';
   if (tekst) tekst.textContent = naam + ': ' + inhoud.substring(0, 40) + (inhoud.length > 40 ? '...' : '');
   if (avatar) avatar.innerHTML = fotoUrl
-    ? '<img src="' + fotoUrl + '" style="width:100%;height:100%;object-fit:cover;"/>'
+    ? '<img src="' + esc(fotoUrl) + '" style="width:100%;height:100%;object-fit:cover;"/>'
     : '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>';
 
   delete notif.dataset.isMatch;
@@ -3668,6 +3705,7 @@ function sluitNietBeschikbareChat() {
 
 async function laadDirecteBerichten() {
   if (!currentUser) return;
+  await laadBlokkades();
   const scroll = document.getElementById('msgListScroll');
   if (!scroll) return;
 
@@ -3694,18 +3732,18 @@ async function laadDirecteBerichten() {
 
     verzoeken.forEach(v => {
       const u = v.van;
-      if (!u) return;
+      if (!u || geblokkeerdeIds.has(u.id)) return;
       const card = document.createElement('div');
       card.style.cssText = 'background:var(--card2);border:1px solid rgba(124,77,255,0.3);border-radius:14px;padding:12px 14px;margin-bottom:8px;';
       card.innerHTML =
         '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">' +
           '<div style="width:36px;height:36px;border-radius:10px;overflow:hidden;flex-shrink:0;background:var(--grad);">' +
-            (u.foto_url ? '<img src="' + u.foto_url + '" style="width:100%;height:100%;object-fit:cover;"/>' : typeIcon(u.type)) +
+            (u.foto_url ? '<img src="' + esc(u.foto_url) + '" style="width:100%;height:100%;object-fit:cover;"/>' : typeIcon(u.type)) +
           '</div>' +
-          '<div><div style="font-weight:700;font-size:13px;">' + (u.naam || 'Onbekend') + '</div>' +
-          '<div style="font-size:12px;color:var(--sub);">' + (u.type || '') + '</div></div>' +
+          '<div><div style="font-weight:700;font-size:13px;">' + esc(u.naam || 'Onbekend') + '</div>' +
+          '<div style="font-size:12px;color:var(--sub);">' + esc(u.type || '') + '</div></div>' +
         '</div>' +
-        '<div style="font-size:13px;color:var(--sub);margin-bottom:10px;font-style:italic;">"' + v.inhoud.substring(0, 80) + (v.inhoud.length > 80 ? '...' : '') + '"</div>' +
+        '<div style="font-size:13px;color:var(--sub);margin-bottom:10px;font-style:italic;">"' + esc(v.inhoud.substring(0, 80)) + (v.inhoud.length > 80 ? '...' : '') + '"</div>' +
         '<div style="display:flex;gap:8px;">' +
           '<button onclick="accepteerVerzoek(\'' + v.id + '\',\'' + u.id + '\')" class="btn btn-primary btn-sm" style="flex:1;">Accepteren</button>' +
           '<button onclick="weigerVerzoek(\'' + v.id + '\')" class="btn btn-ghost btn-sm" style="flex:1;">Weigeren</button>' +
@@ -3731,6 +3769,7 @@ async function laadDirecteBerichten() {
   }
 
   gesprekken.forEach((g, userId) => {
+    if (geblokkeerdeIds.has(userId)) return;
     const div = document.createElement('div');
     div.className = 'msg-item';
     div.style.cssText += 'position:relative;';
@@ -3740,13 +3779,13 @@ async function laadDirecteBerichten() {
     avEl.className = 'msg-av';
     avEl.style.overflow = 'hidden';
     avEl.innerHTML = g.user?.foto_url
-      ? '<img src="' + g.user.foto_url + '" style="width:100%;height:100%;object-fit:cover;"/>'
+      ? '<img src="' + esc(g.user.foto_url) + '" style="width:100%;height:100%;object-fit:cover;"/>'
       : '<div style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;">' + typeIcon(g.user?.type) + '</div>';
 
     const infoEl = document.createElement('div');
     infoEl.style.cssText = 'flex:1;overflow:hidden;';
-    infoEl.innerHTML = '<div class="msg-name">' + (g.user?.naam || 'Onbekend') + '</div>' +
-      '<div class="msg-preview">' + (g.laasteBericht || '').substring(0, 40) + '</div>';
+    infoEl.innerHTML = '<div class="msg-name">' + esc(g.user?.naam || 'Onbekend') + '</div>' +
+      '<div class="msg-preview">' + esc((g.laasteBericht || '').substring(0, 40)) + '</div>';
 
     const rightEl = document.createElement('div');
     rightEl.style.cssText = 'display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0;';
@@ -3830,7 +3869,7 @@ async function openGesprek(userId, user) {
   if (meldBtn) meldBtn.style.display = 'flex';
   const av = document.getElementById('chatAvatar');
   if (av && user?.foto_url) {
-    av.innerHTML = '<img src="' + user.foto_url + '" style="width:100%;height:100%;object-fit:cover;border-radius:50%;"/><div id="onlineDot" style="display:none;position:absolute;bottom:0;right:0;width:10px;height:10px;border-radius:50%;background:#4ade80;border:2px solid var(--bg2);z-index:2;"></div>';
+    av.innerHTML = '<img src="' + esc(user.foto_url) + '" style="width:100%;height:100%;object-fit:cover;border-radius:50%;"/><div id="onlineDot" style="display:none;position:absolute;bottom:0;right:0;width:10px;height:10px;border-radius:50%;background:#4ade80;border:2px solid var(--bg2);z-index:2;"></div>';
   }
   updateChatOnlineStatus(userId);
   await sb.from('directe_berichten').update({ gelezen: true }).eq('van_user_id', userId).eq('naar_user_id', currentUser.id).eq('gelezen', false);
@@ -3959,7 +3998,7 @@ async function laadGesprekBerichten(userId) {
     if (!msgs || !data) return;
     const wasBottom = msgs.scrollHeight - msgs.scrollTop <= msgs.clientHeight + 50;
     msgs.innerHTML = data.map(b =>
-      '<div class="bubble ' + (b.van_user_id === currentUser.id ? 'bubble-me' : 'bubble-them') + '">' + b.inhoud + '</div>'
+      '<div class="bubble ' + (b.van_user_id === currentUser.id ? 'bubble-me' : 'bubble-them') + '">' + esc(b.inhoud) + '</div>'
     ).join('');
     if (wasBottom) msgs.scrollTop = msgs.scrollHeight;
   } catch(e) { console.warn('laadGesprekBerichten fout:', e.message); }
@@ -3969,8 +4008,18 @@ async function sendMsg() {
   const inp = document.getElementById('chatInput');
   const val = inp?.value.trim();
   if (!val || !huidigChatUserId || !currentUser) return;
+  await laadBlokkades();
+  if (geblokkeerdeIds.has(huidigChatUserId)) {
+    toonInfo('Niet mogelijk', 'Je kunt geen berichten sturen naar deze gebruiker.', '\ud83d\udeab');
+    return;
+  }
   inp.value = '';
-  await sb.from('directe_berichten').insert({ van_user_id: currentUser.id, naar_user_id: huidigChatUserId, inhoud: val });
+  const { error } = await sb.from('directe_berichten').insert({ van_user_id: currentUser.id, naar_user_id: huidigChatUserId, inhoud: val });
+  if (error) {
+    inp.value = val; // bericht terugzetten zodat het niet verloren gaat
+    toonInfo('Versturen mislukt', 'Je bericht kon niet worden verstuurd. Controleer je verbinding en probeer opnieuw.', '\u26a0\ufe0f');
+    return;
+  }
   laadGesprekBerichten(huidigChatUserId);
 }
 
@@ -3981,6 +4030,7 @@ async function blokkeerGebruiker() {
 
 async function _blokkeerBevestigd() {
   await sb.from('blokkades').upsert({ blokkeerder_id: currentUser.id, geblokkeerde_id: huidigChatUserId }, { onConflict: 'blokkeerder_id,geblokkeerde_id' });
+  geblokkeerdeIds.add(huidigChatUserId);
   huidigChatUserId = null;
   document.getElementById('blokkeerBtn').style.display = 'none'; document.getElementById('meldBtn').style.display = 'none';
   document.querySelector('.chat-name').textContent = 'Selecteer een gesprek';
@@ -4062,7 +4112,7 @@ async function laadBerichten(matchId) {
   if (!msgs || !data) return;
   const wasBottom = msgs.scrollHeight - msgs.scrollTop <= msgs.clientHeight + 50;
   msgs.innerHTML = data.map(b => `
-    <div class="bubble ${b.afzender_id === currentUser.id ? 'bubble-me' : 'bubble-them'}">${b.inhoud}</div>`).join('');
+    <div class="bubble ${b.afzender_id === currentUser.id ? 'bubble-me' : 'bubble-them'}">${esc(b.inhoud)}</div>`).join('');
   if (wasBottom) msgs.scrollTop = msgs.scrollHeight;
 }
 
@@ -4671,17 +4721,17 @@ function openKaartDetail(index) {
 
   const foto = document.getElementById('kdFoto');
   if (p.foto_url) {
-    foto.innerHTML = '<img src="' + p.foto_url + '" style="width:100%;height:100%;object-fit:cover;"/>';
+    foto.innerHTML = '<img src="' + esc(p.foto_url) + '" style="width:100%;height:100%;object-fit:cover;"/>';
   } else {
     foto.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;">' + typeIcon(p.type) + '</div>';
   }
 
   const tags = document.getElementById('kdTags');
-  tags.innerHTML = (p.tags || []).map(t => '<span class="tag">' + t + '</span>').join('');
+  tags.innerHTML = (p.tags || []).map(t => '<span class="tag">' + esc(t) + '</span>').join('');
 
   const links = document.getElementById('kdLinks');
   if (p.link) {
-    links.innerHTML = '<a href="' + (p.link.startsWith('http') ? p.link : 'https://' + p.link) + '" target="_blank" style="font-size:13px;color:var(--neon2);">' + p.link + '</a>';
+    links.innerHTML = '<a href="' + esc(p.link.startsWith('http') ? p.link : 'https://' + p.link) + '" target="_blank" rel="noopener" style="font-size:13px;color:var(--neon2);">' + esc(p.link) + '</a>';
     links.style.display = 'block';
   } else {
     links.style.display = 'none';
