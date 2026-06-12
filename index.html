@@ -2764,7 +2764,7 @@ async function doSwipe(dir) {
   // Opslaan in Supabase
   if (currentUser && targetUserId && targetUserId !== currentUser.id) {
     const { error: swipeError } = await sb.from('swipes').upsert(
-      { swiper_id: currentUser.id, target_id: targetUserId, richting: dir },
+      { swiper_id: currentUser.id, target_id: targetUserId, richting: dir, advertentie_id: p.isAdvertentie ? p.id : null },
       { onConflict: 'swiper_id,target_id' }
     );
     if (swipeError) {
@@ -3261,10 +3261,11 @@ async function laadSwipeHistory() {
   }
 
   const targetIds = [...new Set(swipes.map(s => s.target_id))];
+  const adIds = [...new Set(swipes.map(s => s.advertentie_id).filter(Boolean))];
 
   const [{ data: profielen }, { data: advertenties }] = await Promise.all([
     sb.from('profiles').select('*').in('id', targetIds),
-    sb.from('advertenties').select('*, profiel:user_id(*)').in('id', targetIds)
+    adIds.length ? sb.from('advertenties').select('*, profiel:user_id(*)').in('id', adIds) : Promise.resolve({ data: [] })
   ]);
 
 
@@ -3279,11 +3280,12 @@ async function laadSwipeHistory() {
 
   swipeHistory = swipes.map(s => {
     const profiel = profielMap[s.target_id];
-    const ad = adMap[s.target_id];
-    if (profiel) return { ...profielNaarKaart(profiel), status: s.richting, swipe_id: s.id };
-    if (ad) return { ...advertentieNaarKaart({ ...ad, profiel: {} }), status: s.richting, swipe_id: s.id };
+    const ad = s.advertentie_id ? adMap[s.advertentie_id] : null;
+    // Geswipede advertentie tonen als die nog bestaat, anders terugvallen op het profiel
+    if (ad) return { ...advertentieNaarKaart(ad), status: s.richting, swipe_id: s.id, target_user_id: s.target_id };
+    if (profiel) return { ...profielNaarKaart(profiel), status: s.richting, swipe_id: s.id, target_user_id: s.target_id };
     return null;
-  }).filter(Boolean).filter(p => !matchIds.has(p.id));
+  }).filter(Boolean).filter(p => !matchIds.has(p.target_user_id || p.id));
 
   renderLiked();
 }
@@ -3313,7 +3315,7 @@ function renderLiked() {
       </div>
       <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0;">
         <div class="liked-badge ${p.status==='like'?'badge-liked':'badge-skipped'}">${p.status==='like'?'♥ Like':'✕ Skip'}</div>
-        <button onclick="event.stopPropagation();verwijderUitLijst('${p.swipe_id}','${p.id}')" style="font-size:11px;padding:4px 8px;border-radius:8px;border:1px solid rgba(229,57,53,0.3);background:rgba(229,57,53,0.1);color:#e53935;cursor:pointer;">Verwijderen</button>
+        <button onclick="event.stopPropagation();verwijderUitLijst('${p.swipe_id}','${p.target_user_id || p.id}')" style="font-size:11px;padding:4px 8px;border-radius:8px;border:1px solid rgba(229,57,53,0.3);background:rgba(229,57,53,0.1);color:#e53935;cursor:pointer;">Verwijderen</button>
       </div>
     </div>`).join('');
 }
@@ -3370,7 +3372,7 @@ async function verwijderUitLijst(swipeId, targetId) {
 
   // Optimistisch verwijderen uit UI
   geswipedIds.delete(targetId);
-  swipeHistory = swipeHistory.filter(p => p.id !== targetId);
+  swipeHistory = swipeHistory.filter(p => (p.target_user_id || p.id) !== targetId);
   renderLiked();
   const { error } = await sb.from('swipes')
     .delete()
@@ -3404,7 +3406,7 @@ async function verwijderUitLijst(swipeId, targetId) {
 
 async function verwijderHuidigeLijstItem() {
   if (!huidigLijstItem) return;
-  await verwijderUitLijst(huidigLijstItem.swipe_id, huidigLijstItem.id);
+  await verwijderUitLijst(huidigLijstItem.swipe_id, huidigLijstItem.target_user_id || huidigLijstItem.id);
   closeLijstDetail();
 }
 
