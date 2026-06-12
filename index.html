@@ -4,7 +4,7 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
 <meta name="theme-color" content="#0d0d14"/>
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><defs><linearGradient id='g' x1='0%25' y1='0%25' x2='100%25' y2='100%25'><stop offset='0%25' stop-color='%237c4dff'/><stop offset='100%25' stop-color='%2300b4d8'/></linearGradient></defs><rect width='100' height='100' rx='22' fill='url(%23g)'/><text y='.9em' font-size='70' x='15'>🎵</text></svg>">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><defs><linearGradient id='g' x1='0%25' y1='0%25' x2='100%25' y2='100%25'><stop offset='0%25' stop-color='%237c4dff'/><stop offset='100%25' stop-color='%2300b4d8'/></linearGradient></defs><rect width='100' height='100' rx='22' fill='url(%23g)'/><text x='50' y='54' dominant-baseline='central' text-anchor='middle' font-family='Arial Black,Arial,sans-serif' font-weight='900' font-size='66' fill='white'>S</text></svg>">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><defs><linearGradient id='g' x1='0%25' y1='0%25' x2='100%25' y2='100%25'><stop offset='0%25' stop-color='%237c4dff'/><stop offset='100%25' stop-color='%2300b4d8'/></linearGradient></defs><rect width='100' height='100' rx='22' fill='url(%23g)'/><text y='.9em' font-size='70' x='15'>🎵</text></svg>">
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
@@ -1535,7 +1535,7 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
     <!-- Naam + Leeftijd (muzikant/sessie/industry) -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;" id="regNaamLeeftijdRij">
       <div><div class="field-label" id="regNaamLabel">Naam *</div><input class="input-field" id="regNaam" maxlength="50" placeholder="Jouw naam"/></div>
-      <div><div class="field-label">Leeftijd *</div><input class="input-field" id="regLeeftijd" type="number" inputmode="numeric" pattern="[0-9]*" placeholder="bijv. 24" min="13" max="99" onkeypress="return event.charCode>=48&&event.charCode<=57"/></div>
+      <div><div class="field-label">Leeftijd *</div><input class="input-field" id="regLeeftijd" type="number" inputmode="numeric" pattern="[0-9]*" placeholder="bijv. 24" min="16" max="99" onkeypress="return event.charCode>=48&&event.charCode<=57"/></div>
     </div>
 
     <!-- Locatie -->
@@ -2174,7 +2174,6 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
         <div class="role-opt" id="fMuz" onclick="setFR('muzikanten')">Muzikanten</div>
         <div class="role-opt" id="fSessie" onclick="setFR('sessie')">Sessie</div>
         <div class="role-opt" id="fIndustry" onclick="setFR('industry')">Industry</div>
-        <div class="role-opt" id="fAll" onclick="setFR('alles')">Alles</div>
       </div>
     </div>
     <div>
@@ -2412,7 +2411,7 @@ async function laadAdvertenties() {
   if (filterState.niveau) profielQuery = profielQuery.eq('niveau', filterState.niveau);
   profielQuery = profielQuery.order('actief_op', { ascending: false }).limit(50);
 
-  let adQuery = sb.from('advertenties').select('*, profiel:user_id(*)').eq('actief', true);
+  let adQuery = sb.from('advertenties').select('*, profiel:user_id(*)').eq('actief', true).neq('user_id', currentUser?.id);
   if (activeType === 'bands') adQuery = adQuery.eq('type', 'band');
   else if (activeType === 'muzikanten') adQuery = adQuery.eq('type', 'muzikant');
   else if (activeType === 'sessie') adQuery = adQuery.eq('type', 'sessie');
@@ -4240,6 +4239,11 @@ async function slaAdvertentieOp() {
   const errEl = document.getElementById('adError');
   if (!naam) { errEl.textContent = 'Vul je naam in.'; errEl.style.display = 'block'; return; }
   if (!adFotoUrl) { errEl.textContent = 'Voeg een foto toe aan je advertentie.'; errEl.style.display = 'block'; return; }
+  // Leeftijd valideren: minimaal 16, maximaal 99
+  const leeftijdOngeldig = v => v && (parseInt(v) < 16 || parseInt(v) > 99);
+  if (!isBand && leeftijdOngeldig(leeftijdEnkel)) { errEl.textContent = 'Leeftijd moet tussen 16 en 99 zijn — Soundmatch is voor 16 jaar en ouder.'; errEl.style.display = 'block'; return; }
+  if (isBand && (leeftijdOngeldig(leeftijdVan) || leeftijdOngeldig(leeftijdTot))) { errEl.textContent = 'Leeftijden moeten tussen 16 en 99 zijn — Soundmatch is voor 16 jaar en ouder.'; errEl.style.display = 'block'; return; }
+  if (isBand && leeftijdVan && leeftijdTot && parseInt(leeftijdVan) > parseInt(leeftijdTot)) { errEl.textContent = '"Van" leeftijd kan niet hoger zijn dan "tot".'; errEl.style.display = 'block'; return; }
   errEl.style.display = 'none';
 
   const opslaanBtn = document.getElementById('adOpslaanBtn');
@@ -4635,13 +4639,13 @@ function closeLightbox() {
   document.getElementById('fotoLightbox').style.display = 'none';
 }
 function setFR(r) {
-  const map = {bands:'fBands', muzikanten:'fMuz', sessie:'fSessie', industry:'fIndustry', alles:'fAll'};
+  const map = {bands:'fBands', muzikanten:'fMuz', sessie:'fSessie', industry:'fIndustry'};
   Object.entries(map).forEach(([type, id]) => {
     const el = document.getElementById(id);
     if (el) el.classList.toggle('active', type===r);
   });
   // Toggle meebewegen (alleen als het van de filter komt, niet van toggle zelf)
-  if (r !== 'alles' && r !== activeType) {
+  if (r !== activeType) {
     setTypeToggle(r);
   }
 }
@@ -4892,6 +4896,7 @@ async function slaProfielOp() {
   const err = document.getElementById('regError');
   if (!naam) { err.textContent = 'Vul je naam in.'; err.style.display = 'block'; return; }
   if (type !== 'band' && !leeftijd) { err.textContent = 'Vul je leeftijd in.'; err.style.display = 'block'; return; }
+  if (leeftijd && (parseInt(leeftijd) < 16 || parseInt(leeftijd) > 99)) { err.textContent = 'Leeftijd moet tussen 16 en 99 zijn \u2014 Soundmatch is voor 16 jaar en ouder.'; err.style.display = 'block'; return; }
   if (!provincie) { err.textContent = 'Selecteer een provincie.'; err.style.display = 'block'; return; }
   if (!stad) { err.textContent = 'Selecteer een stad.'; err.style.display = 'block'; return; }
   err.style.display = 'none';
