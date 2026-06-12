@@ -709,6 +709,8 @@ html, body {
   gap: 24px;
   align-items: center;
 }
+/* Flex-kinderen mogen niet krimpen — anders snijdt overflow:hidden ze af i.p.v. dat het paneel scrollt */
+#panel-profile > * { flex-shrink: 0; }
 
 .profile-hero {
   display: flex; align-items: center; gap: 20px;
