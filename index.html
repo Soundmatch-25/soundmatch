@@ -9,7 +9,13 @@
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 <meta name="apple-mobile-web-app-title" content="Soundmatch"/>
-<title>Soundmatch</title>
+<title>Soundmatch — Vind muzikanten en bands bij jou in de buurt</title>
+<meta name="description" content="Soundmatch matcht muzikanten, bands en sessiemuzikanten in Nederland. Swipe, match en jam. Gratis aanmelden."/>
+<meta property="og:title" content="Soundmatch — Vind muzikanten en bands"/>
+<meta property="og:description" content="Swipe, match en jam met muzikanten bij jou in de buurt."/>
+<meta property="og:type" content="website"/>
+<meta property="og:url" content="https://soundmatch.nl"/>
+<meta property="og:locale" content="nl_NL"/>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link rel="stylesheet" href="https://unpkg.com/@tabler/icons-webfont@latest/dist/tabler-icons.min.css"/>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
@@ -318,7 +324,7 @@ html, body {
 .discover-header h2 {
   font-family: var(--font-head);
   font-size: 20px;
-  font-weight: 700;
+  font-weight: 800;
   color: var(--text);
 }
 
@@ -553,7 +559,7 @@ html, body {
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
 }
-.panel-header h2 { font-family: var(--font-head); font-size: 22px; font-weight: 800; }
+.panel-header h2 { font-family: var(--font-head); font-size: 20px; font-weight: 800; }
 
 .liked-tabs { display: flex; gap: 4px; margin-top: 14px; background: var(--card2); border-radius: 12px; padding: 4px; }
 .liked-tab { flex: 1; padding: 10px 8px; text-align: center; font-size: 13px; font-weight: 600; color: var(--sub); cursor: pointer; border-radius: 10px; transition: all .15s; -webkit-tap-highlight-color: transparent; user-select: none; }
@@ -615,11 +621,11 @@ html, body {
   overflow: hidden;
 }
 .msg-list-header {
-  padding: 24px 20px 16px;
+  padding: 24px 28px 16px;
   border-bottom: 1px solid var(--border);
   font-family: var(--font-head);
   font-size: 20px;
-  font-weight: 700;
+  font-weight: 800;
   flex-shrink: 0;
 }
 .msg-list-scroll { flex: 1; overflow-y: auto; padding: 10px; }
@@ -668,7 +674,12 @@ html, body {
   border-radius: 18px;
   font-size: 14px;
   line-height: 1.5;
+  overflow-wrap: anywhere;
 }
+/* Lange woorden, namen en links mogen nergens horizontaal uit hun container breken */
+.card-desc, .card-name, .msg-preview, .msg-name, .liked-card-name, .ad-card-title,
+#kdBio, #kdNaam, #kdLinks, #lijstDetailBio, #lijstDetailNaam, #lijstDetailLinks,
+.profile-row-value { overflow-wrap: anywhere; }
 .bubble-them { background: var(--card2); color: var(--text); border-bottom-left-radius: 4px; align-self: flex-start; border: 1px solid var(--border); }
 .bubble-me { background: var(--neon); color: #fff; border-bottom-right-radius: 4px; align-self: flex-end; }
 .chat-input-row {
@@ -1014,7 +1025,10 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
     min-height: 320px;
     max-height: 520px;
   }
-  .discover-header h2 { font-size: 17px; }
+  .discover-header h2 { font-size: 18px; }
+  .panel-header h2 { font-size: 18px; }
+  .msg-list-header { font-size: 18px; padding: 14px 16px 10px; }
+  .panel-titel { font-size: 18px; }
   .card-name { font-size: 16px; }
   .card-role { font-size: 11px; }
   .card-desc { font-size: 12px; -webkit-line-clamp: 3; }
@@ -1060,6 +1074,9 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
 
   /* Match modal */
   .modal-overlay { padding: 16px; }
+
+  /* iOS zoomt automatisch in op velden met font-size < 16px — voorkomen */
+  .input-field, .chat-input, select.input-field, textarea.input-field { font-size: 16px; }
 }
 
 .mobile-nav {
@@ -1515,7 +1532,7 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
 
     <!-- Naam + Leeftijd (muzikant/sessie/industry) -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;" id="regNaamLeeftijdRij">
-      <div><div class="field-label" id="regNaamLabel">Naam *</div><input class="input-field" id="regNaam" placeholder="Jouw naam"/></div>
+      <div><div class="field-label" id="regNaamLabel">Naam *</div><input class="input-field" id="regNaam" maxlength="50" placeholder="Jouw naam"/></div>
       <div><div class="field-label">Leeftijd *</div><input class="input-field" id="regLeeftijd" type="number" inputmode="numeric" pattern="[0-9]*" placeholder="bijv. 24" min="13" max="99" onkeypress="return event.charCode>=48&&event.charCode<=57"/></div>
     </div>
 
@@ -1567,7 +1584,7 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
     <!-- Bio -->
     <div>
       <div class="field-label">Bio</div>
-      <textarea class="input-field" id="regBio" rows="3" style="resize:none;overflow:hidden;" placeholder="Vertel iets over jezelf en wat je zoekt..." oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"></textarea>
+      <textarea class="input-field" id="regBio" maxlength="500" rows="3" style="resize:none;overflow:hidden;" placeholder="Vertel iets over jezelf en wat je zoekt..." oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"></textarea>
     </div>
 
     <!-- Links -->
@@ -1743,7 +1760,7 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
 
         <div class="chat-msgs" id="chatMsgs"></div>
         <div class="chat-input-row">
-          <input class="chat-input" id="chatInput" placeholder="Typ een bericht..." onkeydown="if(event.key==='Enter')sendMsg()"/>
+          <input class="chat-input" id="chatInput" maxlength="1000" placeholder="Typ een bericht..." onkeydown="if(event.key==='Enter')sendMsg()"/>
           <button class="send-btn" onclick="sendMsg()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button>
         </div>
       </div>
@@ -1751,6 +1768,7 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
 
     <!-- ── PROFILE PANEL ── -->
     <div class="panel" id="panel-profile">
+      <div class="panel-titel" style="width:100%;max-width:600px;font-family:var(--font-head);font-size:20px;font-weight:800;flex-shrink:0;">Mijn Profiel</div>
       <div id="profielIncompleetBanner" style="display:none;background:rgba(255,193,7,0.1);border:1px solid rgba(255,193,7,0.3);border-radius:14px;padding:14px 16px;display:none;align-items:flex-start;gap:12px;">
         <div style="font-size:20px;">⚠️</div>
         <div style="flex:1;">
@@ -1785,19 +1803,7 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
       </div>
 
       <div class="profile-section">
-        <div class="profile-row" style="cursor:pointer;" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none'">
-          <div class="profile-row-label"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:var(--sub)"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg> Notificaties</div>
-          <div style="display:flex;align-items:center;gap:8px;"><span style="font-size:13px;color:var(--sub);">Ingesteld</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg></div>
-        </div>
-        <div style="display:none;padding:12px 16px;border-top:1px solid var(--border);background:var(--card2);">
-          <div class="notif-settings-section">
-            <label class="notif-row"><input type="checkbox" checked class="notif-check"/><div><div style="font-size:13px;font-weight:500;color:var(--text);">Match notificatie</div><div style="font-size:12px;color:var(--sub);">E-mail + push bij wederzijdse like</div></div></label>
-            <label class="notif-row"><input type="checkbox" checked class="notif-check"/><div><div style="font-size:13px;font-weight:500;color:var(--text);">Nieuw in jouw buurt</div><div style="font-size:12px;color:var(--sub);">Melding bij nieuwe match-kandidaat in jouw regio</div></div></label>
-            <label class="notif-row"><input type="checkbox" class="notif-check"/><div><div style="font-size:13px;font-weight:500;color:var(--text);">Wekelijks overzicht</div><div style="font-size:12px;color:var(--sub);">E-mail met nieuwe advertenties die passen</div></div></label>
-            <label class="notif-row"><input type="checkbox" class="notif-check"/><div><div style="font-size:13px;font-weight:500;color:var(--text);">Nieuwe berichten</div><div style="font-size:12px;color:var(--sub);">Push bij nieuw chatbericht</div></div></label>
-          </div>
-        </div>
-        <div class="profile-row"><div class="profile-row-label"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:var(--sub)"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg> Muzieklinks</div><div class="profile-row-value">SoundCloud</div></div>
+        <div class="profile-row"><div class="profile-row-label"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:var(--sub)"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg> Muzieklinks</div><div class="profile-row-value" id="profielMuzieklinksWaarde">—</div></div>
         <div class="profile-row" style="cursor:pointer;" onclick="openJuridisch('voorwaarden')"><div class="profile-row-label"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:var(--sub)"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg> Algemene voorwaarden</div></div>
         <div class="profile-row" style="cursor:pointer;" onclick="openJuridisch('privacy')"><div class="profile-row-label"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:var(--sub)"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> Privacybeleid</div></div>
         <div class="profile-row" style="cursor:pointer;" onclick="uitloggen()"><div class="profile-row-label" style="color:#e53935;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#e53935" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg> Uitloggen</div></div>
@@ -1816,7 +1822,7 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
             <h2>Mijn Advertenties</h2>
             <div style="font-size:14px;color:var(--sub);margin-top:4px;font-weight:400;">Maak meerdere advertenties — één per band, instrument of project.</div>
           </div>
-          <button class="btn btn-primary btn-sm" style="flex-shrink:0;" onclick="toonAdFormulier()">
+          <button class="btn btn-primary btn-sm" style="flex-shrink:0;" onclick="nieuweAdvertentie()">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             Nieuwe advertentie
           </button>
@@ -1876,7 +1882,7 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
             <!-- Naam -->
             <div>
               <div class="field-label" id="adTitelLabel">Naam *</div>
-              <input class="input-field" id="adNaam" placeholder="Jouw naam"/>
+              <input class="input-field" id="adNaam" maxlength="50" placeholder="Jouw naam"/>
             </div>
 
             <!-- Locatie -->
@@ -1942,7 +1948,7 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
             <!-- Bio -->
             <div>
               <div class="field-label">Beschrijving</div>
-              <textarea class="input-field" id="adBio" rows="3" style="resize:none;overflow:hidden;" placeholder="Vertel iets over jezelf, wat je zoekt, wanneer je beschikbaar bent..." oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"></textarea>
+              <textarea class="input-field" id="adBio" maxlength="500" rows="3" style="resize:none;overflow:hidden;" placeholder="Vertel iets over jezelf, wat je zoekt, wanneer je beschikbaar bent..." oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"></textarea>
             </div>
 
             <!-- Links -->
@@ -2101,35 +2107,12 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
   </div>
 </div>
 
-<!-- KAART DETAIL MODAL -->
-<div class="modal-overlay" id="kaartDetailModal" onclick="if(event.target===this)closeKaartDetail()">
-  <div class="modal-box" style="max-width:480px;width:90%;padding:0;overflow:hidden;border-radius:24px;">
-    <div id="kdFoto" style="height:220px;background:var(--grad);position:relative;"></div>
-    <div style="padding:24px;display:flex;flex-direction:column;gap:14px;">
-      <div>
-        <div style="font-family:var(--font-head);font-size:22px;font-weight:800;" id="kdNaam"></div>
-        <div style="font-size:14px;color:var(--neon);margin-top:4px;" id="kdRol"></div>
-      </div>
-      <div id="kdBio" style="font-size:14px;color:var(--sub);line-height:1.6;"></div>
-      <div id="kdTags" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
-      <div id="kdLinks"></div>
-      <div style="display:flex;gap:10px;">
-        <button class="btn btn-primary" style="flex:1;" onclick="closeKaartDetail();openDirectBerichtModal()">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-          Bericht sturen
-        </button>
-        <button class="btn btn-ghost" onclick="closeKaartDetail()">Sluiten</button>
-      </div>
-    </div>
-  </div>
-</div>
-
 <!-- DIRECT BERICHT MODAL -->
 <div class="modal-overlay" id="directBerichtModal" onclick="if(event.target===this)closeDirectBericht()">
   <div class="modal-box" style="max-width:440px;width:90%;padding:28px;gap:16px;display:flex;flex-direction:column;">
     <div style="font-family:var(--font-head);font-size:20px;font-weight:800;">Stuur een bericht</div>
     <div style="font-size:14px;color:var(--sub);" id="directBerichtNaam"></div>
-    <textarea id="directBerichtTekst" class="input-field" rows="4" style="resize:none;" placeholder="Schrijf een bericht..."></textarea>
+    <textarea id="directBerichtTekst" class="input-field" maxlength="1000" rows="4" style="resize:none;" placeholder="Schrijf een bericht..."></textarea>
     <div id="directBerichtError" style="font-size:13px;color:#ff8a80;display:none;"></div>
     <div style="display:flex;gap:10px;">
       <button class="btn btn-ghost" style="flex:1;" onclick="closeDirectBericht()">Annuleren</button>
@@ -2339,6 +2322,18 @@ function profielNaarKaart(p) {
 
 // ═══════════════ SUPABASE DATA LADEN ═══════════════
 const geswipedIds = new Set(); // user IDs die al gezien zijn
+
+// Storage-pad afleiden uit publieke avatar-URL (voor opschonen van foto's)
+function storagePadUitUrl(url) {
+  if (!url) return null;
+  const m = String(url).match(/\/avatars\/(.+?)(\?|$)/);
+  return m ? decodeURIComponent(m[1]) : null;
+}
+async function verwijderStorageFoto(url) {
+  const pad = storagePadUitUrl(url);
+  if (!pad) return;
+  try { await sb.storage.from('avatars').remove([pad]); } catch(e) { console.warn('Foto opschonen mislukt:', e.message); }
+}
 
 // Geblokkeerde gebruikers (beide richtingen: door mij geblokkeerd + mij geblokkeerd)
 const geblokkeerdeIds = new Set();
@@ -2682,8 +2677,17 @@ async function _verwijderAccountBevestigd() {
     await sb.from('blokkades').delete().or('blokkeerder_id.eq.' + uid + ',geblokkeerde_id.eq.' + uid);
     await sb.from('profiles').delete().eq('id', uid);
 
+    // Alle foto's van deze gebruiker uit storage verwijderen
+    try {
+      const { data: bestanden } = await sb.storage.from('avatars').list(uid);
+      if (bestanden?.length) {
+        await sb.storage.from('avatars').remove(bestanden.map(b => uid + '/' + b.name));
+      }
+    } catch(e) { console.warn('Storage opschonen mislukt:', e.message); }
+
     // Auth user verwijderen via edge function
     const { data: { session } } = await sb.auth.getSession();
+    if (!session?.access_token) throw new Error('Sessie verlopen — log opnieuw in en probeer het nogmaals.');
     const resp = await fetch(SUPABASE_URL + '/functions/v1/smooth-processor', {
       method: 'POST',
       headers: {
@@ -2733,60 +2737,6 @@ function toonInfo(titel, tekst, icon) {
 function infoSluit() {
   document.getElementById('infoModal').classList.remove('open');
 }
-function openKaartDetail(idx) {
-  const p = advertentiesData[idx];
-  if (!p) return;
-  const raw = p.raw || {};
-
-  const modal = document.getElementById('kaartDetailModal');
-  if (!modal) return;
-
-  // Foto
-  document.getElementById('kdFoto').innerHTML = p.foto_url
-    ? `<img src="${esc(p.foto_url)}" style="width:100%;height:100%;object-fit:cover;"/>`
-    : `<div style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;">${typeIcon(p.type)}</div>`;
-
-  // Info
-  document.getElementById('kdNaam').textContent = p.naam;
-  document.getElementById('kdRol').textContent = p.rol;
-
-  // Tags
-  const tags = [...(raw.genres || []), ...(raw.instrumenten || raw.instrument || []), raw.niveau, raw.beschikbaarheid].filter(Boolean);
-  document.getElementById('kdTags').innerHTML = tags.map(t => `<span class="tag">${esc(t)}</span>`).join('');
-
-  // Rijen
-  const rijen = [
-    ['Type', p.type ? p.type.charAt(0).toUpperCase() + p.type.slice(1) : '—'],
-    ['Locatie', raw.stad || raw.locatie || raw.profiel?.stad || '—'],
-    ['Leeftijd', raw.leeftijd ? raw.leeftijd + ' jaar' : '—'],
-    ['Niveau', raw.niveau || '—'],
-    ['Beschikbaarheid', raw.beschikbaarheid || '—'],
-  ];
-  document.getElementById('kdRijen').innerHTML = rijen.filter(r => r[1] !== '—').map(([label, waarde]) =>
-    `<div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);font-size:14px;">
-      <span style="color:var(--sub);">${label}</span>
-      <span style="font-weight:500;">${esc(waarde)}</span>
-    </div>`
-  ).join('');
-
-  // Bio
-  const bioEl = document.getElementById('kdBio');
-  bioEl.textContent = raw.omschrijving || p.desc || '';
-  bioEl.style.display = (raw.omschrijving || p.desc) ? 'block' : 'none';
-
-  // Links
-  const linksEl = document.getElementById('kdLinks');
-  if (raw.muzieklinks || p.link) {
-    const links = (raw.muzieklinks || p.link || '').split(',').map(l => l.trim()).filter(Boolean);
-    linksEl.innerHTML = links.map(l => `<a href="${esc(l.startsWith('http')?l:'https://'+l)}" target="_blank" rel="noopener" style="color:var(--neon2);font-size:13px;display:block;margin-bottom:4px;">${esc(l)}</a>`).join('');
-    linksEl.style.display = 'block';
-  } else {
-    linksEl.style.display = 'none';
-  }
-
-  modal.classList.add('open');
-}
-
 function sluitKaartDetail() {
   document.getElementById('kaartDetailModal')?.classList.remove('open');
 }
@@ -3076,7 +3026,7 @@ async function laadMatchesLijst() {
   matches.forEach(match => {
     const anderId = match.gebruiker_a === currentUser.id ? match.gebruiker_b : match.gebruiker_a;
     const ander = match.gebruiker_a === currentUser.id ? match.b : match.a;
-    if (!ander || !anderId) return;
+    if (!ander || !anderId || geblokkeerdeIds.has(anderId)) return;
 
     const card = document.createElement('div');
     card.style.cssText = 'display:flex;align-items:center;gap:14px;padding:14px 16px;background:var(--card2);border-radius:16px;border:1px solid rgba(124,77,255,0.2);';
@@ -3945,47 +3895,6 @@ async function updateChatOnlineStatus(userId) {
   } catch(e) {}
 }
 
-let typingTimeout = null;
-
-function stuurTypingIndicator() {
-  if (!currentUser || !huidigChatUserId) return;
-  
-  sb.from('typing_indicators').upsert({
-    user_id: currentUser.id,
-    chat_with: huidigChatUserId,
-    bijgewerkt_op: new Date().toISOString()
-  }, { onConflict: 'user_id', ignoreDuplicates: false });
-  
-  clearTimeout(typingTimeout);
-  typingTimeout = setTimeout(async () => {
-    await sb.from('typing_indicators').delete().eq('user_id', currentUser.id);
-  }, 3000);
-}
-
-async function checkTypingIndicator(userId) {
-  if (!userId || !currentUser) return;
-  try {
-    const { data, error } = await sb.from('typing_indicators')
-      .select('bijgewerkt_op')
-      .eq('user_id', userId)
-      .eq('chat_with', currentUser.id)
-      .maybeSingle();
-    
-    const indicator = document.getElementById('typingIndicator');
-    const naam = document.getElementById('typingNaam');
-    if (!indicator) return;
-    
-    if (data) {
-      const seconden = (Date.now() - new Date(data.bijgewerkt_op)) / 1000;
-      if (seconden < 4) {
-        if (naam) naam.textContent = '';
-        indicator.style.display = 'flex';
-        return;
-      }
-    }
-    indicator.style.display = 'none';
-  } catch(e) {}
-}
 
 async function laadGesprekBerichten(userId) {
   try {
@@ -4023,97 +3932,39 @@ async function sendMsg() {
   laadGesprekBerichten(huidigChatUserId);
 }
 
+function resetChatHeader() {
+  document.getElementById('blokkeerBtn').style.display = 'none';
+  document.getElementById('meldBtn').style.display = 'none';
+  document.querySelector('.chat-name').textContent = 'Selecteer een gesprek';
+  document.getElementById('chatMsgs').innerHTML = '';
+  const statusEl = document.getElementById('chatOnlineStatus');
+  if (statusEl) statusEl.textContent = '';
+  const av = document.getElementById('chatAvatar');
+  if (av) av.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>';
+  stopAppInterval('gesprek');
+  stopAppInterval('onlinelezen');
+}
+
 async function blokkeerGebruiker() {
   if (!huidigChatUserId || !currentUser) return;
   toonBevestig('Gebruiker blokkeren', 'Je ziet elkaar dan niet meer in de app.', '🚫', 'Blokkeren', () => _blokkeerBevestigd());
 }
 
 async function _blokkeerBevestigd() {
-  await sb.from('blokkades').upsert({ blokkeerder_id: currentUser.id, geblokkeerde_id: huidigChatUserId }, { onConflict: 'blokkeerder_id,geblokkeerde_id' });
-  geblokkeerdeIds.add(huidigChatUserId);
+  const ander = huidigChatUserId;
+  await sb.from('blokkades').upsert({ blokkeerder_id: currentUser.id, geblokkeerde_id: ander }, { onConflict: 'blokkeerder_id,geblokkeerde_id' });
+  // Match en chat permanent verwijderen (komt ook na deblokkeren niet terug)
+  await sb.from('matches').delete().or('and(gebruiker_a.eq.' + currentUser.id + ',gebruiker_b.eq.' + ander + '),and(gebruiker_a.eq.' + ander + ',gebruiker_b.eq.' + currentUser.id + ')');
+  await sb.from('directe_berichten').delete().or('and(van_user_id.eq.' + currentUser.id + ',naar_user_id.eq.' + ander + '),and(van_user_id.eq.' + ander + ',naar_user_id.eq.' + currentUser.id + ')');
+  await sb.from('berichtverzoeken').delete().or('and(van_user_id.eq.' + currentUser.id + ',naar_user_id.eq.' + ander + '),and(van_user_id.eq.' + ander + ',naar_user_id.eq.' + currentUser.id + ')');
+  geblokkeerdeIds.add(ander);
   huidigChatUserId = null;
-  document.getElementById('blokkeerBtn').style.display = 'none'; document.getElementById('meldBtn').style.display = 'none';
-  document.querySelector('.chat-name').textContent = 'Selecteer een gesprek';
-  document.getElementById('chatMsgs').innerHTML = '';
+  resetChatHeader();
   laadDirecteBerichten();
+  laadMatchesLijst();
   const t = document.getElementById('toast');
   t.textContent = 'Gebruiker geblokkeerd.'; t.classList.add('show');
   setTimeout(() => t.classList.remove('show'), 2200);
-}
-
-let huidigeMatch = null;
-let berichtenInterval = null;
-
-async function laadMatches() {
-  if (!currentUser) return;
-  const { data } = await sb.from('matches').select('*, a:gebruiker_a(*), b:gebruiker_b(*)').or(`gebruiker_a.eq.${currentUser.id},gebruiker_b.eq.${currentUser.id}`).order('aangemaakt_op', { ascending: false });
-
-  // Update badge
-  const badge = document.getElementById('berichtenBadge');
-  if (badge && data?.length) {
-    badge.textContent = data.length;
-    badge.style.display = 'inline-block';
-  } else if (badge) {
-    badge.style.display = 'none';
-  }
-
-  const scroll = document.getElementById('msgListScroll');
-  if (!scroll) return;
-
-  if (!data?.length) {
-    scroll.innerHTML = `<div style="padding:32px 20px;text-align:center;color:var(--sub);font-size:14px;display:flex;flex-direction:column;align-items:center;gap:12px;"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="opacity:.4"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><div>Nog geen matches.<br>Ga swipen!</div></div>`;
-    return;
-  }
-
-  scroll.innerHTML = data.map(match => {
-    const ander = match.gebruiker_a === currentUser.id ? match.b : match.a;
-    if (!ander) return '';
-    return `<div class="msg-item" onclick="openMatch('${match.id}', '${ander.id}')" id="match-${match.id}">
-      <div class="msg-av" style="overflow:hidden;">${ander.foto_url ? `<img src="${ander.foto_url}" style="width:100%;height:100%;object-fit:cover;"/>` : `<div style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;">${typeIcon(ander.type)}</div>`}</div>
-      <div style="flex:1;overflow:hidden;">
-        <div class="msg-name">${ander.naam || 'Onbekend'}</div>
-        <div class="msg-preview" id="preview-${match.id}">Match! Stuur een berichtje.</div>
-      </div>
-    </div>`;
-  }).join('');
-
-  // Laad laatste bericht per match
-  data.forEach(async match => {
-    const { data: msgs } = await sb.from('berichten').select('inhoud').eq('match_id', match.id).order('verstuurd_op', { ascending: false }).limit(1);
-    if (msgs?.[0]) {
-      const el = document.getElementById(`preview-${match.id}`);
-      if (el) el.textContent = msgs[0].inhoud;
-    }
-  });
-}
-
-async function openMatch(matchId, anderId) {
-  huidigeMatch = matchId;
-  document.querySelectorAll('.msg-item').forEach(el => el.classList.remove('active'));
-  document.getElementById(`match-${matchId}`)?.classList.add('active');
-
-  // Laad ander profiel
-  const { data: ander } = await sb.from('profiles').select('*').eq('id', anderId).single();
-  const chatCol = document.querySelector('.chat-col');
-  if (!chatCol) return;
-  chatCol.style.display = 'flex';
-
-  document.querySelector('.chat-header-bar .chat-name').textContent = ander?.naam || 'Match';
-
-  await laadBerichten(matchId);
-
-  // Refresh berichten elke 5 seconden
-  setAppInterval('gesprek', () => laadBerichten(matchId), 5000);
-}
-
-async function laadBerichten(matchId) {
-  const { data } = await sb.from('berichten').select('*').eq('match_id', matchId).order('verstuurd_op', { ascending: true });
-  const msgs = document.getElementById('chatMsgs');
-  if (!msgs || !data) return;
-  const wasBottom = msgs.scrollHeight - msgs.scrollTop <= msgs.clientHeight + 50;
-  msgs.innerHTML = data.map(b => `
-    <div class="bubble ${b.afzender_id === currentUser.id ? 'bubble-me' : 'bubble-them'}">${esc(b.inhoud)}</div>`).join('');
-  if (wasBottom) msgs.scrollTop = msgs.scrollHeight;
 }
 
 // ═══════════════ ADVERTENTIES ═══════════════
@@ -4235,6 +4086,20 @@ function fixBioHoogte() {
   });
 }
 
+const MAX_ADVERTENTIES = 4;
+
+async function nieuweAdvertentie() {
+  if (!currentUser) return;
+  const { count } = await sb.from('advertenties')
+    .select('*', { count: 'exact', head: true })
+    .eq('user_id', currentUser.id);
+  if ((count || 0) >= MAX_ADVERTENTIES) {
+    toonInfo('Maximum bereikt', 'Je kunt maximaal ' + MAX_ADVERTENTIES + ' advertenties tegelijk hebben. Verwijder eerst een bestaande advertentie om een nieuwe te plaatsen.', '\ud83d\udccb');
+    return;
+  }
+  toonAdFormulier();
+}
+
 function toonAdFormulier() {
   document.getElementById('adOverzicht').style.display = 'none';
   document.getElementById('adFormulier').style.display = 'flex';
@@ -4326,6 +4191,8 @@ async function handleAdFoto(input) {
       const { error } = await sb.storage.from('avatars').upload(bestandsnaam, blob, { contentType: 'image/jpeg', upsert: true });
       if (error) throw error;
       const { data: urlData } = sb.storage.from('avatars').getPublicUrl(bestandsnaam);
+      // Oude ad-foto opruimen (niet de profielfoto avatar.jpg)
+      if (adFotoUrl && !adFotoUrl.includes('/avatar.jpg') && adFotoUrl !== urlData.publicUrl) await verwijderStorageFoto(adFotoUrl);
       adFotoUrl = urlData.publicUrl + '?t=' + Date.now();
       overlay.textContent = '✓';
       setTimeout(() => overlay.remove(), 1000);
@@ -4395,6 +4262,15 @@ async function slaAdvertentieOp() {
     if (editId) {
       ({ error } = await sb.from('advertenties').update(adData).eq('id', editId).eq('user_id', currentUser.id));
     } else {
+      const { count: adCount } = await sb.from('advertenties')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', currentUser.id);
+      if ((adCount || 0) >= MAX_ADVERTENTIES) {
+        const errEl = document.getElementById('adError');
+        errEl.textContent = 'Je hebt het maximum van ' + MAX_ADVERTENTIES + ' advertenties bereikt. Verwijder eerst een bestaande advertentie.';
+        errEl.style.display = 'block';
+        return;
+      }
       ({ error } = await sb.from('advertenties').insert({ ...adData, user_id: currentUser.id }));
     }
 
@@ -4459,7 +4335,9 @@ async function bewerkAd(id) {
 }
 async function verwijderAd(id) {
   toonBevestig('Advertentie verwijderen', 'Deze advertentie wordt permanent verwijderd.', '🗑️', 'Verwijderen', async () => {
+    const { data: ad } = await sb.from('advertenties').select('foto_url').eq('id', id).maybeSingle();
     await sb.from('advertenties').delete().eq('id', id).eq('user_id', currentUser.id);
+    if (ad?.foto_url && !ad.foto_url.includes('/avatar.jpg')) await verwijderStorageFoto(ad.foto_url);
     laadMijnAdvertenties();
   });
 }
@@ -4742,9 +4620,7 @@ function openKaartDetail(index) {
   modal.classList.add('open');
 }
 
-function closeKaartDetail() {
-  document.getElementById('kaartDetailModal').classList.remove('open');
-}
+
 function openLightbox(url) {
   const lb = document.getElementById('fotoLightbox');
   const img = document.getElementById('fotoLightboxImg');
@@ -4928,14 +4804,11 @@ async function registreerMetEmail() {
 async function wachtwoordVergeten() {
   const email = document.getElementById('loginEmail')?.value.trim();
   if (!email) {
-    const inp = prompt('Vul je e-mailadres in:');
-    if (!inp) return;
-    await sb.auth.resetPasswordForEmail(inp, { redirectTo: window.location.origin });
-    toonInfo('Email verstuurd!', 'Check je email voor de reset link.', '📧');
+    toonInfo('E-mailadres nodig', 'Vul eerst je e-mailadres in in het inlogveld hierboven, en klik dan opnieuw op "Wachtwoord vergeten".', '📧');
     return;
   }
   await sb.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin });
-  toonInfo('Email verstuurd!', 'Check ' + email + ' voor de reset link.', '📧');
+  toonInfo('Email verstuurd!', 'Als er een account bestaat voor ' + esc(email) + ' ontvang je een reset-link. Check ook je spam.', '📧');
 }
 
 async function loginMetGoogle() {
@@ -5065,6 +4938,13 @@ async function slaProfielOp() {
 }
 
 function vulProfielIn(profiel) {
+  // Muzieklinks-rij in profielmenu bijwerken
+  const mlWaarde = document.getElementById('profielMuzieklinksWaarde');
+  if (mlWaarde) {
+    const links = (profiel?.muzieklink || '').split(',').map(l => l.trim()).filter(Boolean);
+    mlWaarde.textContent = links.length ? (links.length === 1 ? links[0].replace(/^https?:\/\//,'').substring(0,28) : links.length + ' links') : '—';
+  }
+
   if (!profiel) return;
 
   // Sidebar naam + rol
