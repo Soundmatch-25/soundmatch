@@ -1752,6 +1752,7 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
           </div>
           <div style="flex:1;min-width:0;">
             <div class="chat-name" style="font-size:16px;font-weight:600;color:var(--text)">Selecteer een gesprek</div>
+            <div class="chat-via" id="chatViaAd" style="display:none;font-size:11px;color:var(--neon2);margin-top:1px;"></div>
             <div style="font-size:11px;color:var(--sub);margin-top:1px;" id="chatOnlineStatus"></div>
           </div>
           <button id="meldBtn" onclick="meldGebruiker()" style="display:none;width:34px;height:34px;border-radius:10px;border:1px solid var(--border);background:transparent;cursor:pointer;align-items:center;justify-content:center;color:var(--sub);flex-shrink:0;margin-right:6px;" title="Melden">
@@ -2229,6 +2230,7 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
     <div>
       <div style="font-family:var(--font-head);font-size:30px;font-weight:900;background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">It's a Match!</div>
       <div style="font-size:14px;color:var(--sub);margin-top:8px;line-height:1.6;">Jij en <strong style="color:var(--text)" id="matchName"></strong> hebben allebei interesse!</div>
+      <div id="matchViaAd" style="display:none;font-size:12px;color:var(--neon2);margin-top:6px;"></div>
     </div>
     <div style="display:flex;flex-direction:column;gap:10px;width:100%;">
       <button class="btn btn-primary btn-full" onclick="closeMatch();stuurBerichtNaMatch()">
@@ -2353,13 +2355,17 @@ async function laadBlokkades(forceer = false) {
   } catch(e) { console.warn('Blokkades laden fout:', e.message); }
 }
 
+const geswipedAdIds = new Set(); // geswipede advertentie-kaarten
 async function laadGezienIds() {
   if (!currentUser) return;
   await laadBlokkades();
-  // Swipes
-  const { data: swipes } = await sb.from('swipes').select('target_id').eq('swiper_id', currentUser.id);
-  (swipes || []).forEach(s => geswipedIds.add(s.target_id));
-  // Matches
+  // Swipes: per kaart — advertentie-swipes blokkeren alleen die advertentie, profiel-swipes alleen de profielkaart
+  const { data: swipes } = await sb.from('swipes').select('target_id, advertentie_id').eq('swiper_id', currentUser.id);
+  (swipes || []).forEach(s => {
+    if (s.advertentie_id) geswipedAdIds.add(s.advertentie_id);
+    else geswipedIds.add(s.target_id);
+  });
+  // Matches: persoon volledig uit het deck (match bestaat al, alle kaarten weg)
   const { data: matches } = await sb.from('matches').select('gebruiker_a,gebruiker_b')
     .or('gebruiker_a.eq.' + currentUser.id + ',gebruiker_b.eq.' + currentUser.id);
   (matches || []).forEach(m => {
@@ -2435,7 +2441,7 @@ async function laadAdvertenties() {
     .map(p => profielNaarKaart(p));
 
   let adKaarten = (advertenties || [])
-    .filter(a => !geswipedIds.has(a.user_id) && !geblokkeerdeIds.has(a.user_id))
+    .filter(a => !geswipedAdIds.has(a.id) && !geswipedIds.has(a.user_id) && !geblokkeerdeIds.has(a.user_id))
     .map(a => advertentieNaarKaart(a));
 
   // Client-side genre/instrument filter toepassen
@@ -2755,32 +2761,29 @@ async function doSwipe(dir) {
   top.style.transform = `translateX(${dir==='like'?600:-600}px) rotate(${dir==='like'?15:-15}deg)`;
 
   // Gebruik altijd de user_id als target, niet het advertentie ID
-  const targetUserId = p.raw?.user_id || p.id;
+  const targetUserId = p.isAdvertentie ? p.raw?.user_id : p.id;
 
-  // Direct toevoegen aan geswiped set
-  if (targetUserId) geswipedIds.add(p.id); // kaart ID
-  if (targetUserId) geswipedIds.add(targetUserId); // user ID
+  // Per kaart registreren: advertentie blokkeert alleen zichzelf, profielkaart alleen zichzelf
+  if (p.isAdvertentie) geswipedAdIds.add(p.id);
+  else geswipedIds.add(p.id);
 
   // Opslaan in Supabase
   if (currentUser && targetUserId && targetUserId !== currentUser.id) {
     const { error: swipeError } = await sb.from('swipes').upsert(
       { swiper_id: currentUser.id, target_id: targetUserId, richting: dir, advertentie_id: p.isAdvertentie ? p.id : null },
-      { onConflict: 'swiper_id,target_id' }
+      { onConflict: 'swiper_id,target_id,advertentie_id' }
     );
     if (swipeError) {
       console.error('Swipe opslaan mislukt:', swipeError.message, swipeError.code, swipeError.details);
       return;
     }
 
-    // Check wederzijdse like — ook op onze advertentie IDs
+    // Check wederzijdse like op user-niveau: heeft de ander minstens 1 like op een van mijn kaarten?
     if (dir === 'like' && !swipeError) {
-      const { data: onzeAds } = await sb.from('advertenties').select('id').eq('user_id', currentUser.id);
-      const onzeTargetIds = [currentUser.id, ...(onzeAds || []).map(a => a.id)];
-
       const { data: wederzijds, error: wErr } = await sb.from('swipes')
-        .select('*')
+        .select('id')
         .eq('swiper_id', targetUserId)
-        .in('target_id', onzeTargetIds)
+        .eq('target_id', currentUser.id)
         .eq('richting', 'like')
         .limit(1);
 
@@ -2802,6 +2805,7 @@ async function doSwipe(dir) {
           else console.error('Match aanmaken mislukt:', res2.error.message);
         }
         if (matchOk) {
+          geswipedIds.add(targetUserId); // match: alle kaarten van deze persoon uit het deck
           // Haal match ID op voor lastMatchId
           const { data: newMatch } = await sb.from('matches').select('id')
             .or('and(gebruiker_a.eq.' + currentUser.id + ',gebruiker_b.eq.' + targetUserId + '),and(gebruiker_a.eq.' + targetUserId + ',gebruiker_b.eq.' + currentUser.id + ')')
@@ -2818,6 +2822,25 @@ async function doSwipe(dir) {
 
 let matchPartner = null;
 
+// Titels van advertenties waarmee ik deze persoon heb geliket (voor match-context)
+async function getViaAdvertenties(userIds) {
+  if (!currentUser || !userIds.length) return {};
+  try {
+    const { data } = await sb.from('swipes')
+      .select('target_id, advertentie:advertentie_id(titel)')
+      .eq('swiper_id', currentUser.id)
+      .eq('richting', 'like')
+      .not('advertentie_id', 'is', null)
+      .in('target_id', userIds);
+    const map = {};
+    (data || []).forEach(s => {
+      if (!s.advertentie?.titel) return;
+      (map[s.target_id] = map[s.target_id] || []).push(s.advertentie.titel);
+    });
+    return map;
+  } catch(e) { return {}; }
+}
+
 function showMatch(p) {
   matchPartner = p;
   // Markeer zodat checkNieuweMatches hem niet nogmaals toont
@@ -2833,6 +2856,15 @@ function showMatch(p) {
   const mijEl = document.getElementById('matchEmojiMij');
   if (mijEl && currentProfile?.foto_url) {
     mijEl.innerHTML = '<img src="' + esc(currentProfile.foto_url) + '" style="width:100%;height:100%;object-fit:cover;"/>';
+  }
+
+  // Context: via welke advertentie ontstond deze match?
+  const viaEl = document.getElementById('matchViaAd');
+  if (viaEl) {
+    if (p.isAdvertentie && p.naam) {
+      viaEl.textContent = 'Via de advertentie “' + p.naam + '”';
+      viaEl.style.display = 'block';
+    } else viaEl.style.display = 'none';
   }
 
   document.getElementById('matchModal').classList.add('open');
@@ -3009,6 +3041,7 @@ function switchTab(tab) {
 
 async function laadMatchesLijst() {
   await laadBlokkades();
+  window._viaAdMap = {};
   if (!currentUser) return;
   const container = document.getElementById('matchesLijst');
   if (!container) return;
@@ -3022,6 +3055,10 @@ async function laadMatchesLijst() {
     container.innerHTML = '<div style="color:var(--sub);font-size:14px;padding:16px;text-align:center;background:var(--card2);border-radius:14px;">Nog geen matches. Like iemand en hoop dat ze terugliked!</div>';
     return;
   }
+
+  // Verzamel alle match-partners en haal op via welke advertentie(s) ik ze likete
+  const partnerIds = matches.map(m => m.gebruiker_a === currentUser.id ? m.gebruiker_b : m.gebruiker_a);
+  window._viaAdMap = await getViaAdvertenties(partnerIds);
 
   container.innerHTML = '';
   matches.forEach(match => {
@@ -3038,8 +3075,9 @@ async function laadMatchesLijst() {
 
     const info = document.createElement('div');
     info.style.cssText = 'flex:1;overflow:hidden;';
+    const viaTitels = (window._viaAdMap || {})[anderId];
     info.innerHTML = '<div style="font-weight:700;font-size:14px;">' + esc(ander.naam || 'Onbekend') + '</div>' +
-      '<div style="font-size:12px;color:var(--neon);margin-top:2px;">✓ Match</div>';
+      '<div style="font-size:12px;color:var(--neon);margin-top:2px;">✓ Match' + (viaTitels?.length ? ' · via: ' + esc(viaTitels.join(', ')) : '') + '</div>';
 
     const btns = document.createElement('div');
     btns.style.cssText = 'display:flex;gap:8px;flex-shrink:0;';
@@ -3137,12 +3175,13 @@ async function laadOntvangenLikes() {
 
   // Filter matches én genopeden eruit
   await laadBlokkades();
-  const uniek = (likes || []).filter(s => 
-    s.swiper_id !== currentUser.id && 
-    !matchIds.has(s.swiper_id) &&
-    !nopeIds.has(s.swiper_id) &&
-    !geblokkeerdeIds.has(s.swiper_id)
-  );
+  const gezien = new Set();
+  const uniek = (likes || []).filter(s => {
+    if (s.swiper_id === currentUser.id || matchIds.has(s.swiper_id) || nopeIds.has(s.swiper_id) || geblokkeerdeIds.has(s.swiper_id)) return false;
+    if (gezien.has(s.swiper_id)) return false; // meerdere kaart-likes van dezelfde persoon: 1x tonen
+    gezien.add(s.swiper_id);
+    return true;
+  });
 
   // Update badge
   const count = uniek.length;
@@ -3370,36 +3409,44 @@ function closeLijstDetail() {
 async function verwijderUitLijst(swipeId, targetId) {
   if (!currentUser) return;
 
-  // Optimistisch verwijderen uit UI
-  geswipedIds.delete(targetId);
-  swipeHistory = swipeHistory.filter(p => (p.target_user_id || p.id) !== targetId);
+  // Optimistisch verwijderen uit UI (alleen deze kaart)
+  const item = swipeHistory.find(p => p.swipe_id === swipeId);
+  if (item) {
+    if (item.isAdvertentie) geswipedAdIds.delete(item.id);
+    else geswipedIds.delete(item.id);
+  }
+  swipeHistory = swipeHistory.filter(p => p.swipe_id !== swipeId);
   renderLiked();
-  const { error } = await sb.from('swipes')
-    .delete()
-    .eq('swiper_id', currentUser.id)
-    .eq('target_id', targetId);
 
+  const { error } = await sb.from('swipes').delete().eq('id', swipeId).eq('swiper_id', currentUser.id);
   if (error) {
     console.error('Verwijderen mislukt:', error.message);
-    geswipedIds.add(targetId);
     laadSwipeHistory();
     return;
   }
 
-  // Check of er een match is
+  // Heb ik nog een andere like op deze persoon staan?
+  const { data: restLikes } = await sb.from('swipes')
+    .select('id')
+    .eq('swiper_id', currentUser.id)
+    .eq('target_id', targetId)
+    .eq('richting', 'like')
+    .limit(1);
+
+  if (restLikes?.length) return; // andere like houdt de match/interesse in stand
+
+  // Geen likes meer van mij op deze persoon: match + chat opruimen, of de ander uit "heeft jou geliked" halen
   const { data: match } = await sb.from('matches')
     .select('id')
     .or('and(gebruiker_a.eq.' + currentUser.id + ',gebruiker_b.eq.' + targetId + '),and(gebruiker_a.eq.' + targetId + ',gebruiker_b.eq.' + currentUser.id + ')')
     .maybeSingle();
 
   if (match) {
-    // Match bestaat — alleen uit bekeken lijst verwijderen, niet de swipe van de ander aanpassen
     await sb.from('matches').delete().eq('id', match.id);
     await sb.from('directe_berichten').delete().eq('van_user_id', currentUser.id).eq('naar_user_id', targetId);
     await sb.from('directe_berichten').delete().eq('van_user_id', targetId).eq('naar_user_id', currentUser.id);
     laadMatchesLijst();
   } else {
-    // Geen match — swipe van de ander ook naar nope zodat hij niet in "heeft jou geliked" verschijnt
     await sb.from('swipes').update({ richting: 'nope' }).eq('swiper_id', targetId).eq('target_id', currentUser.id);
   }
 }
@@ -3816,6 +3863,14 @@ async function openGesprek(userId, user) {
   huidigChatUserId = userId;
   const naamEl = document.querySelector('.chat-name');
   if (naamEl) naamEl.textContent = user?.naam || 'Onbekend';
+  // Via welke advertentie matchten we?
+  const viaEl = document.getElementById('chatViaAd');
+  if (viaEl) {
+    const viaMap = await getViaAdvertenties([userId]);
+    const titels = viaMap[userId];
+    if (titels?.length) { viaEl.textContent = 'via: ' + titels.join(', '); viaEl.style.display = 'block'; }
+    else { viaEl.textContent = ''; viaEl.style.display = 'none'; }
+  }
   const blokkeerBtn = document.getElementById('blokkeerBtn');
   if (blokkeerBtn) blokkeerBtn.style.display = 'block';
   const meldBtn = document.getElementById('meldBtn');
@@ -3942,6 +3997,8 @@ function resetChatHeader() {
   document.getElementById('chatMsgs').innerHTML = '';
   const statusEl = document.getElementById('chatOnlineStatus');
   if (statusEl) statusEl.textContent = '';
+  const viaEl = document.getElementById('chatViaAd');
+  if (viaEl) { viaEl.textContent = ''; viaEl.style.display = 'none'; }
   const av = document.getElementById('chatAvatar');
   if (av) av.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>';
   stopAppInterval('gesprek');
@@ -4834,6 +4891,13 @@ async function loginMetGoogle() {
 
 async function uitloggen() {
   await sb.auth.signOut();
+  // In-memory caches legen zodat het volgende account geen data van dit account ziet
+  geswipedIds.clear();
+  geswipedAdIds.clear();
+  geblokkeerdeIds.clear();
+  blokkadesGeladen = false;
+  swipeHistory = [];
+  window._viaAdMap = {};
   showScreen('onboard');
 }
 
