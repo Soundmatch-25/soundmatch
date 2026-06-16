@@ -4,6 +4,7 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
 <meta name="theme-color" content="#0d0d14"/>
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><defs><linearGradient id='g' x1='0%25' y1='0%25' x2='100%25' y2='100%25'><stop offset='0%25' stop-color='%237c4dff'/><stop offset='100%25' stop-color='%2300b4d8'/></linearGradient></defs><rect width='100' height='100' rx='22' fill='url(%23g)'/><text x='50' y='54' dominant-baseline='central' text-anchor='middle' font-family='Arial Black,Arial,sans-serif' font-weight='900' font-size='66' fill='white'>S</text></svg>">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><defs><linearGradient id='g' x1='0%25' y1='0%25' x2='100%25' y2='100%25'><stop offset='0%25' stop-color='%237c4dff'/><stop offset='100%25' stop-color='%2300b4d8'/></linearGradient></defs><rect width='100' height='100' rx='22' fill='url(%23g)'/><text y='.9em' font-size='70' x='15'>🎵</text></svg>">
 <meta name="apple-mobile-web-app-capable" content="yes"/>
@@ -1451,6 +1452,7 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
       </button>
     </div>
     <div id="regEmailError" style="font-size:13px;color:#ff8a80;display:none;"></div>
+    <div id="turnstileContainer" style="display:flex;justify-content:center;min-height:65px;"></div>
     <button class="btn btn-primary btn-full" style="padding:17px;" onclick="registreerMetEmail()">Account aanmaken</button>
     <div style="text-align:center;font-size:13px;color:var(--sub);">Al een account? <span onclick="showScreen('onboard')" style="color:var(--neon);cursor:pointer;">Inloggen</span></div>
   </div>
@@ -4825,6 +4827,8 @@ function toggleWachtwoord(inputId, btn) {
 
 function showEmailRegistratie() {
   showScreen('emailreg');
+  // Captcha-widget renderen (of resetten als hij al bestond)
+  setTimeout(renderTurnstile, 100);
 }
 
 async function loginMetEmail() {
@@ -4842,6 +4846,23 @@ async function loginMetEmail() {
   }
 }
 
+const TURNSTILE_SITEKEY = '0x4AAAAAADluFHR8HAXo4XMi';
+let turnstileToken = null;
+let turnstileWidgetId = null;
+
+function renderTurnstile() {
+  const el = document.getElementById('turnstileContainer');
+  if (!el || typeof turnstile === 'undefined') return;
+  if (turnstileWidgetId !== null) { try { turnstile.reset(turnstileWidgetId); } catch(e){} turnstileToken = null; return; }
+  turnstileWidgetId = turnstile.render('#turnstileContainer', {
+    sitekey: TURNSTILE_SITEKEY,
+    theme: 'dark',
+    callback: (token) => { turnstileToken = token; },
+    'expired-callback': () => { turnstileToken = null; },
+    'error-callback': () => { turnstileToken = null; }
+  });
+}
+
 async function registreerMetEmail() {
   const email = document.getElementById('regEmailNieuw')?.value.trim();
   const ww = document.getElementById('regWachtwoordNieuw')?.value;
@@ -4851,8 +4872,11 @@ async function registreerMetEmail() {
   if (!email || !ww) { if(err){err.textContent='Vul alle velden in';err.style.display='block';} return; }
   if (ww.length < 6) { if(err){err.textContent='Wachtwoord moet minimaal 6 tekens zijn';err.style.display='block';} return; }
   if (ww !== ww2) { if(err){err.textContent='Wachtwoorden komen niet overeen';err.style.display='block';} return; }
+  if (!turnstileToken) { if(err){err.textContent='Bevestig even dat je geen robot bent.';err.style.display='block';} return; }
 
-  const { error } = await sb.auth.signUp({ email, password: ww });
+  const { error } = await sb.auth.signUp({ email, password: ww, options: { captchaToken: turnstileToken } });
+  if (turnstileWidgetId !== null && typeof turnstile !== 'undefined') { try { turnstile.reset(turnstileWidgetId); } catch(e){} }
+  turnstileToken = null;
   if (error) {
     if (err) { err.textContent = error.message; err.style.display = 'block'; }
   } else {
