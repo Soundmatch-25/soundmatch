@@ -4918,6 +4918,8 @@ function voerCaptchaUit() {
   return new Promise((resolve) => {
     if (typeof turnstile === 'undefined') { resolve(null); return; }
     zorgVoorTurnstile();
+    // Altijd resetten vóór execute — anders geeft Turnstile het al verbruikte token terug
+    if (turnstileWidgetId !== null) { try { turnstile.reset(turnstileWidgetId); } catch(e){} }
     turnstileToken = null;
     let klaar = false;
     const timeout = setTimeout(() => { if (!klaar) { klaar = true; turnstileResolver = null; resolve(null); } }, 15000);
@@ -4977,7 +4979,6 @@ async function registreerMetEmail() {
   if (!token) { if(err){err.textContent='Verificatie mislukt, probeer het opnieuw.';err.style.display='block';} return; }
 
   const { error } = await sb.auth.signUp({ email, password: ww, options: { captchaToken: token } });
-  if (turnstileWidgetId !== null && typeof turnstile !== 'undefined') { try { turnstile.reset(turnstileWidgetId); } catch(e){} }
   turnstileToken = null; turnstileResolver = null;
   if (error) {
     if (err) { err.textContent = error.message; err.style.display = 'block'; }
