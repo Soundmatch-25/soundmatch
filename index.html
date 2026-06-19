@@ -1456,7 +1456,6 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
       </button>
     </div>
     <div id="regEmailError" style="font-size:13px;color:#ff8a80;display:none;"></div>
-    <div id="turnstileContainer" style="display:flex;justify-content:center;min-height:65px;"></div>
     <button class="btn btn-primary btn-full" style="padding:17px;" onclick="registreerMetEmail()">Account aanmaken</button>
     <div style="text-align:center;font-size:13px;color:var(--sub);">Al een account? <span onclick="showScreen('onboard')" style="color:var(--neon);cursor:pointer;">Inloggen</span></div>
   </div>
@@ -4874,8 +4873,6 @@ function toggleWachtwoord(inputId, btn) {
 
 function showEmailRegistratie() {
   showScreen('emailreg');
-  // Captcha alleen klaarzetten (onzichtbaar) — pas uitvoeren bij de klik op Account aanmaken
-  setTimeout(zorgVoorTurnstile, 100);
 }
 
 async function loginMetEmail() {
@@ -4883,8 +4880,10 @@ async function loginMetEmail() {
   const wachtwoord = document.getElementById('loginWachtwoord')?.value;
   const err = document.getElementById('authError');
   if (!email || !wachtwoord) { if(err){err.textContent='Vul email en wachtwoord in';err.style.display='block';} return; }
-  
-  const { error } = await sb.auth.signInWithPassword({ email, password: wachtwoord });
+
+  const token = await voerCaptchaUit();
+  if (!token) { if(err){err.textContent='Verificatie mislukt, probeer het opnieuw.';err.style.display='block';} return; }
+  const { error } = await sb.auth.signInWithPassword({ email, password: wachtwoord, options: { captchaToken: token } });
   if (error) {
     if (err) {
       err.textContent = error.message.includes('Invalid') ? 'Onjuist e-mailadres of wachtwoord' : error.message;
@@ -4949,7 +4948,12 @@ function startVerstuurCooldown(seconden = 60) {
 async function verstuurBevestigingOpnieuw() {
   if (!laatsteRegistratieEmail) { showScreen('onboard'); return; }
   const status = document.getElementById('opnieuwVerstuurStatus');
-  const { error } = await sb.auth.resend({ type: 'signup', email: laatsteRegistratieEmail });
+  const token = await voerCaptchaUit();
+  if (!token) {
+    if (status) { status.textContent = 'Verificatie mislukt, probeer het opnieuw.'; status.style.color = '#ff8a80'; status.style.display = 'block'; }
+    return;
+  }
+  const { error } = await sb.auth.resend({ type: 'signup', email: laatsteRegistratieEmail, options: { captchaToken: token } });
   if (status) {
     if (error) { status.textContent = 'Versturen mislukt: ' + error.message; status.style.color = '#ff8a80'; }
     else { status.textContent = 'Nieuwe mail verstuurd naar ' + laatsteRegistratieEmail; status.style.color = 'var(--neon)'; }
@@ -4996,7 +5000,9 @@ async function wachtwoordVergeten() {
     toonInfo('E-mailadres nodig', 'Vul eerst je e-mailadres in in het inlogveld hierboven, en klik dan opnieuw op "Wachtwoord vergeten".', '📧');
     return;
   }
-  await sb.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin });
+  const token = await voerCaptchaUit();
+  if (!token) { toonInfo('Verificatie mislukt', 'Probeer het zo nog eens.', '⚠️'); return; }
+  await sb.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin, captchaToken: token });
   toonInfo('Email verstuurd!', 'Als er een account bestaat voor ' + esc(email) + ' ontvang je een reset-link. Check ook je spam.', '📧');
 }
 
@@ -5410,8 +5416,11 @@ startKeepAlive();
 startBerichtenPoll();
 checkNieuweLikes();
 initCookieMelding();
+// Captcha-widget alvast onzichtbaar klaarzetten (pas uitgevoerd bij login/registratie/reset)
+setTimeout(zorgVoorTurnstile, 300);
 </script>
 
+<div id="turnstileContainer" style="position:fixed;bottom:0;left:0;width:1px;height:1px;overflow:hidden;"></div>
 <div id="cookieMelding" style="position:fixed;left:0;right:0;bottom:-200px;z-index:9999;background:var(--card2);border-top:1px solid var(--border);padding:16px 20px;transition:bottom .4s ease;box-shadow:0 -8px 30px rgba(0,0,0,.4);">
   <div style="max-width:720px;margin:0 auto;display:flex;flex-wrap:wrap;align-items:center;gap:14px;">
     <div style="flex:1;min-width:220px;font-size:13px;line-height:1.6;color:var(--sub);">
