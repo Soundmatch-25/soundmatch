@@ -1136,7 +1136,8 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
 
 .btn-spinner { display:inline-block; width:18px; height:18px; border:2px solid rgba(255,255,255,0.35); border-top-color:#fff; border-radius:50%; animation:btnspin 0.7s linear infinite; vertical-align:middle; }
 @keyframes btnspin { to { transform: rotate(360deg); } }
-.btn[disabled] { opacity:0.7; cursor:default; }
+.btn[disabled] { opacity:0.85; cursor:default; }
+#opnieuwVerstuurBtn[disabled] { opacity:1; }
 </style>
 </head>
 <body>
@@ -1814,7 +1815,7 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
     <!-- ── PROFILE PANEL ── -->
     <div class="panel" id="panel-profile">
       <div class="panel-titel" style="width:100%;max-width:600px;font-family:var(--font-head);font-size:20px;font-weight:800;flex-shrink:0;">Mijn Profiel</div>
-      <div id="profielIncompleetBanner" style="display:none;background:rgba(255,193,7,0.1);border:1px solid rgba(255,193,7,0.3);border-radius:14px;padding:14px 16px;display:none;align-items:flex-start;gap:12px;">
+      <div id="profielIncompleetBanner" style="display:none;background:rgba(255,193,7,0.1);border:1px solid rgba(255,193,7,0.3);border-radius:14px;padding:14px 16px;align-items:flex-start;gap:12px;">
         <div style="font-size:20px;">⚠️</div>
         <div style="flex:1;">
           <div style="font-size:14px;font-weight:700;color:#ffc107;">Profiel niet compleet</div>
@@ -4961,7 +4962,7 @@ function knopKlaar(id) {
 }
 let verstuurCooldownTimer = null;
 
-function startVerstuurCooldown(seconden = 60) {
+function startVerstuurCooldown(seconden = 25) {
   const btn = document.getElementById('opnieuwVerstuurBtn');
   if (!btn) return;
   let rest = seconden;
@@ -4969,7 +4970,9 @@ function startVerstuurCooldown(seconden = 60) {
   clearInterval(verstuurCooldownTimer);
   const tick = () => {
     btn.textContent = rest > 0 ? 'Opnieuw versturen (' + rest + 's)' : 'Mail opnieuw versturen';
-    btn.style.opacity = rest > 0 ? '0.55' : '1';
+    // Tekst blijft leesbaar (wit), alleen de knop oogt rustiger tijdens de cooldown
+    btn.style.color = '#fff';
+    btn.style.background = rest > 0 ? 'rgba(255,255,255,0.06)' : '';
     if (rest <= 0) { btn.disabled = false; clearInterval(verstuurCooldownTimer); }
     rest--;
   };
@@ -5262,15 +5265,18 @@ function vulProfielIn(profiel) {
 function checkProfielCompleet(profiel) {
   const banner = document.getElementById('profielIncompleetBanner');
   const tekstEl = document.getElementById('profielIncompleetTekst');
-  if (!banner || !tekstEl) return;
+  if (!banner || !tekstEl || !profiel) return;
 
+  const heeftItems = v => Array.isArray(v) ? v.length > 0 : !!(v && String(v).trim());
   const ontbreekt = [];
   if (!profiel.foto_url) ontbreekt.push('profielfoto');
-  if (!profiel.bio || profiel.bio.trim().length < 10) ontbreekt.push('bio');
-  if (!profiel.instrument || profiel.instrument.length === 0) ontbreekt.push('instrument');
-  if (!profiel.genres || profiel.genres.length === 0) ontbreekt.push('genres');
+  if (!profiel.bio || profiel.bio.trim().length < 5) ontbreekt.push('bio');
+  // Bands hebben geen instrument; alleen voor niet-bands vereisen
+  if (profiel.type !== 'band' && !heeftItems(profiel.instrument)) ontbreekt.push('instrument');
+  if (!heeftItems(profiel.genres)) ontbreekt.push('genres');
 
   if (ontbreekt.length > 0) {
+    console.log('[banner] ontbreekt:', ontbreekt, '| type:', profiel.type, '| instrument:', profiel.instrument, '| genres:', profiel.genres, '| bio-len:', (profiel.bio||'').length, '| foto:', !!profiel.foto_url);
     tekstEl.textContent = 'Vul nog toe: ' + ontbreekt.join(', ') + '. Een compleet profiel krijgt veel meer matches!';
     banner.style.display = 'flex';
   } else {
