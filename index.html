@@ -1380,7 +1380,8 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
         <ul style="margin-top:8px;padding-left:20px;display:flex;flex-direction:column;gap:6px;color:var(--sub);">
           <li><strong style="color:var(--text);">Supabase</strong> — opslag van de database en authenticatie (hosting binnen de EU);</li>
           <li><strong style="color:var(--text);">Vercel</strong> — hosting van de website;</li>
-          <li><strong style="color:var(--text);">Google</strong> — uitsluitend indien je kiest voor "Doorgaan met Google" als inlogmethode.</li>
+          <li><strong style="color:var(--text);">Google</strong> — uitsluitend indien je kiest voor "Doorgaan met Google" als inlogmethode;</li>
+          <li><strong style="color:var(--text);">Cloudflare</strong> — voor de beveiliging van het registratieformulier tegen geautomatiseerd misbruik (zie de paragraaf over bots hieronder).</li>
         </ul>
         <p style="margin-top:10px;">Daarnaast zijn je profielgegevens en advertenties zichtbaar voor andere gebruikers van het platform — dat is immers het doel van Soundmatch. Chatberichten zijn alleen zichtbaar voor jou en je gesprekspartner.</p>
       </div>
@@ -1396,12 +1397,15 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
       </div>
 
       <div>
-        <h2 style="font-family:var(--font-head);font-size:17px;font-weight:800;margin-bottom:12px;color:var(--neon);">6 — Beveiliging</h2>
+        <h2 style="font-family:var(--font-head);font-size:17px;font-weight:800;margin-bottom:12px;color:var(--neon);">6 — Bescherming tegen bots (Cloudflare Turnstile)</h2>
+        <p>Om geautomatiseerde registraties en misbruik tegen te gaan, maakt Soundmatch bij het aanmaken van een account gebruik van <strong style="color:var(--text);">Cloudflare Turnstile</strong>. Deze dienst voert een onzichtbare verificatie uit om te bepalen of een registratie door een mens wordt gedaan. Hierbij worden beperkte technische gegevens (zoals browserkenmerken) door Cloudflare verwerkt. Cloudflare gebruikt deze gegevens niet voor advertenties of profilering. Op het gebruik van Turnstile is het <a href="https://www.cloudflare.com/application-services/terms/turnstile-privacy-policy-addendum/" target="_blank" rel="noopener" style="color:var(--neon2);text-decoration:underline;">Cloudflare Turnstile Privacy Addendum</a> van toepassing.</p>
+
+        <h2 style="font-family:var(--font-head);font-size:17px;font-weight:800;margin-bottom:12px;color:var(--neon);margin-top:8px;">7 — Beveiliging</h2>
         <p>Soundmatch neemt passende technische en organisatorische maatregelen om jouw gegevens te beschermen, waaronder versleutelde verbindingen (HTTPS), versleutelde wachtwoordopslag en toegangsbeperking op databaseniveau (Row Level Security).</p>
       </div>
 
       <div>
-        <h2 style="font-family:var(--font-head);font-size:17px;font-weight:800;margin-bottom:12px;color:var(--neon);">7 — Jouw rechten</h2>
+        <h2 style="font-family:var(--font-head);font-size:17px;font-weight:800;margin-bottom:12px;color:var(--neon);">8 — Jouw rechten</h2>
         <p>Op basis van de AVG heb je de volgende rechten:</p>
         <ul style="margin-top:8px;padding-left:20px;display:flex;flex-direction:column;gap:6px;color:var(--sub);">
           <li><strong style="color:var(--text);">Recht op inzage</strong> (art. 15 AVG): je kunt een overzicht opvragen van de persoonsgegevens die wij van jou verwerken;</li>
@@ -1415,7 +1419,7 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
       </div>
 
       <div>
-        <h2 style="font-family:var(--font-head);font-size:17px;font-weight:800;margin-bottom:12px;color:var(--neon);">8 — Wijzigingen</h2>
+        <h2 style="font-family:var(--font-head);font-size:17px;font-weight:800;margin-bottom:12px;color:var(--neon);">9 — Wijzigingen</h2>
         <p>Soundmatch kan dit privacybeleid wijzigen. Belangrijke wijzigingen worden minimaal 30 dagen voor inwerkingtreding aangekondigd op het platform.</p>
       </div>
 
@@ -4870,8 +4874,8 @@ function toggleWachtwoord(inputId, btn) {
 
 function showEmailRegistratie() {
   showScreen('emailreg');
-  // Captcha-widget renderen (of resetten als hij al bestond)
-  setTimeout(renderTurnstile, 100);
+  // Captcha alleen klaarzetten (onzichtbaar) — pas uitvoeren bij de klik op Account aanmaken
+  setTimeout(zorgVoorTurnstile, 100);
 }
 
 async function loginMetEmail() {
@@ -4893,16 +4897,33 @@ const TURNSTILE_SITEKEY = '0x4AAAAAADluFHR8HAXo4XMi';
 let turnstileToken = null;
 let turnstileWidgetId = null;
 
-function renderTurnstile() {
+// Widget eenmalig klaarzetten in execute-mode (onzichtbaar): pas uitgevoerd bij de klik op Account aanmaken
+let turnstileResolver = null;
+function zorgVoorTurnstile() {
   const el = document.getElementById('turnstileContainer');
   if (!el || typeof turnstile === 'undefined') return;
-  if (turnstileWidgetId !== null) { try { turnstile.reset(turnstileWidgetId); } catch(e){} turnstileToken = null; return; }
+  if (turnstileWidgetId !== null) return;
   turnstileWidgetId = turnstile.render('#turnstileContainer', {
     sitekey: TURNSTILE_SITEKEY,
     theme: 'dark',
-    callback: (token) => { turnstileToken = token; },
+    execution: 'execute',
+    appearance: 'interaction-only',
+    callback: (token) => { turnstileToken = token; if (turnstileResolver) { turnstileResolver(token); turnstileResolver = null; } },
     'expired-callback': () => { turnstileToken = null; },
-    'error-callback': () => { turnstileToken = null; }
+    'error-callback': () => { turnstileToken = null; if (turnstileResolver) { turnstileResolver(null); turnstileResolver = null; } }
+  });
+}
+
+// Voert de captcha-check uit en wacht op het token (max 15s)
+function voerCaptchaUit() {
+  return new Promise((resolve) => {
+    if (typeof turnstile === 'undefined') { resolve(null); return; }
+    zorgVoorTurnstile();
+    turnstileToken = null;
+    let klaar = false;
+    const timeout = setTimeout(() => { if (!klaar) { klaar = true; turnstileResolver = null; resolve(null); } }, 15000);
+    turnstileResolver = (tok) => { if (klaar) return; klaar = true; clearTimeout(timeout); resolve(tok); };
+    try { turnstile.execute(turnstileWidgetId); } catch(e) { if (!klaar) { klaar = true; clearTimeout(timeout); resolve(null); } }
   });
 }
 
@@ -4946,11 +4967,14 @@ async function registreerMetEmail() {
   if (!email || !ww) { if(err){err.textContent='Vul alle velden in';err.style.display='block';} return; }
   if (ww.length < 6) { if(err){err.textContent='Wachtwoord moet minimaal 6 tekens zijn';err.style.display='block';} return; }
   if (ww !== ww2) { if(err){err.textContent='Wachtwoorden komen niet overeen';err.style.display='block';} return; }
-  if (!turnstileToken) { if(err){err.textContent='Bevestig even dat je geen robot bent.';err.style.display='block';} return; }
 
-  const { error } = await sb.auth.signUp({ email, password: ww, options: { captchaToken: turnstileToken } });
+  // Captcha onzichtbaar uitvoeren op het moment van registreren
+  const token = await voerCaptchaUit();
+  if (!token) { if(err){err.textContent='Verificatie mislukt, probeer het opnieuw.';err.style.display='block';} return; }
+
+  const { error } = await sb.auth.signUp({ email, password: ww, options: { captchaToken: token } });
   if (turnstileWidgetId !== null && typeof turnstile !== 'undefined') { try { turnstile.reset(turnstileWidgetId); } catch(e){} }
-  turnstileToken = null;
+  turnstileToken = null; turnstileResolver = null;
   if (error) {
     if (err) { err.textContent = error.message; err.style.display = 'block'; }
   } else {
