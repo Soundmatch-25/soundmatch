@@ -1458,6 +1458,39 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
   </div>
 </div>
 
+<!-- ═══════ MAIL VERSTUURD ═══════ -->
+<div id="screen-mailverstuurd" class="screen" style="background:var(--bg);justify-content:center;align-items:center;">
+  <div style="width:100%;max-width:420px;padding:0 24px;display:flex;flex-direction:column;gap:24px;text-align:center;">
+    <div style="font-size:56px;line-height:1;">📨</div>
+    <div>
+      <div class="auth-logo" style="margin-bottom:16px;">SOUND<span class="acc">MATCH.</span></div>
+      <h1 style="font-family:var(--font-head);font-size:24px;font-weight:900;margin-bottom:12px;">Check je inbox</h1>
+      <p style="color:var(--sub);font-size:14px;line-height:1.7;">We hebben een bevestigingsmail gestuurd naar <strong id="mailVerstuurdAdres" style="color:var(--text);"></strong>. Klik op de link in die mail om je account te activeren.</p>
+    </div>
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px;font-size:13px;color:var(--sub);line-height:1.7;text-align:left;">
+      Geen mail ontvangen? Check je <strong style="color:var(--text);">spam- of ongewenste mail</strong>-map. Soms duurt het een paar minuten voordat de mail binnen is.
+    </div>
+    <button class="btn btn-secondary btn-full" id="opnieuwVerstuurBtn" style="padding:15px;" onclick="verstuurBevestigingOpnieuw()">Mail opnieuw versturen</button>
+    <div id="opnieuwVerstuurStatus" style="font-size:13px;color:var(--neon);display:none;"></div>
+    <div style="text-align:center;font-size:13px;color:var(--sub);"><span onclick="showScreen('onboard')" style="color:var(--neon);cursor:pointer;">← Terug naar inloggen</span></div>
+  </div>
+</div>
+
+<!-- ═══════ ACCOUNT GEACTIVEERD ═══════ -->
+<div id="screen-geactiveerd" class="screen" style="background:var(--bg);justify-content:center;align-items:center;">
+  <div style="width:100%;max-width:420px;padding:0 24px;display:flex;flex-direction:column;gap:24px;text-align:center;">
+    <div style="width:88px;height:88px;border-radius:50%;background:rgba(124,77,255,0.12);display:flex;align-items:center;justify-content:center;margin:0 auto;">
+      <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="var(--neon)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+    </div>
+    <div>
+      <div class="auth-logo" style="margin-bottom:16px;">SOUND<span class="acc">MATCH.</span></div>
+      <h1 style="font-family:var(--font-head);font-size:26px;font-weight:900;margin-bottom:12px;">Je account is geactiveerd! 🎉</h1>
+      <p style="color:var(--sub);font-size:14px;line-height:1.7;">Welkom bij Soundmatch. Maak nu je profiel aan zodat andere muzikanten je kunnen vinden.</p>
+    </div>
+    <button class="btn btn-primary btn-full" style="padding:17px;" onclick="showScreen('register')">Profiel aanmaken →</button>
+  </div>
+</div>
+
 <!-- ═══════ LOGIN ═══════ -->
 <div id="screen-login" class="screen">
   <div class="auth-box">
@@ -4790,6 +4823,16 @@ const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 let currentUser = null;
 let currentProfile = null;
 
+// Detecteer of de gebruiker net via de e-mail-bevestigingslink binnenkomt
+let komtVanBevestiging = false;
+(function detecteerBevestiging() {
+  const hash = window.location.hash || '';
+  const query = window.location.search || '';
+  if (hash.includes('type=signup') || query.includes('type=signup')) {
+    komtVanBevestiging = true;
+  }
+})();
+
 sb.auth.onAuthStateChange(async (event, session) => {
   if (event === 'SIGNED_OUT') {
     currentUser = null;
@@ -4863,6 +4906,37 @@ function renderTurnstile() {
   });
 }
 
+let laatsteRegistratieEmail = null;
+let verstuurCooldownTimer = null;
+
+function startVerstuurCooldown(seconden = 60) {
+  const btn = document.getElementById('opnieuwVerstuurBtn');
+  if (!btn) return;
+  let rest = seconden;
+  btn.disabled = true;
+  clearInterval(verstuurCooldownTimer);
+  const tick = () => {
+    btn.textContent = rest > 0 ? 'Opnieuw versturen (' + rest + 's)' : 'Mail opnieuw versturen';
+    btn.style.opacity = rest > 0 ? '0.55' : '1';
+    if (rest <= 0) { btn.disabled = false; clearInterval(verstuurCooldownTimer); }
+    rest--;
+  };
+  tick();
+  verstuurCooldownTimer = setInterval(tick, 1000);
+}
+
+async function verstuurBevestigingOpnieuw() {
+  if (!laatsteRegistratieEmail) { showScreen('onboard'); return; }
+  const status = document.getElementById('opnieuwVerstuurStatus');
+  const { error } = await sb.auth.resend({ type: 'signup', email: laatsteRegistratieEmail });
+  if (status) {
+    if (error) { status.textContent = 'Versturen mislukt: ' + error.message; status.style.color = '#ff8a80'; }
+    else { status.textContent = 'Nieuwe mail verstuurd naar ' + laatsteRegistratieEmail; status.style.color = 'var(--neon)'; }
+    status.style.display = 'block';
+  }
+  startVerstuurCooldown();
+}
+
 async function registreerMetEmail() {
   const email = document.getElementById('regEmailNieuw')?.value.trim();
   const ww = document.getElementById('regWachtwoordNieuw')?.value;
@@ -4885,8 +4959,10 @@ async function registreerMetEmail() {
     document.getElementById('regEmailNieuw').value = '';
     document.getElementById('regWachtwoordNieuw').value = '';
     document.getElementById('regWachtwoordBevestig').value = '';
-    toonInfo('Account aangemaakt!', 'Check je email om je account te bevestigen. Daarna kun je inloggen.', '✅');
-    showScreen('onboard');
+    laatsteRegistratieEmail = email;
+    document.getElementById('mailVerstuurdAdres').textContent = email;
+    showScreen('mailverstuurd');
+    startVerstuurCooldown();
   }
 }
 
@@ -4942,7 +5018,7 @@ async function laadOfMaakProfiel(user) {
     showScreen('app');
   } else if (profiel && !profiel.naam) {
     currentProfile = profiel;
-    showScreen('register');
+    toonProfielOfGeactiveerd();
   } else {
     const { data: nieuwProfiel } = await sb
       .from('profiles')
@@ -4950,6 +5026,17 @@ async function laadOfMaakProfiel(user) {
       .select()
       .single();
     currentProfile = nieuwProfiel;
+    toonProfielOfGeactiveerd();
+  }
+}
+
+function toonProfielOfGeactiveerd() {
+  if (komtVanBevestiging) {
+    komtVanBevestiging = false;
+    // Hash opschonen zodat een refresh niet opnieuw het scherm toont
+    try { history.replaceState(null, '', window.location.pathname); } catch(e) {}
+    showScreen('geactiveerd');
+  } else {
     showScreen('register');
   }
 }
