@@ -5270,13 +5270,12 @@ function checkProfielCompleet(profiel) {
   const heeftItems = v => Array.isArray(v) ? v.length > 0 : !!(v && String(v).trim());
   const ontbreekt = [];
   if (!profiel.foto_url) ontbreekt.push('profielfoto');
-  if (!profiel.bio || profiel.bio.trim().length < 5) ontbreekt.push('bio');
+  if (!profiel.bio || profiel.bio.trim().length < 1) ontbreekt.push('bio');
   // Bands hebben geen instrument; alleen voor niet-bands vereisen
   if (profiel.type !== 'band' && !heeftItems(profiel.instrument)) ontbreekt.push('instrument');
   if (!heeftItems(profiel.genres)) ontbreekt.push('genres');
 
   if (ontbreekt.length > 0) {
-    console.log('[banner] ontbreekt:', ontbreekt, '| type:', profiel.type, '| instrument:', profiel.instrument, '| genres:', profiel.genres, '| bio-len:', (profiel.bio||'').length, '| foto:', !!profiel.foto_url);
     tekstEl.textContent = 'Vul nog toe: ' + ontbreekt.join(', ') + '. Een compleet profiel krijgt veel meer matches!';
     banner.style.display = 'flex';
   } else {
