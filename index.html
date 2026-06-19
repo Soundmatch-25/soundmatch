@@ -1133,6 +1133,10 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
   pointer-events: none;
 }
 .toast.show { opacity: 1; }
+
+.btn-spinner { display:inline-block; width:18px; height:18px; border:2px solid rgba(255,255,255,0.35); border-top-color:#fff; border-radius:50%; animation:btnspin 0.7s linear infinite; vertical-align:middle; }
+@keyframes btnspin { to { transform: rotate(360deg); } }
+.btn[disabled] { opacity:0.7; cursor:default; }
 </style>
 </head>
 <body>
@@ -1161,7 +1165,7 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
             </button>
           </div>
-          <button class="btn btn-primary btn-full" style="padding:18px;font-size:16px;border-radius:16px;gap:10px;" onclick="loginMetEmail()">
+          <button class="btn btn-primary btn-full" id="loginBtn" style="padding:18px;font-size:16px;border-radius:16px;gap:10px;" onclick="loginMetEmail()">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
             Login met email
           </button>
@@ -1456,7 +1460,7 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
       </button>
     </div>
     <div id="regEmailError" style="font-size:13px;color:#ff8a80;display:none;"></div>
-    <button class="btn btn-primary btn-full" style="padding:17px;" onclick="registreerMetEmail()">Account aanmaken</button>
+    <button class="btn btn-primary btn-full" id="regBtn" style="padding:17px;" onclick="registreerMetEmail()">Account aanmaken</button>
     <div style="text-align:center;font-size:13px;color:var(--sub);">Al een account? <span onclick="showScreen('onboard')" style="color:var(--neon);cursor:pointer;">Inloggen</span></div>
   </div>
 </div>
@@ -4837,7 +4841,6 @@ let komtVanBevestiging = false;
 })();
 
 sb.auth.onAuthStateChange(async (event, session) => {
-  console.log('[auth]', event, 'user:', session?.user?.id || 'geen');
   if (event === 'SIGNED_OUT') {
     currentUser = null;
     currentProfile = null;
@@ -4889,16 +4892,20 @@ async function loginMetEmail() {
   const wachtwoord = document.getElementById('loginWachtwoord')?.value;
   const err = document.getElementById('authError');
   if (!email || !wachtwoord) { if(err){err.textContent='Vul email en wachtwoord in';err.style.display='block';} return; }
+  if (err) err.style.display = 'none';
 
+  knopBezig('loginBtn', 'Inloggen...');
   const token = await voerCaptchaUit();
-  if (!token) { if(err){err.textContent='Verificatie mislukt, probeer het opnieuw.';err.style.display='block';} return; }
+  if (!token) { knopKlaar('loginBtn'); if(err){err.textContent='Verificatie mislukt, probeer het opnieuw.';err.style.display='block';} return; }
   const { error } = await sb.auth.signInWithPassword({ email, password: wachtwoord, options: { captchaToken: token } });
   if (error) {
+    knopKlaar('loginBtn');
     if (err) {
       err.textContent = error.message.includes('Invalid') ? 'Onjuist e-mailadres of wachtwoord' : error.message;
       err.style.display = 'block';
     }
   }
+  // Bij succes navigeert de app weg van het loginscherm; knop hoeft niet hersteld te worden
 }
 
 const TURNSTILE_SITEKEY = '0x4AAAAAADluFHR8HAXo4XMi';
@@ -4938,6 +4945,20 @@ function voerCaptchaUit() {
 }
 
 let laatsteRegistratieEmail = null;
+
+function knopBezig(id, tekst) {
+  const btn = document.getElementById(id);
+  if (!btn) return;
+  btn.dataset.origineel = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<span class="btn-spinner"></span> ' + (tekst || 'Even geduld...');
+}
+function knopKlaar(id) {
+  const btn = document.getElementById(id);
+  if (!btn || btn.dataset.origineel === undefined) return;
+  btn.innerHTML = btn.dataset.origineel;
+  btn.disabled = false;
+}
 let verstuurCooldownTimer = null;
 
 function startVerstuurCooldown(seconden = 60) {
@@ -4983,11 +5004,14 @@ async function registreerMetEmail() {
   if (ww.length < 6) { if(err){err.textContent='Wachtwoord moet minimaal 6 tekens zijn';err.style.display='block';} return; }
   if (ww !== ww2) { if(err){err.textContent='Wachtwoorden komen niet overeen';err.style.display='block';} return; }
 
+  if (err) err.style.display = 'none';
+  knopBezig('regBtn', 'Account aanmaken...');
   // Captcha onzichtbaar uitvoeren op het moment van registreren
   const token = await voerCaptchaUit();
-  if (!token) { if(err){err.textContent='Verificatie mislukt, probeer het opnieuw.';err.style.display='block';} return; }
+  if (!token) { knopKlaar('regBtn'); if(err){err.textContent='Verificatie mislukt, probeer het opnieuw.';err.style.display='block';} return; }
 
   const { error } = await sb.auth.signUp({ email, password: ww, options: { captchaToken: token } });
+  knopKlaar('regBtn');
   turnstileToken = null; turnstileResolver = null;
   if (error) {
     if (err) { err.textContent = error.message; err.style.display = 'block'; }
@@ -5042,13 +5066,11 @@ async function uitloggen() {
 }
 
 async function laadOfMaakProfiel(user) {
-  console.log('[profiel] laden voor', user.id);
   const { data: profiel, error } = await sb
     .from('profiles')
     .select('*')
     .eq('id', user.id)
     .maybeSingle();
-  console.log('[profiel] resultaat:', profiel ? ('naam=' + profiel.naam) : 'geen profiel', error ? ('FOUT: ' + error.message) : '');
 
   if (profiel && profiel.naam) {
     currentProfile = profiel;
