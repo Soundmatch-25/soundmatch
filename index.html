@@ -523,6 +523,8 @@ html, body {
   border-radius: 40px;
   padding: 4px;
   gap: 0;
+  margin: 0 auto;
+  width: fit-content;
 }
 .type-toggle-slider {
   position: absolute;
@@ -661,6 +663,7 @@ html, body {
   width: 40px; height: 40px; border-radius: 12px;
   background: var(--grad); display: flex; align-items: center; justify-content: center; font-size: 20px;
 }
+.chat-av-sm img { border-radius: 12px !important; }
 .chat-msgs {
   flex: 1;
   overflow-y: auto;
@@ -1550,7 +1553,7 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
     <!-- Type -->
     <div>
       <div class="field-label">Ik ben een...</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
         <div class="type-card active" id="regMuz" onclick="setRegRole('muzikant')">
           <div class="type-card-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>
           <div class="type-card-label">Muzikant</div>
@@ -1620,10 +1623,12 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
       <div><div class="field-label">Beschikbaarheid</div><select class="select-field" id="regBeschikbaarheid"><option>Hobby</option><option selected>Serieus</option><option>Professioneel</option></select></div>
     </div>
 
-    <!-- Bio -->
-    <div>
-      <div class="field-label">Bio</div>
-      <textarea class="input-field" id="regBio" maxlength="500" rows="3" style="resize:none;overflow:hidden;" placeholder="Vertel iets over jezelf en wat je zoekt..." oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"></textarea>
+    <!-- Bio (belangrijk veld) -->
+    <div style="background:var(--card2);border:1px solid var(--border);border-radius:14px;padding:16px;">
+      <div class="field-label" style="font-size:15px;">Bio <span style="color:var(--neon);">— jouw verhaal</span></div>
+      <div style="font-size:12px;color:var(--sub);margin:-4px 0 10px;">Vertel wie je bent, wat je zoekt en wat je muzikaal drijft. Een goede bio levert meer matches op.</div>
+      <textarea class="input-field" id="regBio" maxlength="1500" rows="7" style="resize:vertical;min-height:150px;" placeholder="Vertel iets over jezelf, je invloeden, ervaring en wat je zoekt..." oninput="document.getElementById('regBioTeller').textContent=this.value.length+' / 1500'"></textarea>
+      <div style="text-align:right;font-size:11px;color:var(--sub);margin-top:4px;" id="regBioTeller">0 / 1500</div>
     </div>
 
     <!-- Links -->
@@ -1893,7 +1898,7 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
             <!-- Type -->
             <div>
               <div class="field-label">Type advertentie</div>
-              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+              <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
                 <div class="type-card active" id="adTypeMuz" onclick="setAdTypeNieuw('muzikant')">
                   <div class="type-card-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>
                   <div class="type-card-label">Muzikant</div>
@@ -1948,6 +1953,9 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
                 <input type="checkbox" id="adCoverband" style="width:18px;height:18px;accent-color:var(--neon);"/> Wij zijn een coverband
               </label>
               <label style="display:flex;align-items:center;gap:10px;font-size:14px;color:var(--text);cursor:pointer;margin-top:8px;">
+                <input type="checkbox" id="adEigenWerk" style="width:18px;height:18px;accent-color:var(--neon);"/> Wij spelen eigen werk
+              </label>
+              <label style="display:flex;align-items:center;gap:10px;font-size:14px;color:var(--text);cursor:pointer;margin-top:8px;">
                 <input type="checkbox" id="adInOprichting" style="width:18px;height:18px;accent-color:var(--neon);"/> Band in oprichting
               </label>
             </div>
@@ -1985,10 +1993,12 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
               </div>
             </div>
 
-            <!-- Bio -->
-            <div>
-              <div class="field-label">Beschrijving</div>
-              <textarea class="input-field" id="adBio" maxlength="500" rows="3" style="resize:none;overflow:hidden;" placeholder="Vertel iets over jezelf, wat je zoekt, wanneer je beschikbaar bent..." oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"></textarea>
+            <!-- Beschrijving (belangrijk veld) -->
+            <div style="background:var(--card2);border:1px solid var(--border);border-radius:14px;padding:16px;">
+              <div class="field-label" style="font-size:15px;">Beschrijving <span style="color:var(--neon);">— jouw verhaal</span></div>
+              <div style="font-size:12px;color:var(--sub);margin:-4px 0 10px;">Dit is het belangrijkste deel van je advertentie. Vertel wie je bent, wat je zoekt, je invloeden en beschikbaarheid.</div>
+              <textarea class="input-field" id="adBio" maxlength="1500" rows="7" style="resize:vertical;min-height:150px;" placeholder="Vertel over jezelf, wat je zoekt, je muzikale invloeden, ervaring en beschikbaarheid..." oninput="document.getElementById('adBioTeller').textContent=this.value.length+' / 1500'"></textarea>
+              <div style="text-align:right;font-size:11px;color:var(--sub);margin-top:4px;" id="adBioTeller">0 / 1500</div>
             </div>
 
             <!-- Links -->
@@ -2131,7 +2141,7 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
       </div>
       <div id="kdTags" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
       <div id="kdRijen"></div>
-      <div id="kdBio" style="font-size:14px;color:var(--sub);line-height:1.6;"></div>
+      <div id="kdBio" style="font-size:15px;color:var(--text);line-height:1.7;white-space:pre-wrap;"></div>
       <div id="kdLinks"></div>
       <div style="display:flex;gap:10px;padding-top:4px;">
         <button class="btn btn-primary" style="flex:1;" onclick="sluitKaartDetail();openDirectBerichtModal()">
@@ -2187,7 +2197,7 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
         <div style="font-size:14px;color:var(--neon);margin-top:4px;" id="lijstDetailRol"></div>
       </div>
       <div id="lijstDetailTags" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
-      <div id="lijstDetailBio" style="font-size:14px;color:var(--sub);line-height:1.6;display:none;"></div>
+      <div id="lijstDetailBio" style="font-size:15px;color:var(--text);line-height:1.7;white-space:pre-wrap;display:none;"></div>
       <div id="lijstDetailLinks" style="display:none;"></div>
       <div style="display:flex;gap:10px;">
         <button class="btn btn-primary" style="flex:2;" onclick="stuurBerichtNaarLijstItem()">
@@ -2220,6 +2230,17 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
       </div>
       <input type="range" min="5" max="100" value="30" step="5" oninput="document.getElementById('distVal').textContent=this.value+' km'"/>
     </div>
+    <div id="filterLocatieSectie">
+      <div class="field-label">Provincie (optioneel)</div>
+      <select class="select-field" id="filterProvincie" onchange="filterUpdateSteden()" style="margin-bottom:10px;">
+        <option value="">Heel Nederland</option>
+      </select>
+      <div class="field-label">Stad (optioneel)</div>
+      <select class="select-field" id="filterStad">
+        <option value="">Hele provincie</option>
+      </select>
+      <div style="font-size:11px;color:var(--sub);margin-top:6px;">Laat leeg om te zoeken op afstand vanaf je eigen locatie.</div>
+    </div>
     <div id="filterLeeftijdSectie">
       <div style="display:flex;justify-content:space-between;margin-bottom:10px;">
         <div class="field-label" style="margin:0;">Leeftijdsbereik</div>
@@ -2246,20 +2267,13 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
         <div class="chip selected" onclick="tc(this)">Alles</div><div class="chip" onclick="tc(this)">Beginner</div><div class="chip" onclick="tc(this)">Gevorderd</div><div class="chip" onclick="tc(this)">Professioneel</div>
       </div>
     </div>
-    <div>
-      <div class="field-label">Max. hoe lang geleden geplaatst</div>
-      <select class="select-field" id="filterGeplaatst">
-        <option value="0">Maakt niet uit</option>
-        <option value="14">2 weken</option>
-        <option value="30">1 maand</option>
-        <option value="60">2 maanden</option>
-        <option value="180">6 maanden</option>
-      </select>
-    </div>
     <div id="filterBandExtra" style="display:none;">
       <div class="field-label">Band-opties</div>
       <label style="display:flex;align-items:center;gap:10px;font-size:14px;color:var(--text);cursor:pointer;margin-bottom:8px;">
         <input type="checkbox" id="filterCoverband" style="width:18px;height:18px;accent-color:var(--neon);"/> Alleen coverbands
+      </label>
+      <label style="display:flex;align-items:center;gap:10px;font-size:14px;color:var(--text);cursor:pointer;margin-bottom:8px;">
+        <input type="checkbox" id="filterEigenWerk" style="width:18px;height:18px;accent-color:var(--neon);"/> Alleen bands met eigen werk
       </label>
       <label style="display:flex;align-items:center;gap:10px;font-size:14px;color:var(--text);cursor:pointer;">
         <input type="checkbox" id="filterOprichting" style="width:18px;height:18px;accent-color:var(--neon);"/> Alleen bands in oprichting
@@ -2466,8 +2480,10 @@ async function laadAdvertenties() {
   if (activeType === 'bands') profielQuery = profielQuery.eq('type', 'band');
   else if (activeType === 'muzikanten') profielQuery = profielQuery.eq('type', 'muzikant');
   else if (activeType === 'industry') profielQuery = profielQuery.eq('type', 'industry');
-  if (filterState.minLeeftijd > 16) profielQuery = profielQuery.gte('leeftijd', filterState.minLeeftijd);
-  if (filterState.maxLeeftijd < 100) profielQuery = profielQuery.lte('leeftijd', filterState.maxLeeftijd);
+  if (activeType !== 'bands') {
+    if (filterState.minLeeftijd > 16) profielQuery = profielQuery.gte('leeftijd', filterState.minLeeftijd);
+    if (filterState.maxLeeftijd < 100) profielQuery = profielQuery.lte('leeftijd', filterState.maxLeeftijd);
+  }
   if (filterState.niveau) profielQuery = profielQuery.eq('niveau', filterState.niveau);
   profielQuery = profielQuery.order('actief_op', { ascending: false }).limit(50);
 
@@ -2515,19 +2531,40 @@ async function laadAdvertenties() {
     );
   }
 
-  // Hoe lang geleden geplaatst (alleen op advertenties — profielen hebben geen plaatsdatum)
-  if (filterState.geplaatstDagen > 0) {
-    const grens = Date.now() - filterState.geplaatstDagen * 24 * 60 * 60 * 1000;
-    adKaarten = adKaarten.filter(a => {
-      const d = a.raw?.aangemaakt_op;
-      if (!d) return false;
-      const ts = (typeof d === 'string' && !d.endsWith('Z') && !d.includes('+')) ? d + 'Z' : d;
-      return new Date(ts).getTime() >= grens;
-    });
+  // Bands: leeftijd is een range-string ("18-45"). Overlap met de gekozen filter-range.
+  if (activeType === 'bands' && (filterState.minLeeftijd > 16 || filterState.maxLeeftijd < 100)) {
+    const overlap = (rangeStr) => {
+      if (!rangeStr) return true; // geen leeftijd opgegeven = altijd tonen
+      const m = String(rangeStr).match(/(\d+)\s*-\s*(\d+)/);
+      if (!m) return true;
+      const van = parseInt(m[1]), tot = parseInt(m[2]);
+      return van <= filterState.maxLeeftijd && tot >= filterState.minLeeftijd;
+    };
+    adKaarten = adKaarten.filter(a => overlap(a.raw?.leeftijd));
   }
-  // Coverband / band in oprichting (alleen advertenties van bands hebben deze vlaggen)
+  // Niveau ook op advertentie-kaarten toepassen
+  if (filterState.niveau) {
+    adKaarten = adKaarten.filter(a => (a.raw?.niveau || '') === filterState.niveau);
+  }
+
+  // Locatie-filter: als provincie/stad is gekozen, daarop filteren (anders blijft afstand t.o.v. profiel gelden)
+  if (filterState.provincie) {
+    const matchLoc = (loc) => (loc || '').toLowerCase().includes(filterState.provincie.toLowerCase());
+    profielKaarten = profielKaarten.filter(p => matchLoc(p.raw?.locatie || p.raw?.provincie));
+    adKaarten = adKaarten.filter(a => matchLoc(a.raw?.locatie || a.raw?.profiel?.locatie));
+  }
+  if (filterState.stad) {
+    const matchStad = (loc) => (loc || '').toLowerCase().includes(filterState.stad.toLowerCase());
+    profielKaarten = profielKaarten.filter(p => matchStad(p.raw?.locatie || p.raw?.stad));
+    adKaarten = adKaarten.filter(a => matchStad(a.raw?.locatie || a.raw?.profiel?.locatie));
+  }
+  // Coverband / eigen werk / band in oprichting (alleen band-advertenties hebben deze vlaggen)
   if (filterState.alleenCoverband) {
     adKaarten = adKaarten.filter(a => a.raw?.coverband === true);
+    profielKaarten = [];
+  }
+  if (filterState.alleenEigenWerk) {
+    adKaarten = adKaarten.filter(a => a.raw?.eigen_werk === true);
     profielKaarten = [];
   }
   if (filterState.alleenOprichting) {
@@ -4247,6 +4284,7 @@ function toonAdFormulier() {
   document.getElementById('adBeschikbaarheid').value = 'Serieus';
   document.querySelectorAll('#adInstrumenten .chip, #adGenres .chip, #adWijZoeken .chip, #adIndustrySoort .chip').forEach(c => c.classList.remove('selected'));
   const cb1 = document.getElementById('adCoverband'); if (cb1) cb1.checked = false;
+  const cbEW = document.getElementById('adEigenWerk'); if (cbEW) cbEW.checked = false;
   const cb2 = document.getElementById('adInOprichting'); if (cb2) cb2.checked = false;
   // Reset links
   document.getElementById('adLinks').innerHTML = resetLinksHTML();
@@ -4409,6 +4447,7 @@ async function slaAdvertentieOp() {
       foto_url: adFotoUrl || null,
       leeftijd: leeftijdInfo, locatie, actief: true,
       coverband: isBand ? !!document.getElementById('adCoverband')?.checked : false,
+      eigen_werk: isBand ? !!document.getElementById('adEigenWerk')?.checked : false,
       in_oprichting: isBand ? !!document.getElementById('adInOprichting')?.checked : false
     };
 
@@ -4474,6 +4513,7 @@ async function bewerkAd(id) {
   document.querySelectorAll('#adIndustrySoort .chip').forEach(c => c.classList.toggle('selected', (ad.instrumenten||[]).includes(c.textContent)));
   document.querySelectorAll('#adGenres .chip').forEach(c => c.classList.toggle('selected', (ad.genres||[]).includes(c.textContent)));
   const ecb1 = document.getElementById('adCoverband'); if (ecb1) ecb1.checked = !!ad.coverband;
+  const ecbEW = document.getElementById('adEigenWerk'); if (ecbEW) ecbEW.checked = !!ad.eigen_werk;
   const ecb2 = document.getElementById('adInOprichting'); if (ecb2) ecb2.checked = !!ad.in_oprichting;
 
   // Links
@@ -4721,7 +4761,7 @@ function selectMsg(el) {
 
 // ═══════════════ FILTER ═══════════════
 // ═══════════════ FILTER STATE ═══════════════
-let filterState = { minLeeftijd: 16, maxLeeftijd: 100, instrumenten: [], genres: [], niveau: '', geplaatstDagen: 0, alleenCoverband: false, alleenOprichting: false };
+let filterState = { minLeeftijd: 16, maxLeeftijd: 100, instrumenten: [], genres: [], niveau: '', provincie: '', stad: '', alleenCoverband: false, alleenEigenWerk: false, alleenOprichting: false };
 
 function closeFilter() {
   filterState.minLeeftijd = parseInt(document.getElementById('ageMin')?.value || 16);
@@ -4736,8 +4776,10 @@ function closeFilter() {
   const niveauChips = [...document.querySelectorAll('#filterNiveau .chip.selected')].map(c => c.textContent);
   filterState.niveau = niveauChips.includes('Alles') ? '' : (niveauChips[0] || '');
 
-  filterState.geplaatstDagen = parseInt(document.getElementById('filterGeplaatst')?.value || '0');
+  filterState.provincie = document.getElementById('filterProvincie')?.value || '';
+  filterState.stad = document.getElementById('filterStad')?.value || '';
   filterState.alleenCoverband = !!document.getElementById('filterCoverband')?.checked;
+  filterState.alleenEigenWerk = !!document.getElementById('filterEigenWerk')?.checked;
   filterState.alleenOprichting = !!document.getElementById('filterOprichting')?.checked;
 
   document.getElementById('filterModal').classList.remove('open');
@@ -4745,7 +4787,30 @@ function closeFilter() {
   laadAdvertenties();
 }
 
+function filterUpdateSteden() {
+  const provincie = document.getElementById('filterProvincie')?.value;
+  const stadSelect = document.getElementById('filterStad');
+  if (!stadSelect) return;
+  stadSelect.innerHTML = '<option value="">Hele provincie</option>';
+  if (provincie && stedenPerProvincie[provincie]) {
+    stedenPerProvincie[provincie].forEach(stad => {
+      const opt = document.createElement('option');
+      opt.value = stad; opt.textContent = stad;
+      stadSelect.appendChild(opt);
+    });
+  }
+}
+
 function openFilter() {
+  // Provincie-dropdown vullen (eenmalig)
+  const provSel = document.getElementById('filterProvincie');
+  if (provSel && provSel.options.length <= 1) {
+    Object.keys(stedenPerProvincie).forEach(prov => {
+      const opt = document.createElement('option');
+      opt.value = prov; opt.textContent = prov;
+      provSel.appendChild(opt);
+    });
+  }
   // Filter afstemmen op de huidige categorie (vult chips, label, zichtbaarheid)
   setFR(activeType);
   document.getElementById('filterModal').classList.add('open');
@@ -4799,7 +4864,7 @@ function closeLightbox() {
 }
 // ── Centrale optie-lijsten (één bron, overal toegepast) ──
 const INSTRUMENTEN = ['Zang','Gitaar','Basgitaar','Drums','Percussie','Keys / Piano','Pianist','Organist','Synthesizer','Toetsenist','Viool','Cello','Contrabas','Trompet','Trombone','Saxofoon','Klarinet','Fluit','Accordeon','Banjo','Ukelele','DJ','Producer','Songwriter','Componist','Dirigent','Rapper','Overig'];
-const WIJ_ZOEKEN = ['Zanger/es','Gitarist','Bassist','Drummer','Percussionist','Toetsenist','Pianist','Organist','Violist','Cellist','Contrabassist','Trompettist','Trombonist','Saxofonist','Klarinettist','Fluitist','Accordeonist','DJ','Producer','Songwriter','Componist','Dirigent','Rapper','Overig'];
+const WIJ_ZOEKEN = ['Zanger/es','Gitarist','Bassist','Drummer','Percussionist','Toetsenist','Pianist','Organist','Violist','Cellist','Contrabassist','Trompettist','Trombonist','Saxofonist','Klarinettist','Fluitist','Accordeonist','Producer','Songwriter','Componist','Dirigent','Rapper','Overig'];
 const GENRES = ['Rock','Classic Rock','Alt-Rock','Indie Rock','Indie','Prog Rock','Hardrock','Stonerrock','Punk','Pop-Punk','Hardcore','Metal','Heavy Metal','Pop','Indie Pop','Jazz','Blues','Soul','R&B','Funk','Hip-Hop','Rap','Electronic','Dance','House','Techno','Drum & Bass','Dubstep','Disco','Ambient','Folk','Bluegrass','Country','Latin','Reggae','Ska','Chanson','Wereldmuziek','Klassiek','Gospel','Christelijk','Religieus','Overig'];
 const INDUSTRY_SOORT = ['Studio','Oefenruimte','Producer','Geluidstechnicus','Manager','Label','Overig'];
 
@@ -4823,7 +4888,7 @@ function vulAlleChips() {
 // Optie-sets per categorie voor het filter (de chip-sectie beweegt mee)
 const FILTER_OPTIES = {
   muzikanten: { label: 'Bespeelt...', items: INSTRUMENTEN, leeftijd: true, niveau: true },
-  bands:      { label: 'Zoekt naar...', items: WIJ_ZOEKEN, leeftijd: false, niveau: false },
+  bands:      { label: 'Zoekt naar...', items: WIJ_ZOEKEN, leeftijd: true, niveau: true },
   industry:   { label: 'Soort', items: INDUSTRY_SOORT, leeftijd: false, niveau: false }
 };
 
