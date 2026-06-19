@@ -4837,16 +4837,23 @@ let komtVanBevestiging = false;
 })();
 
 sb.auth.onAuthStateChange(async (event, session) => {
+  console.log('[auth]', event, 'user:', session?.user?.id || 'geen');
   if (event === 'SIGNED_OUT') {
     currentUser = null;
     currentProfile = null;
     showScreen('onboard');
   } else if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session?.user) {
-    if (currentUser?.id === session.user.id) return;
+    if (currentUser?.id === session.user.id && currentProfile) return;
     currentUser = session.user;
-    // Direct online status updaten
-    try { await sb.from('profiles').update({ online_op: new Date().toISOString() }).eq('id', session.user.id); } catch(e) {}
-    await laadOfMaakProfiel(session.user);
+    // Online status op de achtergrond updaten — mag de doorstroom nooit blokkeren
+    sb.from('profiles').update({ online_op: new Date().toISOString() }).eq('id', session.user.id).then(()=>{}, ()=>{});
+    try {
+      await laadOfMaakProfiel(session.user);
+    } catch (e) {
+      console.error('laadOfMaakProfiel fout:', e.message);
+      // Niet vastlopen op het loginscherm: stuur door naar profiel aanmaken
+      showScreen('register');
+    }
   } else if (event === 'TOKEN_REFRESHED' && session?.user) {
     currentUser = session.user;
   }
@@ -5033,11 +5040,13 @@ async function uitloggen() {
 }
 
 async function laadOfMaakProfiel(user) {
+  console.log('[profiel] laden voor', user.id);
   const { data: profiel, error } = await sb
     .from('profiles')
     .select('*')
     .eq('id', user.id)
     .maybeSingle();
+  console.log('[profiel] resultaat:', profiel ? ('naam=' + profiel.naam) : 'geen profiel', error ? ('FOUT: ' + error.message) : '');
 
   if (profiel && profiel.naam) {
     currentProfile = profiel;
