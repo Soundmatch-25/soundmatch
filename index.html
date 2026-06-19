@@ -1612,6 +1612,13 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
       </div>
     </div>
 
+    <div id="regVeldenIndustry" style="display:none;">
+      <div class="field-label">Soort *</div>
+      <div class="chip-group" id="regIndustrySoort">
+        <div class="chip" onclick="tc(this)">Studio</div><div class="chip" onclick="tc(this)">Oefenruimte</div><div class="chip" onclick="tc(this)">Producer</div><div class="chip" onclick="tc(this)">Geluidstechnicus</div><div class="chip" onclick="tc(this)">Manager</div><div class="chip" onclick="tc(this)">Label</div><div class="chip" onclick="tc(this)">Overig</div>
+      </div>
+    </div>
+
     <!-- Genre (altijd) -->
     <div>
       <div class="field-label">Genre(s)</div>
@@ -1962,6 +1969,14 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
               </div>
             </div>
 
+            <!-- Soort (industry) -->
+            <div id="adVeldenIndustry" style="display:none;">
+              <div class="field-label">Soort *</div>
+              <div class="chip-group" id="adIndustrySoort">
+                <div class="chip" onclick="tc(this)">Studio</div><div class="chip" onclick="tc(this)">Oefenruimte</div><div class="chip" onclick="tc(this)">Producer</div><div class="chip" onclick="tc(this)">Geluidstechnicus</div><div class="chip" onclick="tc(this)">Manager</div><div class="chip" onclick="tc(this)">Label</div><div class="chip" onclick="tc(this)">Overig</div>
+              </div>
+            </div>
+
             <!-- Genres -->
             <div>
               <div class="field-label">Genre(s)</div>
@@ -2227,7 +2242,7 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
       </div>
       <input type="range" min="5" max="100" value="30" step="5" oninput="document.getElementById('distVal').textContent=this.value+' km'"/>
     </div>
-    <div>
+    <div id="filterLeeftijdSectie">
       <div style="display:flex;justify-content:space-between;margin-bottom:10px;">
         <div class="field-label" style="margin:0;">Leeftijdsbereik</div>
         <div style="font-size:14px;font-weight:600;color:var(--text)" id="ageLabel">18 – 45</div>
@@ -2239,11 +2254,9 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
         <input type="range" id="ageMax" min="16" max="100" value="45" step="1" oninput="updateAge()"/>
       </div>
     </div>
-    <div>
-      <div class="field-label">Instrument</div>
-      <div class="chip-group" id="filterInstrumenten">
-        <div class="chip selected" onclick="tc(this)">Alles</div><div class="chip" onclick="tc(this)">Gitaar</div><div class="chip" onclick="tc(this)">Basgitaar</div><div class="chip" onclick="tc(this)">Drums</div><div class="chip" onclick="tc(this)">Percussie</div><div class="chip" onclick="tc(this)">Zang</div><div class="chip" onclick="tc(this)">Keys / Piano</div><div class="chip" onclick="tc(this)">Synthesizer</div><div class="chip" onclick="tc(this)">Viool</div><div class="chip" onclick="tc(this)">Cello</div><div class="chip" onclick="tc(this)">Trompet</div><div class="chip" onclick="tc(this)">Saxofoon</div><div class="chip" onclick="tc(this)">Trombone</div><div class="chip" onclick="tc(this)">DJ</div><div class="chip" onclick="tc(this)">Producer</div><div class="chip" onclick="tc(this)">Ukulele</div><div class="chip" onclick="tc(this)">Banjo</div><div class="chip" onclick="tc(this)">Overig</div>
-      </div>
+    <div id="filterChipSectie">
+      <div class="field-label" id="filterChipLabel">Bespeelt...</div>
+      <div class="chip-group" id="filterInstrumenten"></div>
     </div>
     <div>
       <div class="field-label">Genre</div>
@@ -2251,7 +2264,7 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
         <div class="chip selected" onclick="tc(this)">Alles</div><div class="chip" onclick="tc(this)">Rock</div><div class="chip" onclick="tc(this)">Classic Rock</div><div class="chip" onclick="tc(this)">Alt-Rock</div><div class="chip" onclick="tc(this)">Indie Rock</div><div class="chip" onclick="tc(this)">Prog Rock</div><div class="chip" onclick="tc(this)">Punk</div><div class="chip" onclick="tc(this)">Pop-Punk</div><div class="chip" onclick="tc(this)">Hardcore</div><div class="chip" onclick="tc(this)">Metal</div><div class="chip" onclick="tc(this)">Heavy Metal</div><div class="chip" onclick="tc(this)">Pop</div><div class="chip" onclick="tc(this)">Indie Pop</div><div class="chip" onclick="tc(this)">Jazz</div><div class="chip" onclick="tc(this)">Blues</div><div class="chip" onclick="tc(this)">Soul</div><div class="chip" onclick="tc(this)">R&amp;B</div><div class="chip" onclick="tc(this)">Funk</div><div class="chip" onclick="tc(this)">Hip-hop</div><div class="chip" onclick="tc(this)">Electronic</div><div class="chip" onclick="tc(this)">House</div><div class="chip" onclick="tc(this)">Techno</div><div class="chip" onclick="tc(this)">Folk</div><div class="chip" onclick="tc(this)">Country</div><div class="chip" onclick="tc(this)">Reggae</div><div class="chip" onclick="tc(this)">Ska</div><div class="chip" onclick="tc(this)">Klassiek</div><div class="chip" onclick="tc(this)">Overig</div>
       </div>
     </div>
-    <div>
+    <div id="filterNiveauSectie">
       <div class="field-label">Niveau</div>
       <div class="chip-group" id="filterNiveau">
         <div class="chip selected" onclick="tc(this)">Alles</div><div class="chip" onclick="tc(this)">Beginner</div><div class="chip" onclick="tc(this)">Gevorderd</div><div class="chip" onclick="tc(this)">Professioneel</div>
@@ -2348,7 +2361,12 @@ function profielNaarKaart(p) {
   const stad = p.stad || p.locatie || '';
   const naam = p.naam || 'Onbekend';
   const type = p.type || 'muzikant';
-  const rol = type === 'band' ? 'Band zoekt muzikant' : type === 'sessie' ? 'Sessiemuzikant' : type === 'industry' ? 'Industry professional' : 'Muzikant zoekt band';
+  const eersteItem = (p.instrument || [])[0];
+  const rol = type === 'band'
+    ? (eersteItem ? 'Band zoekt ' + eersteItem.toLowerCase() : 'Band zoekt muzikant')
+    : type === 'sessie' ? 'Sessiemuzikant'
+    : type === 'industry' ? (eersteItem || 'Industry')
+    : 'Muzikant zoekt band';
   const tags = [...(p.instrument || []).slice(0,2), ...(p.genres || []).slice(0,1), p.niveau, stad].filter(Boolean);
   return {
     id: p.id,
@@ -2522,7 +2540,12 @@ function advertentieNaarKaart(a) {
   const genres = (a.genres || []).slice(0,2).join(' / ') || 'Muzikant';
   const naam = a.titel || profiel.naam || 'Onbekend';
   const type = a.type || 'muzikant';
-  const rol = type === 'band' ? 'Band zoekt muzikant' : type === 'sessie' ? 'Sessiemuzikant' : type === 'industry' ? 'Industry professional' : 'Muzikant zoekt band';
+  const eersteItem = (a.instrumenten || [])[0];
+  const rol = type === 'band'
+    ? (eersteItem ? 'Band zoekt ' + eersteItem.toLowerCase() : 'Band zoekt muzikant')
+    : type === 'sessie' ? 'Sessiemuzikant'
+    : type === 'industry' ? (eersteItem || 'Industry')
+    : 'Muzikant zoekt band';
   const tags = [...(a.instrumenten || []).slice(0,2), ...(a.genres || []).slice(0,1), a.niveau, profiel.stad || profiel.locatie].filter(Boolean);
   return {
     id: a.id,
@@ -4211,7 +4234,7 @@ function toonAdFormulier() {
   document.getElementById('adBio').value = '';
   document.getElementById('adNiveau').value = 'Gevorderd';
   document.getElementById('adBeschikbaarheid').value = 'Serieus';
-  document.querySelectorAll('#adInstrumenten .chip, #adGenres .chip, #adWijZoeken .chip').forEach(c => c.classList.remove('selected'));
+  document.querySelectorAll('#adInstrumenten .chip, #adGenres .chip, #adWijZoeken .chip, #adIndustrySoort .chip').forEach(c => c.classList.remove('selected'));
   // Reset links
   document.getElementById('adLinks').innerHTML = resetLinksHTML();
   // Reset type naar muzikant
@@ -4246,9 +4269,13 @@ function setAdTypeNieuw(adType) {
     el.classList.toggle('active', t === adType);
   });
   const isBand = adType === 'band';
-  document.getElementById('adVeldenMuz').style.display = isBand ? 'none' : 'block';
+  const isIndustry = adType === 'industry';
+  document.getElementById('adVeldenMuz').style.display = (isBand || isIndustry) ? 'none' : 'block';
   document.getElementById('adVeldenBand').style.display = isBand ? 'block' : 'none';
-  document.getElementById('adNiveauRij').style.display = isBand ? 'none' : '';
+  document.getElementById('adVeldenIndustry').style.display = isIndustry ? 'block' : 'none';
+  document.getElementById('adNiveauRij').style.display = (isBand || isIndustry) ? 'none' : '';
+  const muzLabelEl = document.querySelector('#adVeldenMuz .field-label');
+  if (muzLabelEl) muzLabelEl.textContent = 'Welke instrument(en) bespeel je?';
   const hints = {
     muzikant: 'Als muzikant zie je bands en sessiemuzikanten in jouw buurt.',
     band: 'Als band zoek je muzikanten om mee samen te spelen.',
@@ -4258,7 +4285,8 @@ function setAdTypeNieuw(adType) {
   const hintEl = document.getElementById('adHint');
   if (hintEl) hintEl.textContent = hints[adType] || '';
 
-  document.getElementById('adLeeftijdEnkel').style.display = isBand ? 'none' : 'block';
+  // Leeftijd: enkel voor muzikant/sessie, range voor band, niets voor industry
+  document.getElementById('adLeeftijdEnkel').style.display = (isBand || isIndustry) ? 'none' : 'block';
   document.getElementById('adLeeftijdRange').style.display = isBand ? 'block' : 'none';
   const label = document.getElementById('adTitelLabel');
   if (label) label.textContent = isBand ? 'Bandnaam *' : 'Naam *';
@@ -4325,8 +4353,11 @@ async function slaAdvertentieOp() {
     : document.getElementById('adTypeIndustry')?.classList.contains('active') ? 'industry' : 'muzikant';
 
   const isBand = adType === 'band';
+  const isIndustry = adType === 'industry';
   const instrumenten = isBand
     ? [...document.querySelectorAll('#adWijZoeken .chip.selected')].map(c => c.textContent)
+    : isIndustry
+    ? [...document.querySelectorAll('#adIndustrySoort .chip.selected')].map(c => c.textContent)
     : [...document.querySelectorAll('#adInstrumenten .chip.selected')].map(c => c.textContent);
   const genres = [...document.querySelectorAll('#adGenres .chip.selected')].map(c => c.textContent);
   const links = [...document.querySelectorAll('#adLinks input')].map(i => i.value.trim()).filter(Boolean).join(', ');
@@ -4335,6 +4366,7 @@ async function slaAdvertentieOp() {
   const leeftijdTot = document.getElementById('adLeeftijdTot')?.value;
   const leeftijdInfo = isBand
     ? (leeftijdVan && leeftijdTot ? leeftijdVan + "-" + leeftijdTot : null)
+    : isIndustry ? null
     : (leeftijdEnkel || null);
 
   // Validatie
@@ -4343,7 +4375,8 @@ async function slaAdvertentieOp() {
   if (!adFotoUrl) { errEl.textContent = 'Voeg een foto toe aan je advertentie.'; errEl.style.display = 'block'; return; }
   // Leeftijd valideren: minimaal 16, maximaal 99
   const leeftijdOngeldig = v => v && (parseInt(v) < 16 || parseInt(v) > 99);
-  if (!isBand && leeftijdOngeldig(leeftijdEnkel)) { errEl.textContent = 'Leeftijd moet tussen 16 en 99 zijn — Soundmatch is voor 16 jaar en ouder.'; errEl.style.display = 'block'; return; }
+  if (isIndustry && instrumenten.length === 0) { errEl.textContent = 'Kies wat voor soort je bent (bijv. Studio of Producer).'; errEl.style.display = 'block'; return; }
+  if (!isBand && !isIndustry && leeftijdOngeldig(leeftijdEnkel)) { errEl.textContent = 'Leeftijd moet tussen 16 en 99 zijn — Soundmatch is voor 16 jaar en ouder.'; errEl.style.display = 'block'; return; }
   if (isBand && (leeftijdOngeldig(leeftijdVan) || leeftijdOngeldig(leeftijdTot))) { errEl.textContent = 'Leeftijden moeten tussen 16 en 99 zijn — Soundmatch is voor 16 jaar en ouder.'; errEl.style.display = 'block'; return; }
   if (isBand && leeftijdVan && leeftijdTot && parseInt(leeftijdVan) > parseInt(leeftijdTot)) { errEl.textContent = '"Van" leeftijd kan niet hoger zijn dan "tot".'; errEl.style.display = 'block'; return; }
   errEl.style.display = 'none';
@@ -4425,6 +4458,7 @@ async function bewerkAd(id) {
   // Chips
   document.querySelectorAll('#adInstrumenten .chip').forEach(c => c.classList.toggle('selected', (ad.instrumenten||[]).includes(c.textContent)));
   document.querySelectorAll('#adWijZoeken .chip').forEach(c => c.classList.toggle('selected', (ad.instrumenten||[]).includes(c.textContent)));
+  document.querySelectorAll('#adIndustrySoort .chip').forEach(c => c.classList.toggle('selected', (ad.instrumenten||[]).includes(c.textContent)));
   document.querySelectorAll('#adGenres .chip').forEach(c => c.classList.toggle('selected', (ad.genres||[]).includes(c.textContent)));
 
   // Links
@@ -4692,7 +4726,11 @@ function closeFilter() {
   laadAdvertenties();
 }
 
-function openFilter() { document.getElementById('filterModal').classList.add('open'); }
+function openFilter() {
+  // Filter afstemmen op de huidige categorie (vult chips, label, zichtbaarheid)
+  setFR(activeType);
+  document.getElementById('filterModal').classList.add('open');
+}
 
 function openKaartDetail(index) {
   const p = advertentiesData[index];
@@ -4740,22 +4778,42 @@ function openLightbox(url) {
 function closeLightbox() {
   document.getElementById('fotoLightbox').style.display = 'none';
 }
+// Optie-sets per categorie voor het filter (de chip-sectie beweegt mee)
+const FILTER_OPTIES = {
+  muzikanten: { label: 'Bespeelt...', items: ['Gitaar','Basgitaar','Drums','Percussie','Zang','Keys / Piano','Synthesizer','Viool','Cello','Trompet','Saxofoon','Trombone','DJ','Producer','Ukulele','Banjo','Overig'], leeftijd: true, niveau: true },
+  sessie:     { label: 'Bespeelt...', items: ['Gitaar','Basgitaar','Drums','Percussie','Zang','Keys / Piano','Synthesizer','Viool','Cello','Trompet','Saxofoon','Trombone','DJ','Producer','Ukulele','Banjo','Overig'], leeftijd: true, niveau: true },
+  bands:      { label: 'Zoekt naar...', items: ['Gitarist','Bassist','Drummer','Zanger/es','Toetsenist','Saxofonist','Trompettist','Violist','DJ','Producer','Overig'], leeftijd: false, niveau: false },
+  industry:   { label: 'Soort', items: ['Studio','Oefenruimte','Producer','Geluidstechnicus','Manager','Label','Overig'], leeftijd: false, niveau: false }
+};
+
+function vulFilterChips(categorie) {
+  const cfg = FILTER_OPTIES[categorie] || FILTER_OPTIES.muzikanten;
+  const label = document.getElementById('filterChipLabel');
+  const groep = document.getElementById('filterInstrumenten');
+  if (label) label.textContent = cfg.label;
+  if (groep) {
+    groep.innerHTML = '<div class="chip selected" onclick="tc(this)">Alles</div>' +
+      cfg.items.map(i => '<div class="chip" onclick="tc(this)">' + i + '</div>').join('');
+  }
+  // Leeftijd en niveau tonen/verbergen per categorie
+  const ageSectie = document.getElementById('filterLeeftijdSectie');
+  const nivSectie = document.getElementById('filterNiveauSectie');
+  if (ageSectie) ageSectie.style.display = cfg.leeftijd ? '' : 'none';
+  if (nivSectie) nivSectie.style.display = cfg.niveau ? '' : 'none';
+}
+
 function setFR(r) {
   const map = {bands:'fBands', muzikanten:'fMuz', sessie:'fSessie', industry:'fIndustry'};
   Object.entries(map).forEach(([type, id]) => {
     const el = document.getElementById(id);
     if (el) el.classList.toggle('active', type===r);
   });
+  // Chip-opties, label en zichtbaarheid leeftijd/niveau aanpassen aan de categorie
+  vulFilterChips(r);
   // Toggle meebewegen (alleen als het van de filter komt, niet van toggle zelf)
   if (r !== activeType) {
     setTypeToggle(r);
   }
-}
-
-function openFilter() {
-  // Zorg dat filter tab overeenkomt met huidige toggle
-  setFR(activeType);
-  document.getElementById('filterModal').classList.add('open');
 }
 
 // ═══════════════ REGISTER ═══════════════
@@ -4792,11 +4850,18 @@ function setRegRole(r) {
     leeftijdRij.style.gridTemplateColumns = isBand ? '1fr' : '1fr 1fr';
   }
 
-  // Instrument vs Wij zoeken
+  // Velden per type tonen: muzikant/sessie = instrument, band = wij zoeken, industry = soort
   const muzVelden = document.getElementById('regVeldenMuzikant');
   const bandVelden = document.getElementById('regVeldenBand');
-  if (muzVelden) muzVelden.style.display = isBand ? 'none' : 'block';
+  const industryVelden = document.getElementById('regVeldenIndustry');
+  const isIndustry = r === 'industry';
+  if (muzVelden) muzVelden.style.display = (isBand || isIndustry) ? 'none' : 'block';
   if (bandVelden) bandVelden.style.display = isBand ? 'block' : 'none';
+  if (industryVelden) industryVelden.style.display = isIndustry ? 'block' : 'none';
+
+  // Instrument-label voor muzikant/sessie
+  const muzLabel = document.querySelector('#regVeldenMuzikant .field-label');
+  if (muzLabel) muzLabel.textContent = 'Welke instrument(en) bespeel je?';
 
   // Niveau en beschikbaarheid verbergen voor bands
   const niveauRij = document.getElementById('regNiveauRij');
@@ -5134,13 +5199,16 @@ async function slaProfielOp() {
 
   const instrumenten = type === 'band'
     ? [...document.querySelectorAll('#regWijZoeken .chip.selected')].map(c => c.textContent)
+    : type === 'industry'
+    ? [...document.querySelectorAll('#regIndustrySoort .chip.selected')].map(c => c.textContent)
     : [...document.querySelectorAll('#regInstrumenten .chip.selected')].map(c => c.textContent);
   const genres = [...document.querySelectorAll('#regGenres .chip.selected')].map(c => c.textContent);
 
   const err = document.getElementById('regError');
   if (!naam) { err.textContent = 'Vul je naam in.'; err.style.display = 'block'; return; }
-  if (type !== 'band' && !leeftijd) { err.textContent = 'Vul je leeftijd in.'; err.style.display = 'block'; return; }
-  if (leeftijd && (parseInt(leeftijd) < 16 || parseInt(leeftijd) > 99)) { err.textContent = 'Leeftijd moet tussen 16 en 99 zijn \u2014 Soundmatch is voor 16 jaar en ouder.'; err.style.display = 'block'; return; }
+  if (type !== 'band' && type !== 'industry' && !leeftijd) { err.textContent = 'Vul je leeftijd in.'; err.style.display = 'block'; return; }
+  if (type !== 'band' && type !== 'industry' && leeftijd && (parseInt(leeftijd) < 16 || parseInt(leeftijd) > 99)) { err.textContent = 'Leeftijd moet tussen 16 en 99 zijn \u2014 Soundmatch is voor 16 jaar en ouder.'; err.style.display = 'block'; return; }
+  if (type === 'industry' && instrumenten.length === 0) { err.textContent = 'Kies wat voor soort je bent (bijv. Studio of Producer).'; err.style.display = 'block'; return; }
   if (!provincie) { err.textContent = 'Selecteer een provincie.'; err.style.display = 'block'; return; }
   if (!stad) { err.textContent = 'Selecteer een stad.'; err.style.display = 'block'; return; }
   err.style.display = 'none';
@@ -5455,6 +5523,8 @@ startKeepAlive();
 startBerichtenPoll();
 checkNieuweLikes();
 initCookieMelding();
+// Filter-chips vullen voor de startcategorie
+vulFilterChips(typeof activeType !== 'undefined' ? activeType : 'muzikanten');
 // Captcha-widget alvast onzichtbaar klaarzetten (pas uitgevoerd bij login/registratie/reset)
 setTimeout(zorgVoorTurnstile, 300);
 </script>
