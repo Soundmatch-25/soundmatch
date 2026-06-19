@@ -4845,15 +4845,17 @@ sb.auth.onAuthStateChange(async (event, session) => {
   } else if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session?.user) {
     if (currentUser?.id === session.user.id && currentProfile) return;
     currentUser = session.user;
-    // Online status op de achtergrond updaten — mag de doorstroom nooit blokkeren
-    sb.from('profiles').update({ online_op: new Date().toISOString() }).eq('id', session.user.id).then(()=>{}, ()=>{});
-    try {
-      await laadOfMaakProfiel(session.user);
-    } catch (e) {
-      console.error('laadOfMaakProfiel fout:', e.message);
-      // Niet vastlopen op het loginscherm: stuur door naar profiel aanmaken
-      showScreen('register');
-    }
+    // BELANGRIJK: binnen onAuthStateChange mag je niet await'en op andere Supabase-calls
+    // (de client houdt een lock vast → deadlock). Daarom buiten de callback uitvoeren.
+    setTimeout(async () => {
+      sb.from('profiles').update({ online_op: new Date().toISOString() }).eq('id', session.user.id).then(()=>{}, ()=>{});
+      try {
+        await laadOfMaakProfiel(session.user);
+      } catch (e) {
+        console.error('laadOfMaakProfiel fout:', e.message);
+        showScreen('register');
+      }
+    }, 0);
   } else if (event === 'TOKEN_REFRESHED' && session?.user) {
     currentUser = session.user;
   }
