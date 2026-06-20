@@ -2438,12 +2438,8 @@ async function laadGezienIds() {
     if (s.advertentie_id) geswipedAdIds.add(s.advertentie_id);
     else geswipedIds.add(s.target_id);
   });
-  // Matches: persoon volledig uit het deck (match bestaat al, alle kaarten weg)
-  const { data: matches } = await sb.from('matches').select('gebruiker_a,gebruiker_b')
-    .or('gebruiker_a.eq.' + currentUser.id + ',gebruiker_b.eq.' + currentUser.id);
-  (matches || []).forEach(m => {
-    geswipedIds.add(m.gebruiker_a === currentUser.id ? m.gebruiker_b : m.gebruiker_a);
-  });
+  // Geen extra blokkering op match-niveau: per-kaart swipes bepalen wat uit het deck is.
+  // Zo blijft bv. iemands band-advertentie zichtbaar ook al matchte je op z'n muzikant-profiel.
 }
 
 async function checkSessie() {
@@ -2506,7 +2502,6 @@ async function laadAdvertenties() {
 
   if (profielRes.error) console.error('Profielen fout:', profielRes.error.message);
   if (adRes.error) console.error('Advertenties fout:', adRes.error.message);
-  console.log('[deck] type:', activeType, '| advertenties uit DB:', (advertenties||[]).length, '| profielen:', (profielen||[]).length);
 
   // Combineer
   await laadBlokkades();
@@ -2517,7 +2512,6 @@ async function laadAdvertenties() {
   let adKaarten = (advertenties || [])
     .filter(a => !geswipedAdIds.has(a.id) && !geswipedIds.has(a.user_id) && !geblokkeerdeIds.has(a.user_id))
     .map(a => advertentieNaarKaart(a));
-  console.log('[deck] adKaarten na geswiped/blokkade filter:', adKaarten.length, '| geswipedAdIds:', geswipedAdIds.size, '| geswipedIds:', geswipedIds.size);
 
   // Client-side genre/instrument filter toepassen
   if (filterState.instrumenten.length > 0) {
@@ -2925,7 +2919,7 @@ async function doSwipe(dir) {
           else console.error('Match aanmaken mislukt:', res2.error.message);
         }
         if (matchOk) {
-          geswipedIds.add(targetUserId); // match: alle kaarten van deze persoon uit het deck
+          // Alleen de geswipete kaart is al geblokkeerd (bovenaan); andere kaarten van deze persoon blijven beschikbaar
           // Haal match ID op voor lastMatchId
           const { data: newMatch } = await sb.from('matches').select('id')
             .or('and(gebruiker_a.eq.' + currentUser.id + ',gebruiker_b.eq.' + targetUserId + '),and(gebruiker_a.eq.' + targetUserId + ',gebruiker_b.eq.' + currentUser.id + ')')
