@@ -2506,6 +2506,7 @@ async function laadAdvertenties() {
 
   if (profielRes.error) console.error('Profielen fout:', profielRes.error.message);
   if (adRes.error) console.error('Advertenties fout:', adRes.error.message);
+  console.log('[deck] type:', activeType, '| advertenties uit DB:', (advertenties||[]).length, '| profielen:', (profielen||[]).length);
 
   // Combineer
   await laadBlokkades();
@@ -2516,6 +2517,7 @@ async function laadAdvertenties() {
   let adKaarten = (advertenties || [])
     .filter(a => !geswipedAdIds.has(a.id) && !geswipedIds.has(a.user_id) && !geblokkeerdeIds.has(a.user_id))
     .map(a => advertentieNaarKaart(a));
+  console.log('[deck] adKaarten na geswiped/blokkade filter:', adKaarten.length, '| geswipedAdIds:', geswipedAdIds.size, '| geswipedIds:', geswipedIds.size);
 
   // Client-side genre/instrument filter toepassen
   if (filterState.instrumenten.length > 0) {
