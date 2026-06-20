@@ -1594,6 +1594,13 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
       </div>
     </div>
 
+    <!-- Bio (belangrijk veld) -->
+    <div style="background:var(--card2);border:1px solid var(--border);border-radius:14px;padding:16px;">
+      <div class="field-label" style="font-size:15px;">Bio <span style="color:var(--neon);">— jouw verhaal</span></div>
+      <div style="font-size:12px;color:var(--sub);margin:-4px 0 10px;">Vertel wie je bent, wat je zoekt en wat je muzikaal drijft. Een goede bio levert meer matches op.</div>
+      <textarea class="input-field" id="regBio" maxlength="1500" rows="7" style="resize:vertical;min-height:150px;" placeholder="Vertel iets over jezelf, je invloeden, ervaring en wat je zoekt..." oninput="document.getElementById('regBioTeller').textContent=this.value.length+' / 1500'"></textarea>
+      <div style="text-align:right;font-size:11px;color:var(--sub);margin-top:4px;" id="regBioTeller">0 / 1500</div>
+
     <!-- MUZIKANT/SESSIE/INDUSTRY velden -->
     <div id="regVeldenMuzikant">
       <div class="field-label">Instrument(en)</div>
@@ -1623,12 +1630,6 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
       <div><div class="field-label">Beschikbaarheid</div><select class="select-field" id="regBeschikbaarheid"><option>Hobby</option><option selected>Serieus</option><option>Professioneel</option></select></div>
     </div>
 
-    <!-- Bio (belangrijk veld) -->
-    <div style="background:var(--card2);border:1px solid var(--border);border-radius:14px;padding:16px;">
-      <div class="field-label" style="font-size:15px;">Bio <span style="color:var(--neon);">— jouw verhaal</span></div>
-      <div style="font-size:12px;color:var(--sub);margin:-4px 0 10px;">Vertel wie je bent, wat je zoekt en wat je muzikaal drijft. Een goede bio levert meer matches op.</div>
-      <textarea class="input-field" id="regBio" maxlength="1500" rows="7" style="resize:vertical;min-height:150px;" placeholder="Vertel iets over jezelf, je invloeden, ervaring en wat je zoekt..." oninput="document.getElementById('regBioTeller').textContent=this.value.length+' / 1500'"></textarea>
-      <div style="text-align:right;font-size:11px;color:var(--sub);margin-top:4px;" id="regBioTeller">0 / 1500</div>
     </div>
 
     <!-- Links -->
@@ -1834,15 +1835,20 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
         </button>
       </div>
 
+      <div class="profile-section" id="profileBioSectie" style="padding:18px;display:none;">
+        <div class="profile-row-label" style="margin-bottom:8px;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:var(--neon)"><line x1="17" y1="10" x2="3" y2="10"/><line x1="21" y1="6" x2="3" y2="6"/><line x1="21" y1="14" x2="3" y2="14"/><line x1="13" y1="18" x2="3" y2="18"/></svg> Bio</div>
+        <div id="profileBioText" style="font-size:15px;color:var(--text);line-height:1.7;white-space:pre-wrap;">—</div>
+      </div>
+
       <div class="profile-section">
         <div class="profile-row"><div class="profile-row-label"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:var(--sub)"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> Type</div><div class="profile-row-value">Muzikant</div></div>
         <div class="profile-row"><div class="profile-row-label"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:var(--sub)"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg> Instrument</div><div class="profile-row-value">Gitaar, Bass</div></div>
         <div class="profile-row"><div class="profile-row-label"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:var(--sub)"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg> Locatie</div><div class="profile-row-value">Hengelo, OV</div></div>
         <div class="profile-row"><div class="profile-row-label"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:var(--sub)"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> Leeftijd</div><div class="profile-row-value">27 jaar</div></div>
         <div class="profile-row"><div class="profile-row-label"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:var(--sub)"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> Niveau</div><div class="profile-row-value">Gevorderd</div></div>
-        <div class="profile-row" id="profileBioRij" style="flex-direction:column;align-items:flex-start;gap:6px;">
+        <div class="profile-row" id="profileBioRij" style="display:none;flex-direction:column;align-items:flex-start;gap:6px;">
           <div class="profile-row-label"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:var(--sub)"><line x1="17" y1="10" x2="3" y2="10"/><line x1="21" y1="6" x2="3" y2="6"/><line x1="21" y1="14" x2="3" y2="14"/><line x1="13" y1="18" x2="3" y2="18"/></svg> Bio</div>
-          <div id="profileBioText" style="font-size:13px;color:var(--sub);line-height:1.6;padding-left:26px;">—</div>
+          <div id="profileBioTextOud" style="font-size:13px;color:var(--sub);line-height:1.6;padding-left:26px;">—</div>
         </div>
       </div>
 
@@ -1939,6 +1945,14 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
               </div>
             </div>
 
+            <!-- Beschrijving (belangrijk veld) -->
+            <div style="background:var(--card2);border:1px solid var(--border);border-radius:14px;padding:16px;">
+              <div class="field-label" style="font-size:15px;">Beschrijving <span style="color:var(--neon);">— jouw verhaal</span></div>
+              <div style="font-size:12px;color:var(--sub);margin:-4px 0 10px;">Dit is het belangrijkste deel van je advertentie. Vertel wie je bent, wat je zoekt, je invloeden en beschikbaarheid.</div>
+              <textarea class="input-field" id="adBio" maxlength="1500" rows="7" style="resize:vertical;min-height:150px;" placeholder="Vertel over jezelf, wat je zoekt, je muzikale invloeden, ervaring en beschikbaarheid..." oninput="document.getElementById('adBioTeller').textContent=this.value.length+' / 1500'"></textarea>
+              <div style="text-align:right;font-size:11px;color:var(--sub);margin-top:4px;" id="adBioTeller">0 / 1500</div>
+            </div>
+
             <!-- Instrumenten (muzikant/sessie/industry) -->
             <div id="adVeldenMuz">
               <div class="field-label">Instrument(en)</div>
@@ -1993,13 +2007,6 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
               </div>
             </div>
 
-            <!-- Beschrijving (belangrijk veld) -->
-            <div style="background:var(--card2);border:1px solid var(--border);border-radius:14px;padding:16px;">
-              <div class="field-label" style="font-size:15px;">Beschrijving <span style="color:var(--neon);">— jouw verhaal</span></div>
-              <div style="font-size:12px;color:var(--sub);margin:-4px 0 10px;">Dit is het belangrijkste deel van je advertentie. Vertel wie je bent, wat je zoekt, je invloeden en beschikbaarheid.</div>
-              <textarea class="input-field" id="adBio" maxlength="1500" rows="7" style="resize:vertical;min-height:150px;" placeholder="Vertel over jezelf, wat je zoekt, je muzikale invloeden, ervaring en beschikbaarheid..." oninput="document.getElementById('adBioTeller').textContent=this.value.length+' / 1500'"></textarea>
-              <div style="text-align:right;font-size:11px;color:var(--sub);margin-top:4px;" id="adBioTeller">0 / 1500</div>
-            </div>
 
             <!-- Links -->
             <div>
@@ -2140,8 +2147,8 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
         <div style="font-size:14px;color:var(--neon);margin-top:3px;" id="kdRol"></div>
       </div>
       <div id="kdTags" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
-      <div id="kdRijen"></div>
       <div id="kdBio" style="font-size:15px;color:var(--text);line-height:1.7;white-space:pre-wrap;"></div>
+      <div id="kdRijen"></div>
       <div id="kdLinks"></div>
       <div style="display:flex;gap:10px;padding-top:4px;">
         <button class="btn btn-primary" style="flex:1;" onclick="sluitKaartDetail();openDirectBerichtModal()">
@@ -5430,9 +5437,11 @@ function vulProfielIn(profiel) {
   setRij('Niveau', profiel.niveau || '—');
   setRij('Muzieklinks', profiel.muzieklink || '—');
 
-  // Bio
+  // Bio (prominente sectie boven de details)
   const bioEl = document.getElementById('profileBioText');
-  if (bioEl) bioEl.textContent = profiel.bio || '—';
+  const bioSectie = document.getElementById('profileBioSectie');
+  if (bioEl) bioEl.textContent = profiel.bio || '';
+  if (bioSectie) bioSectie.style.display = (profiel.bio && profiel.bio.trim()) ? 'block' : 'none';
 
   // Compleetheid check
   checkProfielCompleet(profiel);
@@ -5527,17 +5536,23 @@ function updateCrop() {
   cropState.zoom = zoom;
 
   const cw = container.offsetWidth;
+  const ch = container.offsetHeight;
   const imgAspect = img.naturalWidth / img.naturalHeight;
+
+  // "Cover": bepaal de basis-afmeting zó dat de foto het kader minimaal volledig vult,
+  // ongeacht of de foto liggend of staand is. Zoom schaalt daar bovenop.
   let renderW, renderH;
   if (imgAspect >= 1) {
+    // liggend: hoogte vult het kader, breedte loopt over
+    renderH = ch * zoom;
+    renderW = renderH * imgAspect;
+  } else {
+    // staand: breedte vult het kader, hoogte loopt over
     renderW = cw * zoom;
     renderH = renderW / imgAspect;
-  } else {
-    renderH = cw * zoom;
-    renderW = renderH * imgAspect;
   }
 
-  clampCrop();
+  clampCrop(renderW, renderH);
   img.style.width = renderW + 'px';
   img.style.height = renderH + 'px';
   img.style.left = '50%';
@@ -5545,16 +5560,17 @@ function updateCrop() {
   img.style.transform = `translate(calc(-50% + ${cropState.x}px), calc(-50% + ${cropState.y}px))`;
 }
 
-function clampCrop() {
+function clampCrop(renderW, renderH) {
   const container = document.getElementById('cropContainer');
   const img = document.getElementById('cropImg');
   if (!container || !img) return;
   const cw = container.offsetWidth;
   const ch = container.offsetHeight;
-  const iw = cw * cropState.zoom;
-  const ih = ch * cropState.zoom;
-  const maxX = (iw - cw) / 2;
-  const maxY = (ih - ch) / 2;
+  // Gebruik de werkelijke render-afmetingen indien meegegeven, anders herberekenen
+  const iw = renderW != null ? renderW : cw * cropState.zoom;
+  const ih = renderH != null ? renderH : ch * cropState.zoom;
+  const maxX = Math.max(0, (iw - cw) / 2);
+  const maxY = Math.max(0, (ih - ch) / 2);
   cropState.x = Math.max(-maxX, Math.min(maxX, cropState.x));
   cropState.y = Math.max(-maxY, Math.min(maxY, cropState.y));
 }
@@ -5576,24 +5592,23 @@ async function bevestigCrop() {
   const ctx = canvas.getContext('2d');
 
   const cw = container.offsetWidth;
+  const ch = container.offsetHeight;
   const scale = size / cw;
   const zoom = cropState.zoom;
 
-  // Bereken renderen met behoud van aspect ratio
+  // Zelfde "cover"-berekening als updateCrop, zodat de uitsnede klopt met de preview
   const imgAspect = img.naturalWidth / img.naturalHeight;
   let renderW, renderH;
   if (imgAspect >= 1) {
-    // Landscape of vierkant - pas op breedte
+    renderH = ch * zoom;
+    renderW = renderH * imgAspect;
+  } else {
     renderW = cw * zoom;
     renderH = renderW / imgAspect;
-  } else {
-    // Portrait - pas op hoogte
-    renderH = cw * zoom;
-    renderW = renderH * imgAspect;
   }
 
   const offsetX = (cw - renderW) / 2 + cropState.x;
-  const offsetY = (cw - renderH) / 2 + cropState.y;
+  const offsetY = (ch - renderH) / 2 + cropState.y;
 
   ctx.drawImage(img, offsetX * scale, offsetY * scale, renderW * scale, renderH * scale);
 
