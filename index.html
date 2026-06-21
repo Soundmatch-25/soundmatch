@@ -1786,7 +1786,7 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
           <button id="chatTerugBtn" onclick="sluitMobieleChat()" style="display:none;width:34px;height:34px;border-radius:50%;border:1px solid var(--border);background:transparent;cursor:pointer;align-items:center;justify-content:center;color:var(--sub);flex-shrink:0;">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
           </button>
-          <div class="chat-av-sm" id="chatAvatar" style="position:relative;overflow:hidden;">
+          <div class="chat-av-sm" id="chatAvatar" style="position:relative;overflow:visible;">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
             <div id="onlineDot" style="display:none;position:absolute;bottom:0;right:0;width:10px;height:10px;border-radius:50%;background:#4ade80;border:2px solid var(--bg2);z-index:2;"></div>
           </div>
@@ -2883,16 +2883,14 @@ async function doSwipe(dir) {
 
   // Opslaan in Supabase
   if (currentUser && targetUserId && targetUserId !== currentUser.id) {
-    console.log('[swipe] opslaan:', dir, '| target_id:', targetUserId, '| advertentie_id:', p.isAdvertentie ? p.id : null);
-    const { error: swipeError } = await sb.from('swipes').upsert(
+      const { error: swipeError } = await sb.from('swipes').upsert(
       { swiper_id: currentUser.id, target_id: targetUserId, richting: dir, advertentie_id: p.isAdvertentie ? p.id : null },
       { onConflict: 'swiper_id,target_id,advertentie_id' }
     );
     if (swipeError) {
-      console.error('[swipe] OPSLAAN MISLUKT:', swipeError.message, swipeError.code, swipeError.details);
+      console.error('Swipe opslaan mislukt:', swipeError.message, swipeError.code, swipeError.details);
       return;
     }
-    console.log('[swipe] opgeslagen OK');
 
     // Check wederzijdse like op user-niveau: heeft de ander minstens 1 like op een van mijn kaarten?
     if (dir === 'like' && !swipeError) {
@@ -2943,7 +2941,7 @@ async function getViaAdvertenties(userIds) {
   if (!currentUser || !userIds.length) return {};
   try {
     const { data } = await sb.from('swipes')
-      .select('target_id, advertentie:advertentie_id(titel)')
+      .select('target_id, advertentie:advertentie_id(id, titel, foto_url)')
       .eq('swiper_id', currentUser.id)
       .eq('richting', 'like')
       .not('advertentie_id', 'is', null)
@@ -2951,10 +2949,15 @@ async function getViaAdvertenties(userIds) {
     const map = {};
     (data || []).forEach(s => {
       if (!s.advertentie?.titel) return;
-      (map[s.target_id] = map[s.target_id] || []).push(s.advertentie.titel);
+      (map[s.target_id] = map[s.target_id] || []).push(s.advertentie);
     });
     return map;
   } catch(e) { return {}; }
+}
+
+// Hulp: haal titels uit de via-map (voor tekstweergave)
+function viaTitels(map, userId) {
+  return (map?.[userId] || []).map(a => a.titel);
 }
 
 function showMatch(p) {
@@ -3191,9 +3194,10 @@ async function laadMatchesLijst() {
 
     const info = document.createElement('div');
     info.style.cssText = 'flex:1;overflow:hidden;';
-    const viaTitels = (window._viaAdMap || {})[anderId];
+    const viaAdsLijst = (window._viaAdMap || {})[anderId] || [];
+    const viaTitelsList = viaAdsLijst.map(a => a.titel);
     info.innerHTML = '<div style="font-weight:700;font-size:14px;">' + esc(ander.naam || 'Onbekend') + '</div>' +
-      '<div style="font-size:12px;color:var(--neon);margin-top:2px;">✓ Match' + (viaTitels?.length ? ' · via: ' + esc(viaTitels.join(', ')) : '') + '</div>';
+      '<div style="font-size:12px;color:var(--neon);margin-top:2px;">✓ Match' + (viaTitelsList.length ? ' · via: ' + esc(viaTitelsList.join(', ')) : '') + '</div>';
 
     const btns = document.createElement('div');
     btns.style.cssText = 'display:flex;gap:8px;flex-shrink:0;';
@@ -3281,7 +3285,6 @@ async function laadOntvangenLikes() {
     .eq('target_id', currentUser.id)
     .eq('richting', 'like')
     .order('aangemaakt_op', { ascending: false });
-  console.log('[likes] ruwe likes op mij:', (likes||[]).length, likes);
 
   // Haal ook op wie jij genoped hebt (dan tonen we ze niet meer)
   const { data: mijnnopes } = await sb.from('swipes')
@@ -3982,10 +3985,11 @@ async function openGesprek(userId, user) {
   if (naamEl) naamEl.textContent = user?.naam || 'Onbekend';
   // Via welke advertentie matchten we?
   const viaEl = document.getElementById('chatViaAd');
+  const viaMap = await getViaAdvertenties([userId]);
+  const viaAds = viaMap[userId] || [];
+  const titels = viaAds.map(a => a.titel);
   if (viaEl) {
-    const viaMap = await getViaAdvertenties([userId]);
-    const titels = viaMap[userId];
-    if (titels?.length) { viaEl.textContent = 'via: ' + titels.join(', '); viaEl.style.display = 'block'; }
+    if (titels.length) { viaEl.textContent = 'via: ' + titels.join(', '); viaEl.style.display = 'block'; }
     else { viaEl.textContent = ''; viaEl.style.display = 'none'; }
   }
   const blokkeerBtn = document.getElementById('blokkeerBtn');
@@ -3993,8 +3997,19 @@ async function openGesprek(userId, user) {
   const meldBtn = document.getElementById('meldBtn');
   if (meldBtn) meldBtn.style.display = 'flex';
   const av = document.getElementById('chatAvatar');
-  if (av && user?.foto_url) {
-    av.innerHTML = '<img src="' + esc(user.foto_url) + '" style="width:100%;height:100%;object-fit:cover;border-radius:50%;"/><div id="onlineDot" style="display:none;position:absolute;bottom:0;right:0;width:10px;height:10px;border-radius:50%;background:#4ade80;border:2px solid var(--bg2);z-index:2;"></div>';
+  if (av) {
+    const adFoto = viaAds.find(a => a.foto_url)?.foto_url;
+    const userFoto = user?.foto_url;
+    const onlineDot = '<div id="onlineDot" style="display:none;position:absolute;bottom:0;right:0;width:10px;height:10px;border-radius:50%;background:#4ade80;border:2px solid var(--bg2);z-index:3;"></div>';
+    if (adFoto) {
+      // Advertentie-foto groot, gebruiker-foto klein als badge in de hoek
+      const userBadge = userFoto
+        ? '<img src="' + esc(userFoto) + '" style="position:absolute;bottom:-2px;right:-2px;width:18px;height:18px;border-radius:50%;object-fit:cover;border:2px solid var(--bg2);z-index:2;"/>'
+        : '';
+      av.innerHTML = '<img src="' + esc(adFoto) + '" style="width:100%;height:100%;object-fit:cover;border-radius:12px;"/>' + userBadge + onlineDot;
+    } else if (userFoto) {
+      av.innerHTML = '<img src="' + esc(userFoto) + '" style="width:100%;height:100%;object-fit:cover;border-radius:50%;"/>' + onlineDot;
+    }
   }
   updateChatOnlineStatus(userId);
   await sb.from('directe_berichten').update({ gelezen: true }).eq('van_user_id', userId).eq('naar_user_id', currentUser.id).eq('gelezen', false);
