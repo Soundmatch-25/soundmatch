@@ -2510,7 +2510,7 @@ async function laadAdvertenties() {
     .map(p => profielNaarKaart(p));
 
   let adKaarten = (advertenties || [])
-    .filter(a => !geswipedAdIds.has(a.id) && !geswipedIds.has(a.user_id) && !geblokkeerdeIds.has(a.user_id))
+    .filter(a => !geswipedAdIds.has(a.id) && !geblokkeerdeIds.has(a.user_id))
     .map(a => advertentieNaarKaart(a));
 
   // Client-side genre/instrument filter toepassen
