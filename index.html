@@ -2883,14 +2883,16 @@ async function doSwipe(dir) {
 
   // Opslaan in Supabase
   if (currentUser && targetUserId && targetUserId !== currentUser.id) {
+    console.log('[swipe] opslaan:', dir, '| target_id:', targetUserId, '| advertentie_id:', p.isAdvertentie ? p.id : null);
     const { error: swipeError } = await sb.from('swipes').upsert(
       { swiper_id: currentUser.id, target_id: targetUserId, richting: dir, advertentie_id: p.isAdvertentie ? p.id : null },
       { onConflict: 'swiper_id,target_id,advertentie_id' }
     );
     if (swipeError) {
-      console.error('Swipe opslaan mislukt:', swipeError.message, swipeError.code, swipeError.details);
+      console.error('[swipe] OPSLAAN MISLUKT:', swipeError.message, swipeError.code, swipeError.details);
       return;
     }
+    console.log('[swipe] opgeslagen OK');
 
     // Check wederzijdse like op user-niveau: heeft de ander minstens 1 like op een van mijn kaarten?
     if (dir === 'like' && !swipeError) {
@@ -3279,6 +3281,7 @@ async function laadOntvangenLikes() {
     .eq('target_id', currentUser.id)
     .eq('richting', 'like')
     .order('aangemaakt_op', { ascending: false });
+  console.log('[likes] ruwe likes op mij:', (likes||[]).length, likes);
 
   // Haal ook op wie jij genoped hebt (dan tonen we ze niet meer)
   const { data: mijnnopes } = await sb.from('swipes')
