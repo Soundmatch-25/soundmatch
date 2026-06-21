@@ -4002,12 +4002,17 @@ async function openGesprek(userId, user) {
     const userFoto = user?.foto_url;
     const onlineDot = '<div id="onlineDot" style="display:none;position:absolute;bottom:0;right:0;width:10px;height:10px;border-radius:50%;background:#4ade80;border:2px solid var(--bg2);z-index:3;"></div>';
     if (adFoto) {
-      // Advertentie-foto groot, gebruiker-foto klein als badge in de hoek
-      const userBadge = userFoto
-        ? '<img src="' + esc(userFoto) + '" style="position:absolute;bottom:-2px;right:-2px;width:18px;height:18px;border-radius:50%;object-fit:cover;border:2px solid var(--bg2);z-index:2;"/>'
-        : '';
-      av.innerHTML = '<img src="' + esc(adFoto) + '" style="width:100%;height:100%;object-fit:cover;border-radius:12px;"/>' + userBadge + onlineDot;
+      // Advertentie-foto en gebruiker-foto naast elkaar
+      av.style.width = 'auto';
+      av.innerHTML =
+        '<div style="display:flex;align-items:center;gap:6px;">' +
+          '<img src="' + esc(adFoto) + '" style="width:40px;height:40px;object-fit:cover;border-radius:12px;flex-shrink:0;" title="' + esc(viaAds.find(a=>a.foto_url)?.titel || '') + '"/>' +
+          (userFoto
+            ? '<div style="position:relative;flex-shrink:0;"><img src="' + esc(userFoto) + '" style="width:40px;height:40px;object-fit:cover;border-radius:50%;"/>' + onlineDot + '</div>'
+            : '') +
+        '</div>';
     } else if (userFoto) {
+      av.style.width = '';
       av.innerHTML = '<img src="' + esc(userFoto) + '" style="width:100%;height:100%;object-fit:cover;border-radius:50%;"/>' + onlineDot;
     }
   }
