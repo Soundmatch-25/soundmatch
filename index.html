@@ -373,11 +373,6 @@ html, body {
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
 }
-.card-badge-dist {
-  position: absolute; top: 14px; right: 14px;
-  padding: 6px 12px; border-radius: 24px;
-  background: rgba(0,0,0,0.55); color: var(--sub); font-size: 12px;
-}
 .card-badge-type {
   position: absolute; bottom: 14px; left: 14px;
   padding: 5px 12px; border-radius: 20px; font-size: 11px; font-weight: 700;
@@ -387,7 +382,6 @@ html, body {
 }
 .type-band { background: rgba(0,0,0,0.6); border: 1px solid rgba(255,107,53,0.6); color: #ff9f7a; }
 .type-muzikant { background: rgba(0,0,0,0.6); border: 1px solid rgba(68,138,255,0.6); color: #7ab8ff; }
-.type-sessie { background: rgba(0,0,0,0.6); border: 1px solid rgba(168,85,247,0.6); color: #d4a4ff; }
 .type-industry { background: rgba(0,0,0,0.6); border: 1px solid rgba(251,191,36,0.5); color: #fcd34d; }
 
 /* Actief indicator */
@@ -477,27 +471,6 @@ html, body {
 }
 .detail-empty i { font-size: 48px; opacity: .3; }
 .detail-empty p { font-size: 14px; opacity: .5; }
-
-.detail-content { flex: 1; overflow-y: auto; display: flex; flex-direction: column; }
-.detail-visual {
-  height: 260px;
-  background: linear-gradient(180deg, #1a1a35, #0d0d20);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 96px;
-  position: relative;
-  flex-shrink: 0;
-}
-.detail-body { padding: 24px; display: flex; flex-direction: column; gap: 16px; }
-.detail-name { font-family: var(--font-head); font-size: 26px; font-weight: 800; color: var(--text); }
-.detail-role { font-size: 13px; color: var(--neon); font-weight: 600; text-transform: uppercase; letter-spacing: .5px; margin-top: -8px; }
-.detail-section-title { font-size: 11px; color: var(--sub); text-transform: uppercase; letter-spacing: 1.5px; }
-.detail-bio { font-size: 14px; color: var(--text); line-height: 1.65; }
-.detail-link {
-  display: flex; align-items: center; gap: 10px;
-  padding: 12px 16px; background: var(--card); border-radius: 12px;
-  border: 1px solid var(--border); cursor: pointer;
-}
-.detail-link-text { font-size: 14px; color: var(--neon2); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .detail-actions {
   display: flex; gap: 10px;
   padding: 16px 24px;
@@ -644,7 +617,6 @@ html, body {
 }
 .msg-name { font-size: 14px; font-weight: 600; color: var(--text); }
 .msg-preview { font-size: 13px; color: var(--sub); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.unread-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--neon); }
 
 /* CHAT COLUMN */
 .chat-col {
@@ -862,31 +834,8 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
 .type-card-sub { font-size: 11px; color: var(--sub); }
 
 /* NOTIFICATIE RIJEN */
-.notif-row {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  padding: 12px 14px;
-  background: var(--card);
-  border-radius: 12px;
-  border: 1px solid var(--border);
-  cursor: pointer;
-}
-.notif-check {
-  width: 18px; height: 18px;
-  accent-color: var(--neon);
-  cursor: pointer;
-  flex-shrink: 0;
-  margin-top: 2px;
-}
 
 /* NOTIFICATIE INSTELLINGEN in profiel */
-.notif-settings-section {
-  max-width: 600px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
 #panel-ads {
   position: relative;
   overflow: hidden;
@@ -937,14 +886,6 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
 .ad-card-title { font-family: var(--font-head); font-size: 17px; font-weight: 700; color: var(--text); }
 .ad-card-meta { font-size: 13px; color: var(--neon); margin-top: 3px; font-weight: 500; }
 .ad-card-desc { font-size: 13px; color: var(--sub); margin-top: 6px; line-height: 1.5; }
-.ad-card-footer {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 12px 20px;
-  border-top: 1px solid var(--border);
-  background: var(--card2);
-  flex-wrap: wrap;
-  gap: 8px;
-}
 .ad-status-badge {
   font-size: 12px; font-weight: 700; padding: 4px 12px; border-radius: 20px;
   background: rgba(46,204,113,0.15); border: 1px solid rgba(46,204,113,0.3); color: #69f0ae;
@@ -1012,8 +953,8 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
   .auth-title { font-size: 22px; }
   .auth-logo { font-size: 22px; }
 
-  /* Register grid naar 1 kolom */
-  #screen-register .auth-box > div[style*="grid-template-columns: 1fr 1fr"] {
+  /* Register: 2-koloms rijen (naam/leeftijd e.d.) naar 1 kolom op mobiel */
+  #screen-register .auth-box > div[style*="grid-template-columns:1fr 1fr;"] {
     display: flex !important;
     flex-direction: column !important;
     gap: 14px !important;
@@ -1109,13 +1050,6 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
 /* ═══════════════════════════════════════════
    AD CARD
 ═══════════════════════════════════════════ */
-.ad-card-inner {
-  width: 100%; height: 100%;
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
-  padding: 32px; gap: 14px; text-align: center;
-  background: var(--card2);
-}
-.ad-label { font-size: 11px; color: var(--sub); letter-spacing: 1.5px; text-transform: uppercase; background: var(--card3); padding: 4px 14px; border-radius: 20px; }
 
 /* ═══════════════════════════════════════════
    SCROLLBAR
@@ -1255,7 +1189,7 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
       <div>
         <h2 style="font-family:var(--font-head);font-size:17px;font-weight:800;margin-bottom:12px;color:var(--neon);">Artikel 3 — Registratie en account</h2>
         <p><strong>3.1 Leeftijdsvereiste.</strong> Om gebruik te maken van Soundmatch dient de gebruiker minimaal 16 jaar oud te zijn. Gebruikers jonger dan 16 jaar hebben toestemming nodig van een ouder of wettelijk vertegenwoordiger. Soundmatch behoudt zich het recht voor bij twijfel over de leeftijd verificatie te vragen.</p>
-        <p style="margin-top:10px;"><strong>3.2 Registratie.</strong> Registratie geschiedt via een externe authenticatieprovider (Google of Facebook). Door te registreren verklaar je dat de door jou verstrekte informatie juist, volledig en actueel is.</p>
+        <p style="margin-top:10px;"><strong>3.2 Registratie.</strong> Registratie geschiedt via een externe authenticatieprovider (Google) of via e-mailadres en wachtwoord. Door te registreren verklaar je dat de door jou verstrekte informatie juist, volledig en actueel is.</p>
         <p style="margin-top:10px;"><strong>3.3 Accountveiligheid.</strong> De gebruiker is verantwoordelijk voor het geheimhouden van zijn inloggegevens en voor alle activiteiten die onder zijn account plaatsvinden. Bij (vermoeden van) ongeoorloofd gebruik dient de gebruiker Soundmatch onmiddellijk te informeren.</p>
         <p style="margin-top:10px;"><strong>3.4 Één account.</strong> Elke gebruiker mag slechts één account aanmaken. Het aanmaken van meerdere accounts is verboden en kan leiden tot verwijdering van alle betrokken accounts.</p>
       </div>
@@ -2451,7 +2385,7 @@ async function checkSessie() {
 }
 
 async function laadAdvertenties() {
-  if (!await checkSessie()) { console.log('checkSessie faalde'); return; }
+  if (!await checkSessie()) { return; }
   const stack = document.getElementById('cardStack');
   if (stack) stack.innerHTML = `<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--sub);flex-direction:column;gap:12px;">
     <div style="width:40px;height:40px;border:3px solid var(--border);border-top-color:var(--neon);border-radius:50%;animation:spin 0.8s linear infinite;"></div>
@@ -2685,54 +2619,6 @@ function renderCards() {
 }
 
 // ═══════════════ FOTO HERPOSITIONERING ═══════════════
-function initFotoReposition(img, card) {
-  if (!img) return;
-  let dragging = false, startX, startY, posX = 50, posY = 50;
-
-  img.addEventListener('mousedown', e => {
-    if (window._wasDragging) return;
-    dragging = true;
-    startX = e.clientX;
-    startY = e.clientY;
-    img.style.cursor = 'grabbing';
-    e.stopPropagation();
-  });
-
-  window.addEventListener('mousemove', e => {
-    if (!dragging) return;
-    const dx = (e.clientX - startX) / img.offsetWidth * -100;
-    const dy = (e.clientY - startY) / img.offsetHeight * -100;
-    posX = Math.max(0, Math.min(100, posX + dx));
-    posY = Math.max(0, Math.min(100, posY + dy));
-    img.style.objectPosition = `${posX}% ${posY}%`;
-    startX = e.clientX;
-    startY = e.clientY;
-  });
-
-  window.addEventListener('mouseup', () => {
-    if (dragging) { dragging = false; img.style.cursor = 'grab'; }
-  });
-
-  // Touch
-  img.addEventListener('touchstart', e => {
-    const t = e.touches[0];
-    startX = t.clientX; startY = t.clientY;
-    dragging = true;
-  }, { passive: true });
-
-  img.addEventListener('touchmove', e => {
-    if (!dragging) return;
-    const t = e.touches[0];
-    const dx = (t.clientX - startX) / img.offsetWidth * -100;
-    const dy = (t.clientY - startY) / img.offsetHeight * -100;
-    posX = Math.max(0, Math.min(100, posX + dx));
-    posY = Math.max(0, Math.min(100, posY + dy));
-    img.style.objectPosition = `${posX}% ${posY}%`;
-    startX = t.clientX; startY = t.clientY;
-  }, { passive: true });
-
-  img.addEventListener('touchend', () => { dragging = false; });
-}
 
 // ═══════════════ MELDEN ═══════════════
 function meldGebruiker() {
@@ -2955,10 +2841,6 @@ async function getViaAdvertenties(userIds) {
   } catch(e) { return {}; }
 }
 
-// Hulp: haal titels uit de via-map (voor tekstweergave)
-function viaTitels(map, userId) {
-  return (map?.[userId] || []).map(a => a.titel);
-}
 
 function showMatch(p) {
   matchPartner = p;
@@ -3190,7 +3072,9 @@ async function laadMatchesLijst() {
 
     const av = document.createElement('div');
     av.style.cssText = 'width:48px;height:48px;border-radius:14px;overflow:hidden;flex-shrink:0;background:var(--grad);display:flex;align-items:center;justify-content:center;';
-    av.innerHTML = ander.foto_url ? '<img src="' + esc(ander.foto_url) + '" style="width:100%;height:100%;object-fit:cover;"/>' : typeIcon(ander.type);
+    const viaAdFoto = ((window._viaAdMap || {})[anderId] || []).find(a => a.foto_url)?.foto_url;
+    const matchFoto = viaAdFoto || ander.foto_url;
+    av.innerHTML = matchFoto ? '<img src="' + esc(matchFoto) + '" style="width:100%;height:100%;object-fit:cover;"/>' : typeIcon(ander.type);
 
     const info = document.createElement('div');
     info.style.cssText = 'flex:1;overflow:hidden;';
@@ -3405,7 +3289,7 @@ function updateLikesBadge(count) {
   });
 }
 async function laadSwipeHistory() {
-  if (!currentUser) { console.log('laadSwipeHistory: geen currentUser'); return; }
+  if (!currentUser) { return; }
   
   const grid = document.getElementById('likedGrid');
   if (grid) grid.innerHTML = '<div style="padding:20px;color:var(--sub);text-align:center;">Laden...</div>';
@@ -4647,28 +4531,6 @@ async function handleFotoUpload(input) {
   });
 }
 
-function schaalFoto(file, maxSize) {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    const reader = new FileReader();
-    reader.onload = e => {
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        let w = img.width, h = img.height;
-        if (w > h) { if (w > maxSize) { h = h * maxSize / w; w = maxSize; } }
-        else { if (h > maxSize) { w = w * maxSize / h; h = maxSize; } }
-        canvas.width = w; canvas.height = h;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, w, h);
-        resolve({ dataUrl: canvas.toDataURL('image/jpeg', 0.92) });
-      };
-      img.onerror = reject;
-      img.src = e.target.result;
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
 
 function voegLinkToe() {
   const container = document.getElementById('muzieklinks');
@@ -4768,12 +4630,7 @@ function showPanel(id) {
   if (id==='discover') laadAdvertenties();
 }
 
-function openChat() { showPanel('messages'); }
 
-function selectMsg(el) {
-  document.querySelectorAll('.msg-item').forEach(m => m.classList.remove('active'));
-  el.classList.add('active');
-}
 
 // ═══════════════ FILTER ═══════════════
 // ═══════════════ FILTER STATE ═══════════════
@@ -5054,16 +4911,6 @@ sb.auth.onAuthStateChange(async (event, session) => {
   }
 });
 
-async function loginMetFacebook() {
-  const { error } = await sb.auth.signInWithOAuth({
-    provider: 'facebook',
-    options: { redirectTo: window.location.origin }
-  });
-  if (error) {
-    const el = document.getElementById('authError');
-    if (el) { el.textContent = 'Facebook login mislukt: ' + error.message; el.style.display = 'block'; }
-  }
-}
 
 function toggleWachtwoord(inputId, btn) {
   const inp = document.getElementById(inputId);
@@ -5247,6 +5094,8 @@ async function loginMetGoogle() {
 
 async function uitloggen() {
   await sb.auth.signOut();
+  // Polling stoppen zodat er na uitloggen geen verzoeken meer doorlopen
+  stopAlleIntervals();
   // In-memory caches legen zodat het volgende account geen data van dit account ziet
   geswipedIds.clear();
   geswipedAdIds.clear();
