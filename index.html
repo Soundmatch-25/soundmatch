@@ -2126,10 +2126,10 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
 
 <!-- LIJST DETAIL MODAL -->
 <div class="modal-overlay" id="lijstDetailModal" onclick="if(event.target===this)closeLijstDetail()" style="display:none;align-items:center;justify-content:center;">
-  <div class="modal-box" style="max-width:480px;width:90%;padding:0;overflow:hidden;border-radius:24px;">
-    <div id="lijstDetailFoto" style="height:220px;background:var(--grad);display:flex;align-items:center;justify-content:center;position:relative;">
+  <div class="modal-box" style="max-width:480px;width:90%;padding:0;overflow:hidden;border-radius:24px;max-height:90vh;display:flex;flex-direction:column;">
+    <div id="lijstDetailFoto" style="height:220px;min-height:220px;background:var(--grad);display:flex;align-items:center;justify-content:center;position:relative;flex-shrink:0;">
     </div>
-    <div style="padding:24px;display:flex;flex-direction:column;gap:16px;">
+    <div style="padding:24px;display:flex;flex-direction:column;gap:16px;overflow-y:auto;">
       <div>
         <div style="font-family:var(--font-head);font-size:22px;font-weight:800;" id="lijstDetailNaam"></div>
         <div style="font-size:14px;color:var(--neon);margin-top:4px;" id="lijstDetailRol"></div>
