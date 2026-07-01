@@ -1436,6 +1436,32 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
   </div>
 </div>
 
+<!-- ═══════ NIEUW WACHTWOORD (na reset-link) ═══════ -->
+<div id="screen-nieuwww" class="screen" style="background:var(--bg);justify-content:center;align-items:center;">
+  <div style="width:100%;max-width:420px;padding:0 24px;display:flex;flex-direction:column;gap:20px;">
+    <div style="text-align:center;">
+      <div class="auth-logo" style="margin-bottom:16px;">SOUND<span class="acc">MATCH.</span></div>
+      <h1 style="font-family:var(--font-head);font-size:24px;font-weight:900;margin-bottom:10px;">Nieuw wachtwoord</h1>
+      <p style="color:var(--sub);font-size:14px;line-height:1.6;">Kies een nieuw wachtwoord voor je account. Minimaal 6 tekens.</p>
+    </div>
+    <div>
+      <div class="field-label">Nieuw wachtwoord</div>
+      <div style="position:relative;">
+        <input class="input-field" type="password" id="nieuwWw1" placeholder="Nieuw wachtwoord" style="padding-right:48px;" onkeydown="if(event.key==='Enter')slaNieuwWwOp()"/>
+        <button type="button" onclick="toggleWachtwoord('nieuwWw1', this)" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--sub);padding:4px;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        </button>
+      </div>
+    </div>
+    <div>
+      <div class="field-label">Herhaal wachtwoord</div>
+      <input class="input-field" type="password" id="nieuwWw2" placeholder="Herhaal je nieuwe wachtwoord" onkeydown="if(event.key==='Enter')slaNieuwWwOp()"/>
+    </div>
+    <div id="nieuwWwError" style="font-size:13px;color:#ff8a80;display:none;"></div>
+    <button class="btn btn-primary btn-full" id="nieuwWwBtn" style="padding:17px;" onclick="slaNieuwWwOp()">Wachtwoord opslaan</button>
+  </div>
+</div>
+
 <!-- ═══════ LOGIN ═══════ -->
 <div id="screen-login" class="screen">
   <div class="auth-box">
@@ -4938,20 +4964,32 @@ let currentProfile = null;
 
 // Detecteer of de gebruiker net via de e-mail-bevestigingslink binnenkomt
 let komtVanBevestiging = false;
+let komtVanReset = false;
 (function detecteerBevestiging() {
   const hash = window.location.hash || '';
   const query = window.location.search || '';
   if (hash.includes('type=signup') || query.includes('type=signup')) {
     komtVanBevestiging = true;
   }
+  if (hash.includes('type=recovery') || query.includes('type=recovery')) {
+    komtVanReset = true;
+  }
 })();
 
 sb.auth.onAuthStateChange(async (event, session) => {
+  if (event === 'PASSWORD_RECOVERY' || (komtVanReset && session?.user)) {
+    // Gebruiker klikte op de reset-link → toon het scherm voor een nieuw wachtwoord
+    komtVanReset = true;
+    currentUser = session?.user || currentUser;
+    showScreen('nieuwww');
+    return;
+  }
   if (event === 'SIGNED_OUT') {
     currentUser = null;
     currentProfile = null;
     showScreen('onboard');
   } else if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session?.user) {
+    if (komtVanReset) { showScreen('nieuwww'); return; }
     if (currentUser?.id === session.user.id && currentProfile) return;
     currentUser = session.user;
     // BELANGRIJK: binnen onAuthStateChange mag je niet await'en op andere Supabase-calls
@@ -5123,6 +5161,31 @@ async function registreerMetEmail() {
     document.getElementById('mailVerstuurdAdres').textContent = email;
     showScreen('mailverstuurd');
     startVerstuurCooldown();
+  }
+}
+
+async function slaNieuwWwOp() {
+  const ww1 = document.getElementById('nieuwWw1')?.value || '';
+  const ww2 = document.getElementById('nieuwWw2')?.value || '';
+  const err = document.getElementById('nieuwWwError');
+  const toon = (m) => { if (err) { err.textContent = m; err.style.display = 'block'; } };
+  if (err) err.style.display = 'none';
+  if (ww1.length < 6) { toon('Je wachtwoord moet minimaal 6 tekens zijn.'); return; }
+  if (ww1 !== ww2) { toon('De wachtwoorden komen niet overeen.'); return; }
+
+  knopBezig('nieuwWwBtn', 'Opslaan...');
+  const { error } = await sb.auth.updateUser({ password: ww1 });
+  knopKlaar('nieuwWwBtn');
+  if (error) { toon('Opslaan mislukt: ' + error.message); return; }
+
+  // Gelukt: reset-vlag wissen, URL opschonen, en doorsturen
+  komtVanReset = false;
+  try { history.replaceState(null, '', window.location.pathname); } catch(e) {}
+  document.getElementById('nieuwWw1').value = '';
+  document.getElementById('nieuwWw2').value = '';
+  toonInfo('Wachtwoord gewijzigd', 'Je nieuwe wachtwoord is opgeslagen. Je bent nu ingelogd.', '\u2705');
+  if (currentUser) {
+    try { await laadOfMaakProfiel(currentUser); } catch(e) { showScreen('app'); }
   }
 }
 
