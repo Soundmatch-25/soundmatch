@@ -1450,7 +1450,7 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
       <div class="field-label">Wachtwoord</div>
       <div class="input-icon-wrap"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--sub);pointer-events:none;"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg><input class="input-field" type="password" placeholder="••••••••" style="padding-left:44px;"/></div>
     </div>
-    <div style="text-align:right;margin-top:-8px;"><span style="font-size:13px;color:var(--neon);cursor:pointer;">Wachtwoord vergeten?</span></div>
+    <div style="text-align:right;margin-top:-8px;"><span onclick="wachtwoordVergeten()" style="font-size:13px;color:var(--neon);cursor:pointer;">Wachtwoord vergeten?</span></div>
     <button class="btn btn-primary btn-full" style="padding:17px;" onclick="showScreen('app')">Inloggen</button>
     <div class="divider"><div class="divider-line"></div><span>of</span><div class="divider-line"></div></div>
     <button class="btn btn-ghost btn-full" style="gap:10px;">
@@ -2042,7 +2042,22 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
   </div>
 </div>
 
-<!-- MELD MODAL -->
+<!-- WACHTWOORD VERGETEN MODAL -->
+<div class="modal-overlay" id="wwVergetenModal" onclick="if(event.target===this)sluitWwVergeten()">
+  <div class="modal-box" style="max-width:400px;gap:16px;">
+    <div style="font-family:var(--font-head);font-size:20px;font-weight:800;">Wachtwoord vergeten?</div>
+    <div style="font-size:14px;color:var(--sub);line-height:1.6;">Vul het e-mailadres in waarmee je je account hebt aangemaakt. We sturen je een link om een nieuw wachtwoord in te stellen.</div>
+    <div>
+      <div class="field-label">E-mailadres</div>
+      <input class="input-field" type="email" id="wwVergetenEmail" placeholder="jouw@email.nl" autocomplete="email"/>
+    </div>
+    <div id="wwVergetenStatus" style="font-size:13px;color:var(--neon);line-height:1.5;display:none;"></div>
+    <div style="display:flex;gap:10px;">
+      <button class="btn btn-full" style="flex:1;background:var(--card2);border:1px solid var(--border);color:var(--text);" onclick="sluitWwVergeten()">Annuleren</button>
+      <button class="btn btn-primary btn-full" style="flex:2;" id="wwVergetenBtn" onclick="verstuurWwReset()">Stuur reset-link</button>
+    </div>
+  </div>
+</div>
 <div class="modal-overlay" id="meldModal" onclick="if(event.target===this)sluitMeldModal()">
   <div class="modal-box" style="max-width:400px;gap:14px;">
     <div style="font-family:var(--font-head);font-size:18px;font-weight:800;">Gebruiker melden</div>
@@ -2166,7 +2181,7 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
         <div class="field-label" style="margin:0;">Max. afstand</div>
         <div style="font-size:14px;font-weight:600;color:var(--text)" id="distVal">30 km</div>
       </div>
-      <input type="range" min="5" max="100" value="30" step="5" oninput="document.getElementById('distVal').textContent=this.value+' km'"/>
+      <input type="range" id="filterAfstand" min="5" max="200" value="30" step="5" oninput="document.getElementById('distVal').textContent=(this.value>=200?'Heel NL':this.value+' km')"/>
     </div>
     <div id="filterLocatieSectie">
       <div class="field-label">Provincie (optioneel)</div>
@@ -2177,7 +2192,7 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
       <select class="select-field" id="filterStad">
         <option value="">Hele provincie</option>
       </select>
-      <div style="font-size:11px;color:var(--sub);margin-top:6px;">Laat leeg om te zoeken op afstand vanaf je eigen locatie.</div>
+      <div style="font-size:11px;color:var(--sub);margin-top:6px;">Kies een stad of provincie als middelpunt, of laat leeg om vanaf je eigen locatie te zoeken. De afstand hierboven bepaalt hoe ver eromheen.</div>
     </div>
     <div id="filterLeeftijdSectie">
       <div style="display:flex;justify-content:space-between;margin-bottom:10px;">
@@ -2481,16 +2496,29 @@ async function laadAdvertenties() {
     adKaarten = adKaarten.filter(a => (a.raw?.niveau || '') === filterState.niveau);
   }
 
-  // Locatie-filter: als provincie/stad is gekozen, daarop filteren (anders blijft afstand t.o.v. profiel gelden)
-  if (filterState.provincie) {
-    const matchLoc = (loc) => (loc || '').toLowerCase().includes(filterState.provincie.toLowerCase());
-    profielKaarten = profielKaarten.filter(p => matchLoc(p.raw?.locatie || p.raw?.provincie));
-    adKaarten = adKaarten.filter(a => matchLoc(a.raw?.locatie || a.raw?.profiel?.locatie));
-  }
-  if (filterState.stad) {
-    const matchStad = (loc) => (loc || '').toLowerCase().includes(filterState.stad.toLowerCase());
-    profielKaarten = profielKaarten.filter(p => matchStad(p.raw?.locatie || p.raw?.stad));
-    adKaarten = adKaarten.filter(a => matchStad(a.raw?.locatie || a.raw?.profiel?.locatie));
+  // Afstand-filter: bepaal het middelpunt (gekozen stad > provincie > eigen locatie) en filter binnen X km
+  if (filterState.afstand < 200) {
+    let middelpunt = null;
+    if (filterState.stad) middelpunt = coordVoorLocatie(filterState.stad);
+    else if (filterState.provincie) middelpunt = coordVoorLocatie(filterState.provincie);
+    else if (currentProfile?.locatie) middelpunt = coordVoorLocatie(currentProfile.locatie);
+
+    if (middelpunt) {
+      const binnenBereik = (loc) => {
+        const c = coordVoorLocatie(loc);
+        if (!c) return false; // locatie onbekend → niet tonen bij afstand-filter
+        const d = afstandKm(middelpunt, c);
+        return d != null && d <= filterState.afstand;
+      };
+      profielKaarten = profielKaarten.filter(p => binnenBereik(p.raw?.locatie || p.raw?.stad || p.raw?.provincie));
+      adKaarten = adKaarten.filter(a => binnenBereik(a.raw?.locatie || a.raw?.profiel?.locatie));
+    }
+  } else if (filterState.provincie || filterState.stad) {
+    // "Heel NL" afstand maar wel een regio gekozen → exacte tekstmatch op die regio
+    const doel = (filterState.stad || filterState.provincie).toLowerCase();
+    const match = (loc) => (loc || '').toLowerCase().includes(doel);
+    profielKaarten = profielKaarten.filter(p => match(p.raw?.locatie));
+    adKaarten = adKaarten.filter(a => match(a.raw?.locatie || a.raw?.profiel?.locatie));
   }
   // Coverband / eigen werk / band in oprichting (alleen band-advertenties hebben deze vlaggen)
   if (filterState.alleenCoverband) {
@@ -4550,6 +4578,31 @@ function getMuzieklinks() {
   const inputs = document.querySelectorAll('#muzieklinks input');
   return [...inputs].map(i => i.value.trim()).filter(Boolean);
 }
+
+// ── Afstand-berekening (coördinaten per stad, terugval op provincie) ──
+const STAD_COORDS = {"Assen": [52.9953, 6.5606], "Emmen": [52.7833, 6.9], "Hoogeveen": [52.8893, 6.7303], "Meppel": [52.8893, 6.7303], "Coevorden": [52.8893, 6.7303], "Borger-Odoorn": [52.8893, 6.7303], "Hardenberg": [52.2963, 6.6283], "Roden": [52.8893, 6.7303], "Beilen": [52.8893, 6.7303], "Klazienaveen": [52.8893, 6.7303], "Smilde": [52.8893, 6.7303], "Westerbork": [52.8893, 6.7303], "Nieuw-Amsterdam": [52.8893, 6.7303], "Schoonoord": [52.8893, 6.7303], "Zuidlaren": [52.8893, 6.7303], "Gieten": [52.8893, 6.7303], "Annen": [52.8893, 6.7303], "Vries": [52.8893, 6.7303], "Norg": [52.8893, 6.7303], "Diever": [52.8893, 6.7303], "Dwingeloo": [52.8893, 6.7303], "Havelte": [52.8893, 6.7303], "Almere": [52.3758, 5.2256], "Lelystad": [52.5167, 5.4833], "Dronten": [52.5185, 5.4358], "Emmeloord": [52.5185, 5.4358], "Urk": [52.6631, 5.5986], "Zeewolde": [52.5185, 5.4358], "Biddinghuizen": [52.5185, 5.4358], "Swifterbant": [52.5185, 5.4358], "Nagele": [52.5185, 5.4358], "Tollebeek": [52.5185, 5.4358], "Kraggenburg": [52.5185, 5.4358], "Leeuwarden": [53.2, 5.7833], "Drachten": [53.1761, 5.7979], "Sneek": [53.1761, 5.7979], "Heerenveen": [53.1761, 5.7979], "Franeker": [53.1761, 5.7979], "Harlingen": [53.1761, 5.7979], "Bolsward": [53.1761, 5.7979], "Joure": [53.1761, 5.7979], "Dokkum": [53.1761, 5.7979], "Gorredijk": [53.1761, 5.7979], "Burgum": [53.1761, 5.7979], "Wolvega": [53.1761, 5.7979], "Lemmer": [53.1761, 5.7979], "Balk": [53.1761, 5.7979], "Koudum": [53.1761, 5.7979], "Makkum": [53.1761, 5.7979], "Workum": [53.1761, 5.7979], "Stavoren": [53.1761, 5.7979], "Sloten": [53.1761, 5.7979], "Akkrum": [53.1761, 5.7979], "Grou": [53.1761, 5.7979], "Beetsterzwaag": [53.1761, 5.7979], "Surhuisterveen": [53.1761, 5.7979], "Buitenpost": [53.1761, 5.7979], "Damwoude": [53.1761, 5.7979], "Kollum": [53.1761, 5.7979], "Nijmegen": [51.8425, 5.8528], "Arnhem": [51.9833, 5.9167], "Apeldoorn": [52.21, 5.97], "Ede": [52.0436, 5.6667], "Doetinchem": [51.9976, 5.8349], "Harderwijk": [52.3506, 5.6172], "Tiel": [51.8833, 5.4333], "Zutphen": [52.14, 6.195], "Wageningen": [51.9644, 5.6631], "Barneveld": [51.9976, 5.8349], "Winterswijk": [51.9976, 5.8349], "Zevenaar": [51.9976, 5.8349], "Culemborg": [51.95, 5.2333], "Doesburg": [52.0167, 6.1333], "Elburg": [51.9976, 5.8349], "Groenlo": [51.9976, 5.8349], "Lochem": [51.9976, 5.8349], "Nunspeet": [51.9976, 5.8349], "Oldebroek": [51.9976, 5.8349], "Putten": [51.9976, 5.8349], "Renkum": [51.9976, 5.8349], "Rheden": [51.9976, 5.8349], "Scherpenzeel": [51.9976, 5.8349], "Voorst": [51.9976, 5.8349], "Westervoort": [51.9667, 5.9667], "Wijchen": [51.9976, 5.8349], "Aalten": [51.9976, 5.8349], "Buren": [51.9976, 5.8349], "Druten": [51.9976, 5.8349], "Duiven": [51.9976, 5.8349], "Hattem": [52.2963, 6.6283], "Heerde": [51.9976, 5.8349], "Groningen": [53.2167, 6.5667], "Veendam": [53.2234, 6.5564], "Hoogezand-Sappemeer": [53.2234, 6.5564], "Stadskanaal": [53.2234, 6.5564], "Winschoten": [53.2234, 6.5564], "Delfzijl": [53.2234, 6.5564], "Leek": [53.2234, 6.5564], "Zuidhorn": [53.2234, 6.5564], "Appingedam": [53.2234, 6.5564], "Bedum": [53.2234, 6.5564], "Loppersum": [53.2234, 6.5564], "Pekela": [53.2234, 6.5564], "Slochteren": [53.2234, 6.5564], "Ten Boer": [53.2234, 6.5564], "Vlagtwedde": [53.2234, 6.5564], "Zuidbroek": [53.2234, 6.5564], "Winsum": [53.2234, 6.5564], "Uithuizen": [53.2234, 6.5564], "Warffum": [53.2234, 6.5564], "Maastricht": [50.8667, 5.6833], "Venlo": [51.37, 6.1681], "Roermond": [51.1933, 5.9872], "Sittard": [51, 5.8667], "Heerlen": [50.8833, 5.9833], "Weert": [50.9786, 5.8952], "Geleen": [50.9667, 5.8333], "Kerkrade": [50.8667, 6.0667], "Brunssum": [50.95, 5.9667], "Landgraaf": [50.9083, 6.0297], "Echt": [50.9786, 5.8952], "Valkenburg": [52.1797, 4.4317], "Gulpen": [50.9786, 5.8952], "Eijsden": [50.9786, 5.8952], "Meerssen": [50.9786, 5.8952], "Stein": [50.9679, 5.7652], "Beek": [50.9394, 5.7961], "Nuth": [50.9786, 5.8952], "Simpelveld": [50.9786, 5.8952], "Vaals": [50.9786, 5.8952], "Gennep": [50.9786, 5.8952], "Bergen": [50.9786, 5.8952], "Mook": [50.9786, 5.8952], "Horst aan de Maas": [50.9786, 5.8952], "Beesel": [50.9786, 5.8952], "Eindhoven": [51.4344, 5.4842], "Tilburg": [51.5572, 5.0911], "Breda": [51.5875, 4.775], "s-Hertogenbosch": [51.7002, 5.3068], "Helmond": [51.4797, 5.6556], "Oss": [51.5621, 5.0902], "Bergen op Zoom": [51.5, 4.3], "Roosendaal": [51.5621, 5.0902], "Waalwijk": [51.5621, 5.0902], "Veghel": [51.5621, 5.0902], "Boxtel": [51.5621, 5.0902], "Vught": [51.5621, 5.0902], "Drunen": [51.5621, 5.0902], "Heusden": [51.5621, 5.0902], "Oosterhout": [51.6431, 4.8569], "Dongen": [51.6258, 4.9433], "Goirle": [51.5621, 5.0902], "Hilvarenbeek": [51.5621, 5.0902], "Oisterwijk": [51.5621, 5.0902], "Schijndel": [51.5621, 5.0902], "Sint-Oedenrode": [51.5621, 5.0902], "Boxmeer": [51.5621, 5.0902], "Cuijk": [51.5621, 5.0902], "Grave": [51.5621, 5.0902], "Mill": [51.5621, 5.0902], "Bernheze": [51.5621, 5.0902], "Boekel": [51.5621, 5.0902], "Gemert-Bakel": [51.5621, 5.0902], "Laarbeek": [51.5621, 5.0902], "Deurne": [51.5621, 5.0902], "Asten": [51.5621, 5.0902], "Someren": [51.5621, 5.0902], "Amsterdam": [52.3667, 4.8833], "Haarlem": [52.3803, 4.6406], "Alkmaar": [52.632, 4.751], "Zaandam": [52.4417, 4.8422], "Hoorn": [52.6425, 5.0597], "Purmerend": [52.505, 4.9639], "Hilversum": [52.23, 5.18], "Den Helder": [52.9583, 4.7589], "Amstelveen": [52.3019, 4.8581], "Hoofddorp": [52.3, 4.6667], "Heerhugowaard": [52.668, 4.841], "Castricum": [52.4699, 4.8427], "Beverwijk": [52.4864, 4.6572], "Velsen": [52.4699, 4.8427], "Heemskerk": [52.5108, 4.6728], "Uitgeest": [52.4699, 4.8427], "Heiloo": [52.6011, 4.7019], "Egmond aan Zee": [52.4699, 4.8427], "Bergen aan Zee": [52.4699, 4.8427], "Schagen": [52.7886, 4.8019], "Texel": [52.4699, 4.8427], "Medemblik": [52.4699, 4.8427], "Enkhuizen": [52.7, 5.2833], "Blaricum": [52.2728, 5.2422], "Bussum": [52.2733, 5.1611], "Huizen": [52.2994, 5.2531], "Laren": [52.2544, 5.2317], "Weesp": [52.3069, 5.0417], "Diemen": [52.3439, 4.9625], "Landsmeer": [52.4699, 4.8427], "Enschede": [52.2225, 6.8925], "Zwolle": [52.5167, 6.1], "Deventer": [52.25, 6.1667], "Hengelo": [52.2656, 6.7931], "Almelo": [52.3567, 6.6625], "Oldenzaal": [52.3125, 6.9292], "Borne": [52.3, 6.75], "Haaksbergen": [52.2963, 6.6283], "Losser": [52.2963, 6.6283], "Dinkelland": [52.2963, 6.6283], "Tubbergen": [52.2963, 6.6283], "Hellendoorn": [52.2963, 6.6283], "Rijssen": [52.2963, 6.6283], "Holten": [52.2963, 6.6283], "Goor": [52.2963, 6.6283], "Delden": [52.2963, 6.6283], "Wierden": [52.2963, 6.6283], "Enter": [52.2963, 6.6283], "Nijverdal": [52.2963, 6.6283], "Vriezenveen": [52.2963, 6.6283], "Vroomshoop": [52.2963, 6.6283], "Staphorst": [52.2963, 6.6283], "Kampen": [52.2963, 6.6283], "Dalfsen": [52.2963, 6.6283], "Ommen": [52.2963, 6.6283], "Raalte": [52.2963, 6.6283], "Olst": [52.2963, 6.6283], "Wijhe": [52.2963, 6.6283], "Ootmarsum": [52.2963, 6.6283], "Denekamp": [52.2963, 6.6283], "De Lutte": [52.2963, 6.6283], "Weerselo": [52.2963, 6.6283], "Utrecht": [52.0908, 5.1217], "Amersfoort": [52.155, 5.3875], "Veenendaal": [52.025, 5.555], "Zeist": [52.0833, 5.2333], "Nieuwegein": [52.0314, 5.0919], "Houten": [52.0261, 5.1728], "IJsselstein": [52.1168, 5.2136], "Woerden": [52.1168, 5.2136], "De Bilt": [52.1168, 5.2136], "Soest": [52.1733, 5.2917], "Baarn": [52.1168, 5.2136], "Bunnik": [52.1168, 5.2136], "Bunschoten": [52.1168, 5.2136], "Eemnes": [52.1168, 5.2136], "Leusden": [52.1168, 5.2136], "Lopik": [52.1168, 5.2136], "Montfoort": [52.1168, 5.2136], "Oudewater": [52.1168, 5.2136], "Renswoude": [52.1168, 5.2136], "Rhenen": [52.1168, 5.2136], "Wijk bij Duurstede": [52.1168, 5.2136], "Woudenberg": [52.1168, 5.2136], "Middelburg": [51.4997, 3.6136], "Vlissingen": [51.45, 3.5833], "Goes": [51.4793, 3.6224], "Terneuzen": [51.4793, 3.6224], "Hulst": [51.4793, 3.6224], "Sluis": [51.4793, 3.6224], "Zierikzee": [51.4793, 3.6224], "Kapelle": [51.4793, 3.6224], "Reimerswaal": [51.4793, 3.6224], "Veere": [51.4793, 3.6224], "Rotterdam": [51.92, 4.48], "Den Haag": [52.08, 4.31], "Leiden": [52.16, 4.49], "Dordrecht": [51.7958, 4.6783], "Zoetermeer": [52.0611, 4.4933], "Delft": [52.0117, 4.3592], "Westland": [51.9901, 4.4835], "Alphen aan den Rijn": [52.1333, 4.65], "Gouda": [52.0181, 4.7056], "Schiedam": [51.9167, 4.4], "Spijkenisse": [51.8333, 4.3167], "Capelle aan den IJssel": [51.9357, 4.5782], "Ridderkerk": [51.8667, 4.6], "Barendrecht": [51.85, 4.5333], "Zwijndrecht": [51.824, 4.6126], "Pijnacker": [52.0183, 4.4361], "Nootdorp": [52.0439, 4.3978], "Waddinxveen": [52.0333, 4.6333], "Boskoop": [52.0667, 4.6333], "Bodegraven": [51.9901, 4.4835], "Lisse": [52.2597, 4.5611], "Hillegom": [52.2917, 4.5794], "Noordwijk": [51.9901, 4.4835], "Sassenheim": [52.2258, 4.5225], "Katwijk": [52.2008, 4.4153], "Wassenaar": [51.9901, 4.4835], "Voorschoten": [52.125, 4.445], "Leidschendam": [52.0883, 4.3944]};
+const PROV_COORDS = {"Drenthe": [52.8893, 6.7303], "Flevoland": [52.5185, 5.4358], "Friesland": [53.1761, 5.7979], "Gelderland": [51.9976, 5.8349], "Groningen": [53.2234, 6.5564], "Limburg": [50.9786, 5.8952], "Noord-Brabant": [51.5621, 5.0902], "Noord-Holland": [52.4699, 4.8427], "Overijssel": [52.2963, 6.6283], "Utrecht": [52.1168, 5.2136], "Zeeland": [51.4793, 3.6224], "Zuid-Holland": [51.9901, 4.4835]};
+function coordVoorLocatie(locatie) {
+  // locatie is bv. "Oldenzaal, Overijssel" of "Oldenzaal" of "Overijssel"
+  if (!locatie) return null;
+  const delen = String(locatie).split(',').map(s => s.trim());
+  for (const d of delen) {
+    if (STAD_COORDS[d]) return STAD_COORDS[d];
+  }
+  for (const d of delen) {
+    if (PROV_COORDS[d]) return PROV_COORDS[d];
+  }
+  return null;
+}
+function afstandKm(a, b) {
+  if (!a || !b) return null;
+  const R = 6371, toRad = x => x * Math.PI / 180;
+  const dLat = toRad(b[0]-a[0]), dLng = toRad(b[1]-a[1]);
+  const lat1 = toRad(a[0]), lat2 = toRad(b[0]);
+  const h = Math.sin(dLat/2)**2 + Math.cos(lat1)*Math.cos(lat2)*Math.sin(dLng/2)**2;
+  return 2 * R * Math.asin(Math.sqrt(h));
+}
+
 const stedenPerProvincie = {
   'Drenthe': ['Assen','Emmen','Hoogeveen','Meppel','Coevorden','Borger-Odoorn','Hardenberg','Roden','Beilen','Klazienaveen','Smilde','Westerbork','Nieuw-Amsterdam','Schoonoord','Zuidlaren','Gieten','Annen','Vries','Norg','Diever','Dwingeloo','Havelte','Overig'],
   'Flevoland': ['Almere','Lelystad','Dronten','Emmeloord','Urk','Zeewolde','Biddinghuizen','Swifterbant','Nagele','Tollebeek','Kraggenburg','Overig'],
@@ -4579,6 +4632,11 @@ function updateSteden() {
   }
 }
 function showScreen(id) {
+  // Reset eventuele knoppen die nog in 'bezig'-toestand staan (bv. login-spinner na terug navigeren)
+  ['loginBtn','regBtn'].forEach(bId => {
+    const b = document.getElementById(bId);
+    if (b && b.dataset.origineel !== undefined) knopKlaar(bId);
+  });
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById('screen-'+id)?.classList.add('active');
   if (id === 'app') {
@@ -4634,7 +4692,7 @@ function showPanel(id) {
 
 // ═══════════════ FILTER ═══════════════
 // ═══════════════ FILTER STATE ═══════════════
-let filterState = { minLeeftijd: 16, maxLeeftijd: 100, instrumenten: [], genres: [], niveau: '', provincie: '', stad: '', alleenCoverband: false, alleenEigenWerk: false, alleenOprichting: false };
+let filterState = { minLeeftijd: 16, maxLeeftijd: 100, instrumenten: [], genres: [], niveau: '', provincie: '', stad: '', afstand: 200, alleenCoverband: false, alleenEigenWerk: false, alleenOprichting: false };
 
 function closeFilter() {
   filterState.minLeeftijd = parseInt(document.getElementById('ageMin')?.value || 16);
@@ -4651,6 +4709,7 @@ function closeFilter() {
 
   filterState.provincie = document.getElementById('filterProvincie')?.value || '';
   filterState.stad = document.getElementById('filterStad')?.value || '';
+  filterState.afstand = parseInt(document.getElementById('filterAfstand')?.value || 200);
   filterState.alleenCoverband = !!document.getElementById('filterCoverband')?.checked;
   filterState.alleenEigenWerk = !!document.getElementById('filterEigenWerk')?.checked;
   filterState.alleenOprichting = !!document.getElementById('filterOprichting')?.checked;
@@ -5067,16 +5126,43 @@ async function registreerMetEmail() {
   }
 }
 
-async function wachtwoordVergeten() {
-  const email = document.getElementById('loginEmail')?.value.trim();
-  if (!email) {
-    toonInfo('E-mailadres nodig', 'Vul eerst je e-mailadres in in het inlogveld hierboven, en klik dan opnieuw op "Wachtwoord vergeten".', '📧');
+function wachtwoordVergeten() {
+  // Vooraf invullen met wat al in het loginveld staat (handig maar niet verplicht)
+  const login = document.getElementById('loginEmail')?.value.trim() || '';
+  const veld = document.getElementById('wwVergetenEmail');
+  if (veld) veld.value = login;
+  const status = document.getElementById('wwVergetenStatus');
+  if (status) { status.style.display = 'none'; status.textContent = ''; }
+  document.getElementById('wwVergetenModal')?.classList.add('open');
+  setTimeout(() => veld?.focus(), 50);
+}
+
+function sluitWwVergeten() {
+  document.getElementById('wwVergetenModal')?.classList.remove('open');
+}
+
+async function verstuurWwReset() {
+  const email = document.getElementById('wwVergetenEmail')?.value.trim();
+  const status = document.getElementById('wwVergetenStatus');
+  if (!email || !email.includes('@')) {
+    if (status) { status.style.color = '#ff8a80'; status.textContent = 'Vul een geldig e-mailadres in.'; status.style.display = 'block'; }
     return;
   }
+  knopBezig('wwVergetenBtn', 'Versturen...');
   const token = await voerCaptchaUit();
-  if (!token) { toonInfo('Verificatie mislukt', 'Probeer het zo nog eens.', '⚠️'); return; }
+  if (!token) {
+    knopKlaar('wwVergetenBtn');
+    if (status) { status.style.color = '#ff8a80'; status.textContent = 'Verificatie mislukt, probeer het opnieuw.'; status.style.display = 'block'; }
+    return;
+  }
   await sb.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin, captchaToken: token });
-  toonInfo('Email verstuurd!', 'Als er een account bestaat voor ' + esc(email) + ' ontvang je een reset-link. Check ook je spam.', '📧');
+  knopKlaar('wwVergetenBtn');
+  // Veilige, neutrale bevestiging (verraadt niet of het adres bestaat)
+  if (status) {
+    status.style.color = 'var(--neon)';
+    status.textContent = 'Als dit e-mailadres bij ons bekend is, hebben we een link gestuurd om je wachtwoord opnieuw in te stellen. Check ook je spam-map.';
+    status.style.display = 'block';
+  }
 }
 
 async function loginMetGoogle() {
