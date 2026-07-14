@@ -5032,14 +5032,13 @@ async function loginMetEmail() {
   const token = await voerCaptchaUit();
   if (!token) { knopKlaar('loginBtn'); if(err){err.textContent='Verificatie mislukt, probeer het opnieuw.';err.style.display='block';} return; }
   const { error } = await sb.auth.signInWithPassword({ email, password: wachtwoord, options: { captchaToken: token } });
+  knopKlaar('loginBtn');
   if (error) {
-    knopKlaar('loginBtn');
     if (err) {
       err.textContent = error.message.includes('Invalid') ? 'Onjuist e-mailadres of wachtwoord' : error.message;
       err.style.display = 'block';
     }
   }
-  // Bij succes navigeert de app weg van het loginscherm; knop hoeft niet hersteld te worden
 }
 
 const TURNSTILE_SITEKEY = '0x4AAAAAADluFHR8HAXo4XMi';
@@ -5146,11 +5145,36 @@ async function registreerMetEmail() {
   const token = await voerCaptchaUit();
   if (!token) { knopKlaar('regBtn'); if(err){err.textContent='Verificatie mislukt, probeer het opnieuw.';err.style.display='block';} return; }
 
-  const { error } = await sb.auth.signUp({ email, password: ww, options: { captchaToken: token } });
+  const { data: signUpData, error } = await sb.auth.signUp({ email, password: ww, options: { captchaToken: token } });
   knopKlaar('regBtn');
   turnstileToken = null; turnstileResolver = null;
-  if (error) {
-    if (err) { err.textContent = error.message; err.style.display = 'block'; }
+
+  // Supabase geeft bij een al bestaand (bevestigd) account vaak geen harde fout,
+  // maar een "lege" identities-array. Vang dat netjes af.
+  const bestaatAl = !error && signUpData?.user && Array.isArray(signUpData.user.identities) && signUpData.user.identities.length === 0;
+
+  if (error || bestaatAl) {
+    if (err) {
+      let melding;
+      if (bestaatAl) {
+        melding = 'Er bestaat al een account met dit e-mailadres. Probeer in te loggen of je wachtwoord te herstellen.';
+      } else {
+        const m = (error?.message || '').toLowerCase();
+        if (m.includes('already registered') || m.includes('already exists') || m.includes('user already')) {
+          melding = 'Er bestaat al een account met dit e-mailadres. Probeer in te loggen of je wachtwoord te herstellen.';
+        } else if (m.includes('invalid') && m.includes('email')) {
+          melding = 'Dit e-mailadres lijkt ongeldig. Controleer of je het goed hebt getypt.';
+        } else if (m.includes('password')) {
+          melding = 'Je wachtwoord voldoet niet aan de eisen (minimaal 6 tekens).';
+        } else if (m.includes('rate limit') || m.includes('too many')) {
+          melding = 'Te veel pogingen. Wacht even en probeer het opnieuw.';
+        } else {
+          melding = error?.message || 'Er ging iets mis bij het aanmaken van je account. Probeer het opnieuw.';
+        }
+      }
+      err.textContent = melding;
+      err.style.display = 'block';
+    }
   } else {
     if (err) err.style.display = 'none';
     // Toon bevestiging
