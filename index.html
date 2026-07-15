@@ -189,6 +189,7 @@ html, body {
 }
 .btn:active { transform: scale(0.97); opacity: .88; }
 .btn-primary { background: var(--grad); color: #fff; }
+.btn-secondary { background: var(--card2); color: var(--text); border: 1px solid var(--border); }
 .btn-ghost { background: transparent; border: 1.5px solid rgba(255,255,255,0.2); color: rgba(255,255,255,0.7); }
 .btn-ghost:hover { background: rgba(255,255,255,0.05); }
 .btn-full { width: 100%; }
@@ -1073,8 +1074,7 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
 
 .btn-spinner { display:inline-block; width:18px; height:18px; border:2px solid rgba(255,255,255,0.35); border-top-color:#fff; border-radius:50%; animation:btnspin 0.7s linear infinite; vertical-align:middle; }
 @keyframes btnspin { to { transform: rotate(360deg); } }
-.btn[disabled] { opacity:0.85; cursor:default; }
-#opnieuwVerstuurBtn[disabled] { opacity:1; }
+.btn[disabled] { cursor:default; }
 </style>
 </head>
 <body>
@@ -5102,9 +5102,7 @@ function startVerstuurCooldown(seconden = 25) {
   clearInterval(verstuurCooldownTimer);
   const tick = () => {
     btn.textContent = rest > 0 ? 'Opnieuw versturen (' + rest + 's)' : 'Mail opnieuw versturen';
-    // Tekst blijft leesbaar (wit), alleen de knop oogt rustiger tijdens de cooldown
-    btn.style.color = '#fff';
-    btn.style.background = rest > 0 ? 'rgba(255,255,255,0.06)' : '';
+    btn.style.opacity = rest > 0 ? '0.6' : '1';
     if (rest <= 0) { btn.disabled = false; clearInterval(verstuurCooldownTimer); }
     rest--;
   };
@@ -5113,18 +5111,37 @@ function startVerstuurCooldown(seconden = 25) {
 }
 
 async function verstuurBevestigingOpnieuw() {
-  if (!laatsteRegistratieEmail) { showScreen('onboard'); return; }
   const status = document.getElementById('opnieuwVerstuurStatus');
+  const toonStatus = (tekst, fout) => {
+    if (!status) return;
+    status.textContent = tekst;
+    status.style.color = fout ? '#ff8a80' : 'var(--neon)';
+    status.style.display = 'block';
+  };
+  if (!laatsteRegistratieEmail) {
+    toonStatus('We weten niet naar welk adres we moeten versturen. Ga terug naar inloggen en probeer het opnieuw.', true);
+    return;
+  }
+  knopBezig('opnieuwVerstuurBtn', 'Versturen...');
   const token = await voerCaptchaUit();
   if (!token) {
-    if (status) { status.textContent = 'Verificatie mislukt, probeer het opnieuw.'; status.style.color = '#ff8a80'; status.style.display = 'block'; }
+    knopKlaar('opnieuwVerstuurBtn');
+    toonStatus('Verificatie mislukt, probeer het opnieuw.', true);
     return;
   }
   const { error } = await sb.auth.resend({ type: 'signup', email: laatsteRegistratieEmail, options: { captchaToken: token } });
-  if (status) {
-    if (error) { status.textContent = 'Versturen mislukt: ' + error.message; status.style.color = '#ff8a80'; }
-    else { status.textContent = 'Nieuwe mail verstuurd naar ' + laatsteRegistratieEmail; status.style.color = 'var(--neon)'; }
-    status.style.display = 'block';
+  knopKlaar('opnieuwVerstuurBtn');
+  if (error) {
+    const m = (error.message || '').toLowerCase();
+    if (m.includes('already') || m.includes('confirmed')) {
+      toonStatus('Dit account is al bevestigd. Je kunt gewoon inloggen.', false);
+    } else if (m.includes('rate') || m.includes('too many') || m.includes('security purposes')) {
+      toonStatus('Even geduld — je kunt zo weer een mail aanvragen.', true);
+    } else {
+      toonStatus('Versturen mislukt: ' + error.message, true);
+    }
+  } else {
+    toonStatus('Nieuwe mail verstuurd naar ' + laatsteRegistratieEmail + '. Check ook je spam-map.', false);
   }
   startVerstuurCooldown();
 }
