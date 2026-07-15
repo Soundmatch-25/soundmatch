@@ -5094,24 +5094,30 @@ function knopKlaar(id) {
 }
 let verstuurCooldownTimer = null;
 
-function startVerstuurCooldown(seconden = 60) {
-  const btn = document.getElementById('opnieuwVerstuurBtn');
+// Generieke cooldown: houdt een knop 'seconden' lang uitgeschakeld met aftelling.
+// Sluit aan op Supabase's "Minimum interval per user" (60s), zodat we geen rate-limit-fout uitlokken.
+const cooldownTimers = {};
+function startKnopCooldown(btnId, tekstKlaar, seconden = 60) {
+  const btn = document.getElementById(btnId);
   if (!btn) return;
   let rest = seconden;
   btn.disabled = true;
-  clearInterval(verstuurCooldownTimer);
+  clearInterval(cooldownTimers[btnId]);
   const tick = () => {
     const klaar = rest <= 0;
-    btn.textContent = klaar ? 'Mail opnieuw versturen' : 'Opnieuw versturen (' + rest + 's)';
-    // Tijdens cooldown: rustige secundaire knop. Daarna: paarse primary-knop.
+    btn.textContent = klaar ? tekstKlaar : 'Nog even wachten (' + rest + 's)';
     btn.classList.toggle('btn-primary', klaar);
     btn.classList.toggle('btn-secondary', !klaar);
     btn.style.opacity = klaar ? '1' : '0.6';
-    if (klaar) { btn.disabled = false; clearInterval(verstuurCooldownTimer); }
+    if (klaar) { btn.disabled = false; clearInterval(cooldownTimers[btnId]); }
     rest--;
   };
   tick();
-  verstuurCooldownTimer = setInterval(tick, 1000);
+  cooldownTimers[btnId] = setInterval(tick, 1000);
+}
+
+function startVerstuurCooldown(seconden = 60) {
+  startKnopCooldown('opnieuwVerstuurBtn', 'Mail opnieuw versturen', seconden);
 }
 
 async function verstuurBevestigingOpnieuw() {
@@ -5263,14 +5269,22 @@ async function verstuurWwReset() {
     if (status) { status.style.color = '#ff8a80'; status.textContent = 'Verificatie mislukt, probeer het opnieuw.'; status.style.display = 'block'; }
     return;
   }
-  await sb.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin, captchaToken: token });
+  const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin, captchaToken: token });
   knopKlaar('wwVergetenBtn');
-  // Veilige, neutrale bevestiging (verraadt niet of het adres bestaat)
   if (status) {
-    status.style.color = 'var(--neon)';
-    status.textContent = 'Als dit e-mailadres bij ons bekend is, hebben we een link gestuurd om je wachtwoord opnieuw in te stellen. Check ook je spam-map.';
+    const m = (error?.message || '').toLowerCase();
+    if (error && (m.includes('rate') || m.includes('too many') || m.includes('security purposes'))) {
+      status.style.color = '#ff8a80';
+      status.textContent = 'Je hebt net al een link aangevraagd. Wacht even voordat je het opnieuw probeert.';
+    } else {
+      // Veilige, neutrale bevestiging (verraadt niet of het adres bestaat)
+      status.style.color = 'var(--neon)';
+      status.textContent = 'Als dit e-mailadres bij ons bekend is, hebben we een link gestuurd om je wachtwoord opnieuw in te stellen. Check ook je spam-map.';
+    }
     status.style.display = 'block';
   }
+  // Voorkom dat men direct opnieuw klikt en tegen Supabase's limiet aanloopt
+  startKnopCooldown('wwVergetenBtn', 'Stuur reset-link', 60);
 }
 
 async function loginMetGoogle() {
