@@ -190,6 +190,17 @@ html, body {
 .btn:active { transform: scale(0.97); opacity: .88; }
 .btn-primary { background: var(--grad); color: #fff; }
 .btn-secondary { background: var(--card2); color: var(--text); border: 1px solid var(--border); }
+
+/* Chat-bubbels veren zachtjes in (alleen nieuwe berichten) */
+@keyframes bubblePop {
+  0%   { opacity: 0; transform: translateY(7px) scale(0.9); }
+  55%  { opacity: 1; transform: translateY(-2px) scale(1.03); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+.bubble-nieuw { animation: bubblePop .3s cubic-bezier(.34,1.56,.64,1); }
+.bubble-me.bubble-nieuw { transform-origin: bottom right; }
+.bubble-them.bubble-nieuw { transform-origin: bottom left; }
+@media (prefers-reduced-motion: reduce) { .bubble-nieuw { animation: none; } }
 .btn-ghost { background: transparent; border: 1.5px solid rgba(255,255,255,0.2); color: rgba(255,255,255,0.7); }
 .btn-ghost:hover { background: rgba(255,255,255,0.05); }
 .btn-full { width: 100%; }
@@ -3109,7 +3120,8 @@ function switchTab(tab) {
 }
 
 async function laadMatchesLijst() {
-  await laadBlokkades();
+  // Verse check: iemand kan je zojuist geblokkeerd hebben
+  await laadBlokkades(true);
   window._viaAdMap = {};
   if (!currentUser) return;
   const container = document.getElementById('matchesLijst');
@@ -3630,6 +3642,34 @@ async function checkNieuweBerichten() {
   } catch(e) { console.warn('checkNieuweBerichten fout:', e.message); }
 }
 
+// Korte, subtiele geluidjes in de chat: 'verstuur' tikt omhoog, 'ontvang' plopt omlaag
+function speelChatGeluid(type) {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.type = 'sine';
+    const nu = ctx.currentTime;
+    if (type === 'verstuur') {
+      osc.frequency.setValueAtTime(880, nu);
+      osc.frequency.exponentialRampToValueAtTime(1250, nu + 0.06);
+      gain.gain.setValueAtTime(0, nu);
+      gain.gain.linearRampToValueAtTime(0.06, nu + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.001, nu + 0.09);
+      osc.start(nu); osc.stop(nu + 0.1);
+    } else {
+      osc.frequency.setValueAtTime(620, nu);
+      osc.frequency.exponentialRampToValueAtTime(430, nu + 0.08);
+      gain.gain.setValueAtTime(0, nu);
+      gain.gain.linearRampToValueAtTime(0.08, nu + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.001, nu + 0.12);
+      osc.start(nu); osc.stop(nu + 0.13);
+    }
+    setTimeout(() => { try { ctx.close(); } catch(e){} }, 400);
+  } catch(e) {}
+}
+
 function speelBerichtGeluid() {
   try {
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -3840,9 +3880,29 @@ async function laadDirecteBerichten() {
   }
 
   // Gesprekken
+  // Ongelezen-status per gesprekspartner (over alle ontvangen berichten, niet alleen het laatste)
+  const ongelezenPer = {};
+  (ontvangen || []).forEach(b => { if (!b.gelezen) ongelezenPer[b.van_user_id] = true; });
+
+  // Alle berichten samenvoegen en op tijd sorteren, zodat écht het laatste bericht per gesprek wint
+  const tijd = (b) => {
+    const t = b.aangemaakt_op || '';
+    return new Date(t.endsWith('Z') ? t : t + 'Z').getTime() || 0;
+  };
+  const alleBerichten = [
+    ...(ontvangen || []).map(b => ({ b, partnerId: b.van_user_id, user: b.van, prefix: '' })),
+    ...(verstuurd || []).map(b => ({ b, partnerId: b.naar_user_id, user: b.naar, prefix: 'Jij: ' }))
+  ].sort((x, y) => tijd(y.b) - tijd(x.b));
+
   const gesprekken = new Map();
-  (ontvangen || []).forEach(b => { if (!gesprekken.has(b.van_user_id)) gesprekken.set(b.van_user_id, { user: b.van, laasteBericht: b.inhoud, ongelezen: !b.gelezen }); });
-  (verstuurd || []).forEach(b => { if (!gesprekken.has(b.naar_user_id)) gesprekken.set(b.naar_user_id, { user: b.naar, laasteBericht: 'Jij: ' + b.inhoud, ongelezen: false }); });
+  alleBerichten.forEach(({ b, partnerId, user, prefix }) => {
+    if (!partnerId || gesprekken.has(partnerId)) return;
+    gesprekken.set(partnerId, {
+      user,
+      laasteBericht: prefix + (b.inhoud || ''),
+      ongelezen: !!ongelezenPer[partnerId]
+    });
+  });
 
   if (!gesprekken.size && !verzoeken?.length) {
     scroll.innerHTML = '<div style="padding:32px 20px;text-align:center;color:var(--sub);font-size:14px;">Nog geen berichten.<br>Druk op het chat-icoontje bij een profiel!</div>';
@@ -3942,6 +4002,8 @@ async function weigerVerzoek(verzoekId) {
 
 async function openGesprek(userId, user) {
   huidigChatUserId = userId;
+  // Nieuwe chat: geschiedenis stil laten verschijnen (geen animatie/geluid voor bestaande berichten)
+  bekendeChatBerichtIds = new Set();
   const naamEl = document.querySelector('.chat-name');
   if (naamEl) naamEl.textContent = user?.naam || 'Onbekend';
   // Via welke advertentie matchten we?
@@ -4045,6 +4107,9 @@ async function updateChatOnlineStatus(userId) {
 }
 
 
+// Bijhouden welke berichten al in beeld staan, zodat alleen nieuwe animeren/geluid maken
+let bekendeChatBerichtIds = new Set();
+
 async function laadGesprekBerichten(userId) {
   try {
     const { data, error } = await sb.from('directe_berichten')
@@ -4055,9 +4120,19 @@ async function laadGesprekBerichten(userId) {
     const msgs = document.getElementById('chatMsgs');
     if (!msgs || !data) return;
     const wasBottom = msgs.scrollHeight - msgs.scrollTop <= msgs.clientHeight + 50;
-    msgs.innerHTML = data.map(b =>
-      '<div class="bubble ' + (b.van_user_id === currentUser.id ? 'bubble-me' : 'bubble-them') + '">' + esc(b.inhoud) + '</div>'
-    ).join('');
+    const eerste = bekendeChatBerichtIds.size === 0;
+
+    // Nieuw ontvangen bericht (van de ander)? Dan een zacht plopje.
+    if (!eerste && data.some(b => b.van_user_id !== currentUser.id && !bekendeChatBerichtIds.has(b.id))) {
+      speelChatGeluid('ontvang');
+    }
+
+    msgs.innerHTML = data.map(b => {
+      const nieuw = !eerste && !bekendeChatBerichtIds.has(b.id);
+      const kant = b.van_user_id === currentUser.id ? 'bubble-me' : 'bubble-them';
+      return '<div class="bubble ' + kant + (nieuw ? ' bubble-nieuw' : '') + '">' + esc(b.inhoud) + '</div>';
+    }).join('');
+    bekendeChatBerichtIds = new Set(data.map(b => b.id));
     if (wasBottom) msgs.scrollTop = msgs.scrollHeight;
   } catch(e) { console.warn('laadGesprekBerichten fout:', e.message); }
 }
@@ -4077,6 +4152,7 @@ async function sendMsg() {
     return;
   }
   inp.value = '';
+  speelChatGeluid('verstuur');
   const { error } = await sb.from('directe_berichten').insert({ van_user_id: currentUser.id, naar_user_id: huidigChatUserId, inhoud: val });
   if (error) {
     inp.value = val; // bericht terugzetten zodat het niet verloren gaat
@@ -4084,6 +4160,7 @@ async function sendMsg() {
     return;
   }
   laadGesprekBerichten(huidigChatUserId);
+  laadDirecteBerichten(); // lijst links bijwerken met het nieuwe laatste bericht
 }
 
 function resetChatHeader() {
