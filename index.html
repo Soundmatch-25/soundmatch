@@ -3572,9 +3572,9 @@ async function stuurDirectBericht() {
   if (!p || !currentUser) return;
   const ontvangerI = p.raw?.user_id || p.id;
 
-  await laadBlokkades();
+  await laadBlokkades(true);
   if (geblokkeerdeIds.has(ontvangerI)) {
-    document.getElementById('directBerichtError').textContent = 'Je kunt geen bericht sturen naar deze gebruiker.';
+    document.getElementById('directBerichtError').textContent = 'Je kunt geen bericht meer sturen naar deze gebruiker.';
     document.getElementById('directBerichtError').style.display = 'block';
     return;
   }
@@ -3690,10 +3690,19 @@ function klikOpNotificatie() {
 async function updateOngelezen() {
   try {
     if (!currentUser) return;
-    const [{ count: berichtenCount }, { count: verzoekCount }] = await Promise.all([
-      sb.from('directe_berichten').select('*', { count: 'exact', head: true }).eq('naar_user_id', currentUser.id).eq('gelezen', false),
-      sb.from('berichtverzoeken').select('*', { count: 'exact', head: true }).eq('naar_user_id', currentUser.id).eq('status', 'wachtend')
-    ]);
+    await laadBlokkades();
+    const geblokkeerd = [...geblokkeerdeIds];
+
+    let berichtenQ = sb.from('directe_berichten').select('*', { count: 'exact', head: true }).eq('naar_user_id', currentUser.id).eq('gelezen', false);
+    let verzoekQ = sb.from('berichtverzoeken').select('*', { count: 'exact', head: true }).eq('naar_user_id', currentUser.id).eq('status', 'wachtend');
+    // Berichten van geblokkeerde gebruikers niet meetellen in de badge
+    if (geblokkeerd.length) {
+      const lijst = '(' + geblokkeerd.join(',') + ')';
+      berichtenQ = berichtenQ.not('van_user_id', 'in', lijst);
+      verzoekQ = verzoekQ.not('van_user_id', 'in', lijst);
+    }
+
+    const [{ count: berichtenCount }, { count: verzoekCount }] = await Promise.all([berichtenQ, verzoekQ]);
     const total = (berichtenCount || 0) + (verzoekCount || 0);
     ['berichtenBadge', 'berichtenBadgeMob'].forEach(id => {
       const b = document.getElementById(id);
@@ -4057,9 +4066,14 @@ async function sendMsg() {
   const inp = document.getElementById('chatInput');
   const val = inp?.value.trim();
   if (!val || !huidigChatUserId || !currentUser) return;
-  await laadBlokkades();
+  // Verse check: de ander kan je zojuist geblokkeerd hebben
+  await laadBlokkades(true);
   if (geblokkeerdeIds.has(huidigChatUserId)) {
-    toonInfo('Niet mogelijk', 'Je kunt geen berichten sturen naar deze gebruiker.', '\ud83d\udeab');
+    toonInfo('Niet mogelijk', 'Je kunt geen berichten meer sturen naar deze gebruiker.', '\ud83d\udeab');
+    huidigChatUserId = null;
+    resetChatHeader();
+    laadDirecteBerichten();
+    laadMatchesLijst();
     return;
   }
   inp.value = '';
