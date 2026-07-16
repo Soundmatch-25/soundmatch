@@ -2232,7 +2232,7 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
         <div class="field-label" style="margin:0;">Max. afstand</div>
         <div style="font-size:14px;font-weight:600;color:var(--text)" id="distVal">30 km</div>
       </div>
-      <input type="range" id="filterAfstand" min="5" max="200" value="30" step="5" oninput="document.getElementById('distVal').textContent=(this.value>=200?'Heel NL':this.value+' km')"/>
+      <input type="range" id="filterAfstand" min="5" max="200" value="30" step="5" oninput="updateAfstandLabel()"/>
     </div>
     <div id="filterLocatieSectie">
       <div class="field-label">Provincie (optioneel)</div>
@@ -2243,7 +2243,7 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
       <select class="select-field" id="filterStad">
         <option value="">Hele provincie</option>
       </select>
-      <div style="font-size:11px;color:var(--sub);margin-top:6px;">Kies een stad of provincie als middelpunt, of laat leeg om vanaf je eigen locatie te zoeken. De afstand hierboven bepaalt hoe ver eromheen.</div>
+      <div id="filterLocatieHint" style="font-size:11px;color:var(--sub);margin-top:6px;">Kies een stad of provincie als middelpunt, of laat leeg om vanaf je eigen locatie te zoeken. De afstand hierboven bepaalt hoe ver eromheen.</div>
     </div>
     <div id="filterLeeftijdSectie">
       <div style="display:flex;justify-content:space-between;margin-bottom:10px;">
@@ -2564,13 +2564,9 @@ async function laadAdvertenties() {
       profielKaarten = profielKaarten.filter(p => binnenBereik(p.raw?.locatie || p.raw?.stad || p.raw?.provincie));
       adKaarten = adKaarten.filter(a => binnenBereik(a.raw?.locatie || a.raw?.profiel?.locatie));
     }
-  } else if (filterState.provincie || filterState.stad) {
-    // "Heel NL" afstand maar wel een regio gekozen → exacte tekstmatch op die regio
-    const doel = (filterState.stad || filterState.provincie).toLowerCase();
-    const match = (loc) => (loc || '').toLowerCase().includes(doel);
-    profielKaarten = profielKaarten.filter(p => match(p.raw?.locatie));
-    adKaarten = adKaarten.filter(a => match(a.raw?.locatie || a.raw?.profiel?.locatie));
   }
+  // Bij "Heel NL" vervalt de afstandsgrens volledig: stad/provincie zijn dan enkel middelpunt
+  // en spelen geen rol meer, dus we filteren niet op locatie.
   // Coverband / eigen werk / band in oprichting (alleen band-advertenties hebben deze vlaggen)
   if (filterState.alleenCoverband) {
     adKaarten = adKaarten.filter(a => a.raw?.coverband === true);
@@ -4916,6 +4912,26 @@ function closeFilter() {
   laadAdvertenties();
 }
 
+// Werkt het afstand-label bij en maakt zichtbaar dat stad/provincie bij "Heel NL" geen rol spelen
+function updateAfstandLabel() {
+  const slider = document.getElementById('filterAfstand');
+  const val = document.getElementById('distVal');
+  const sectie = document.getElementById('filterLocatieSectie');
+  const hint = document.getElementById('filterLocatieHint');
+  if (!slider) return;
+  const heelNL = parseInt(slider.value) >= 200;
+  if (val) val.textContent = heelNL ? 'Heel NL' : slider.value + ' km';
+  if (sectie) {
+    sectie.style.opacity = heelNL ? '0.45' : '1';
+    sectie.style.pointerEvents = heelNL ? 'none' : '';
+  }
+  if (hint) {
+    hint.textContent = heelNL
+      ? 'Je zoekt door heel Nederland — stad en provincie spelen dan geen rol.'
+      : 'Kies een stad of provincie als middelpunt, of laat leeg om vanaf je eigen locatie te zoeken. De afstand hierboven bepaalt hoe ver eromheen.';
+  }
+}
+
 function filterUpdateSteden() {
   const provincie = document.getElementById('filterProvincie')?.value;
   const stadSelect = document.getElementById('filterStad');
@@ -4942,6 +4958,7 @@ function openFilter() {
   }
   // Filter afstemmen op de huidige categorie (vult chips, label, zichtbaarheid)
   setFR(activeType);
+  updateAfstandLabel();
   document.getElementById('filterModal').classList.add('open');
 }
 
