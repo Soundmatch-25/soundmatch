@@ -1537,7 +1537,8 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
         <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
       </div>
       <input type="file" id="regFotoInput" accept="image/jpeg,image/png,image/webp" style="display:none;" onchange="handleFotoUpload(this)"/>
-      <div style="font-size:12px;color:var(--sub);margin-top:8px;">Klik om profielfoto te kiezen</div>
+      <div style="font-size:12px;color:var(--sub);margin-top:8px;">Klik om een foto te kiezen</div>
+      <div style="font-size:11px;color:var(--sub);margin-top:4px;opacity:.8;">Hoeft geen foto van jezelf te zijn — je instrument of een sfeerbeeld mag ook.</div>
       <div id="fotoUploadStatus" style="font-size:12px;margin-top:4px;display:none;"></div>
     </div>
 
@@ -1889,6 +1890,7 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
               </div>
               <input type="file" id="adFotoInput" accept="image/jpeg,image/png,image/webp" style="display:none;" onchange="handleAdFoto(this)"/>
               <div style="font-size:12px;color:var(--sub);margin-top:8px;">Klik om foto toe te voegen</div>
+              <div style="font-size:11px;color:var(--sub);margin-top:4px;opacity:.8;">Bijvoorbeeld je instrument, oefenruimte of een sfeerbeeld.</div>
             </div>
 
             <!-- Type -->
@@ -4669,7 +4671,7 @@ async function slaAdvertentieOp() {
   // Validatie
   const errEl = document.getElementById('adError');
   if (!naam) { errEl.textContent = 'Vul je naam in.'; errEl.style.display = 'block'; return; }
-  if (!adFotoUrl) { errEl.textContent = 'Voeg een foto toe aan je advertentie.'; errEl.style.display = 'block'; return; }
+  if (!adFotoUrl) { errEl.textContent = 'Voeg een foto toe \u2014 advertenties met foto krijgen veel meer reacties.'; errEl.style.display = 'block'; return; }
   // Leeftijd valideren: minimaal 16, maximaal 99
   const leeftijdOngeldig = v => v && (parseInt(v) < 16 || parseInt(v) > 99);
   if (isIndustry && instrumenten.length === 0) { errEl.textContent = 'Kies wat voor soort je bent (bijv. Studio of Producer).'; errEl.style.display = 'block'; return; }
@@ -5712,6 +5714,7 @@ async function slaProfielOp() {
   if (type === 'industry' && instrumenten.length === 0) { err.textContent = 'Kies wat voor soort je bent (bijv. Studio of Producer).'; err.style.display = 'block'; return; }
   if (!provincie) { err.textContent = 'Selecteer een provincie.'; err.style.display = 'block'; return; }
   if (!stad) { err.textContent = 'Selecteer een stad.'; err.style.display = 'block'; return; }
+  if (!uploadedFotoUrl && !currentProfile?.foto_url) { err.textContent = 'Voeg een foto toe \u2014 dit hoeft geen foto van jezelf te zijn.'; err.style.display = 'block'; return; }
   err.style.display = 'none';
 
 
