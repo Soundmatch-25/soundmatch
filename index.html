@@ -2885,6 +2885,7 @@ async function doSwipe(dir) {
           const { data: newMatch } = await sb.from('matches').select('id')
             .or('and(gebruiker_a.eq.' + currentUser.id + ',gebruiker_b.eq.' + targetUserId + '),and(gebruiker_a.eq.' + targetUserId + ',gebruiker_b.eq.' + currentUser.id + ')')
             .maybeSingle();
+          if (newMatch?.id) bekendeMatchIds.add(newMatch.id); // eigen match: geen popup, je ziet al de match-modal
           setTimeout(() => showMatch({ ...p, id: targetUserId, matchId: newMatch?.id }), 400);
         }
       }
@@ -3712,6 +3713,63 @@ function toonBerichtNotificatie(naam, inhoud, fotoUrl) {
   notif._timeout = setTimeout(() => { notif.style.display = 'none'; }, 8000);
 }
 
+// Melding voor de ánder: die krijgt geen match-modal te zien, dus wel een popup.
+// Verschijnt overal in de app (in tegenstelling tot de berichtmelding).
+function toonMatchNotificatie(naam, fotoUrl) {
+  const notif = document.getElementById('berichtNotificatie');
+  if (!notif) return;
+  speelBerichtGeluid();
+
+  const tekst = document.getElementById('notifTekst');
+  const avatar = document.getElementById('notifAvatar');
+  const titel = notif.querySelector('.notif-titel');
+
+  if (titel) titel.textContent = '\ud83c\udf89 Je hebt een nieuwe match!';
+  if (tekst) tekst.textContent = naam + ' \u2014 klik om te bekijken';
+  if (avatar) avatar.innerHTML = fotoUrl
+    ? '<img src="' + esc(fotoUrl) + '" style="width:100%;height:100%;object-fit:cover;"/>'
+    : '<svg width="20" height="20" viewBox="0 0 24 24" fill="white" stroke="none"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>';
+
+  notif.dataset.isMatch = '1';
+  notif.style.display = 'flex';
+  clearTimeout(notif._timeout);
+  notif._timeout = setTimeout(() => { notif.style.display = 'none'; }, 10000);
+}
+
+// Nieuwe matches detecteren die niet door jouw eigen swipe zijn ontstaan
+let bekendeMatchIds = new Set();
+let matchesInitieelGeladen = false;
+
+async function checkNieuweMatches() {
+  if (!currentUser) return;
+  try {
+    const { data } = await sb.from('matches')
+      .select('id, gebruiker_a, gebruiker_b')
+      .or('gebruiker_a.eq.' + currentUser.id + ',gebruiker_b.eq.' + currentUser.id);
+    if (!data) return;
+
+    // Eerste ronde: bestaande matches als bekend markeren, geen melding
+    if (!matchesInitieelGeladen) {
+      bekendeMatchIds = new Set(data.map(m => m.id));
+      matchesInitieelGeladen = true;
+      return;
+    }
+
+    const nieuwe = data.filter(m => !bekendeMatchIds.has(m.id));
+    bekendeMatchIds = new Set(data.map(m => m.id));
+    if (!nieuwe.length) return;
+
+    const m = nieuwe[nieuwe.length - 1];
+    const anderId = m.gebruiker_a === currentUser.id ? m.gebruiker_b : m.gebruiker_a;
+    await laadBlokkades();
+    if (geblokkeerdeIds.has(anderId)) return;
+
+    const { data: prof } = await sb.from('profiles').select('naam, foto_url').eq('id', anderId).maybeSingle();
+    toonMatchNotificatie(prof?.naam || 'Iemand', prof?.foto_url);
+    laadMatchesLijst();
+  } catch(e) {}
+}
+
 function klikOpNotificatie() {
   const notif = document.getElementById('berichtNotificatie');
   notif.style.display = 'none';
@@ -3758,6 +3816,7 @@ function startBerichtenPoll() {
   setAppInterval('online', updateOnlineStatus, 60000);
   setAppInterval('chatcheck', checkChatVerwijderd, 10000);
   setAppInterval('likesbadge', checkNieuweLikes, 30000);
+  setAppInterval('nieuwematches', checkNieuweMatches, 15000);
   checkNieuweLikes(); // direct bij start
 }
 
@@ -5496,6 +5555,9 @@ async function uitloggen() {
   geswipedIds.clear();
   geswipedAdIds.clear();
   geblokkeerdeIds.clear();
+  bekendeMatchIds.clear();
+  matchesInitieelGeladen = false;
+  bekendeChatBerichtIds.clear();
   blokkadesGeladen = false;
   swipeHistory = [];
   window._viaAdMap = {};
