@@ -1081,7 +1081,24 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
   z-index: 9999; opacity: 0; transition: opacity .2s;
   pointer-events: none;
 }
-.toast.show { opacity: 1; }
+.toast.show { opacity: 1; animation: toastVeer .36s cubic-bezier(.34,1.56,.64,1); }
+@keyframes toastVeer {
+  0%   { opacity: 0; transform: translateX(-50%) translateY(14px) scale(.9); }
+  60%  { opacity: 1; transform: translateX(-50%) translateY(-4px) scale(1.04); }
+  100% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+}
+
+/* Meldingspopup rechtsboven veert naar binnen */
+@keyframes notifVeer {
+  0%   { opacity: 0; transform: translateX(30px) scale(.9); }
+  60%  { opacity: 1; transform: translateX(-5px) scale(1.03); }
+  100% { opacity: 1; transform: translateX(0) scale(1); }
+}
+.notif-veer { animation: notifVeer .38s cubic-bezier(.34,1.56,.64,1); }
+
+@media (prefers-reduced-motion: reduce) {
+  .toast.show, .notif-veer { animation: none; }
+}
 
 .btn-spinner { display:inline-block; width:18px; height:18px; border:2px solid rgba(255,255,255,0.35); border-top-color:#fff; border-radius:50%; animation:btnspin 0.7s linear infinite; vertical-align:middle; }
 @keyframes btnspin { to { transform: rotate(360deg); } }
@@ -2287,9 +2304,11 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
   </div>
 </div>
 
+<!-- Confetti ligt buiten de modal, zodat ook de match-melding hem kan gebruiken -->
+<canvas id="confettiCanvas" style="position:fixed;inset:0;pointer-events:none;z-index:999;"></canvas>
+
 <!-- MATCH MODAL -->
 <div class="modal-overlay" id="matchModal" onclick="if(event.target===this)closeMatch()">
-  <canvas id="confettiCanvas" style="position:fixed;inset:0;pointer-events:none;z-index:999;"></canvas>
   <div class="modal-box" style="max-width:400px;text-align:center;align-items:center;gap:20px;position:relative;z-index:1000;">
     <div style="font-size:48px;">🎉</div>
     <div style="display:flex;gap:16px;align-items:center;justify-content:center;">
@@ -2965,7 +2984,7 @@ function stuurBerichtNaMatch() {
 let confettiAnim = null;
 let confettiParticles = [];
 
-function startConfetti() {
+function startConfetti(aantal = 120, vanRechtsboven = false) {
   const canvas = document.getElementById('confettiCanvas');
   if (!canvas) return;
   canvas.width = window.innerWidth;
@@ -2973,9 +2992,10 @@ function startConfetti() {
   const ctx = canvas.getContext('2d');
   const colors = ['#7c4dff','#e040fb','#00e5ff','#ff6d00','#69f0ae','#ffea00'];
 
-  confettiParticles = Array.from({length: 120}, () => ({
-    x: Math.random() * canvas.width,
-    y: -20,
+  confettiParticles = Array.from({length: aantal}, () => ({
+    // Bij de melding valt de confetti rond de popup rechtsboven, niet over het hele scherm
+    x: vanRechtsboven ? canvas.width - 40 - Math.random() * 260 : Math.random() * canvas.width,
+    y: vanRechtsboven ? 10 + Math.random() * 20 : -20,
     r: Math.random() * 8 + 4,
     d: Math.random() * 80 + 20,
     color: colors[Math.floor(Math.random() * colors.length)],
@@ -3184,18 +3204,20 @@ async function laadMatchesLijst() {
 }
 
 async function verwijderMatch(matchId, anderUserId) {
-  toonBevestig('Match verwijderen', 'Je ziet elkaar terug in Geskipt. De chat wordt ook verwijderd.', '💔', 'Verwijderen', () => _verwijderMatchBevestigd(matchId, anderUserId));
+  toonBevestig('Match verwijderen', 'Je ziet deze persoon terug bij Geskipt. De chat wordt ook verwijderd.', '💔', 'Verwijderen', () => _verwijderMatchBevestigd(matchId, anderUserId));
 }
 
 async function _verwijderMatchBevestigd(matchId, anderUserId) {
   await sb.from('matches').delete().eq('id', matchId);
-  await sb.from('swipes').upsert({ swiper_id: currentUser.id, target_id: anderUserId, richting: 'nope' }, { onConflict: 'swiper_id,target_id' });
-  await sb.from('swipes').update({ richting: 'nope' }).eq('swiper_id', anderUserId).eq('target_id', currentUser.id);
+  // Al jouw likes op deze persoon omzetten naar 'nope' (ook die op losse advertenties).
+  // De swipe van de ánder blijft ongemoeid: die heeft jou immers niet afgewezen.
+  await sb.from('swipes').update({ richting: 'nope' })
+    .eq('swiper_id', currentUser.id).eq('target_id', anderUserId);
   await sb.from('directe_berichten').delete().eq('van_user_id', currentUser.id).eq('naar_user_id', anderUserId);
   await sb.from('directe_berichten').delete().eq('van_user_id', anderUserId).eq('naar_user_id', currentUser.id);
-  geswipedIds.delete(anderUserId);
   laadMatchesLijst(); laadOntvangenLikes(); laadSwipeHistory(); laadDirecteBerichten();
   await laadGezienIds();
+  laadAdvertenties();
   if (huidigChatUserId === anderUserId) {
     huidigChatUserId = null;
     document.getElementById('chatMsgs').innerHTML = '';
@@ -3709,6 +3731,7 @@ function toonBerichtNotificatie(naam, inhoud, fotoUrl) {
 
   delete notif.dataset.isMatch;
   notif.style.display = 'flex';
+  herstartAnimatie(notif, 'notif-veer');
   clearTimeout(notif._timeout);
   notif._timeout = setTimeout(() => { notif.style.display = 'none'; }, 8000);
 }
@@ -3732,6 +3755,8 @@ function toonMatchNotificatie(naam, fotoUrl) {
 
   notif.dataset.isMatch = '1';
   notif.style.display = 'flex';
+  herstartAnimatie(notif, 'notif-veer');
+  startConfetti(45, true); // korte burst rond de popup
   clearTimeout(notif._timeout);
   notif._timeout = setTimeout(() => { notif.style.display = 'none'; }, 10000);
 }
@@ -3803,6 +3828,14 @@ async function checkNieuweMatches() {
     const nieuwe = data.filter(m => !bekendeMatchIds.has(m.id));
     for (const m of nieuwe) await meldNieuweMatch(m);
   } catch(e) {}
+}
+
+// Zorgt dat een CSS-animatie opnieuw afspeelt, ook als het element al zichtbaar was
+function herstartAnimatie(el, klasse) {
+  if (!el) return;
+  el.classList.remove(klasse);
+  void el.offsetWidth; // forceert een reflow zodat de animatie opnieuw start
+  el.classList.add(klasse);
 }
 
 function klikOpNotificatie() {
