@@ -3739,34 +3739,69 @@ function toonMatchNotificatie(naam, fotoUrl) {
 // Nieuwe matches detecteren die niet door jouw eigen swipe zijn ontstaan
 let bekendeMatchIds = new Set();
 let matchesInitieelGeladen = false;
+let matchKanaal = null;
 
+// Meldt één nieuwe match (gebruikt door zowel realtime als de fallback-poll)
+async function meldNieuweMatch(match) {
+  if (!currentUser || !match?.id) return;
+  if (bekendeMatchIds.has(match.id)) return;
+  bekendeMatchIds.add(match.id);
+  const anderId = match.gebruiker_a === currentUser.id ? match.gebruiker_b : match.gebruiker_a;
+  if (!anderId) return;
+  await laadBlokkades();
+  if (geblokkeerdeIds.has(anderId)) return;
+  const { data: prof } = await sb.from('profiles').select('naam, foto_url').eq('id', anderId).maybeSingle();
+  toonMatchNotificatie(prof?.naam || 'Iemand', prof?.foto_url);
+  laadMatchesLijst();
+}
+
+// Bestaande matches inlezen zodat je bij het inloggen geen meldingenstorm krijgt.
+// Wordt aangeroepen zodra het profiel geladen is — zo ontstaat er geen gat waarin
+// een verse match ten onrechte als "al bekend" wordt weggeschreven.
+async function initMatchMeldingen() {
+  if (!currentUser || matchesInitieelGeladen) return;
+  try {
+    const { data } = await sb.from('matches')
+      .select('id')
+      .or('gebruiker_a.eq.' + currentUser.id + ',gebruiker_b.eq.' + currentUser.id);
+    bekendeMatchIds = new Set((data || []).map(m => m.id));
+    matchesInitieelGeladen = true;
+    startMatchRealtime();
+  } catch(e) {}
+}
+
+// Live verbinding: melding komt direct binnen, ook als dit tabblad op de achtergrond staat
+function startMatchRealtime() {
+  if (matchKanaal || !currentUser) return;
+  try {
+    matchKanaal = sb.channel('match-meldingen')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'matches' }, (payload) => {
+        const m = payload.new;
+        if (!m || !currentUser) return;
+        if (m.gebruiker_a !== currentUser.id && m.gebruiker_b !== currentUser.id) return;
+        meldNieuweMatch(m);
+      })
+      .subscribe();
+  } catch(e) {}
+}
+
+function stopMatchRealtime() {
+  if (!matchKanaal) return;
+  try { sb.removeChannel(matchKanaal); } catch(e) {}
+  matchKanaal = null;
+}
+
+// Vangnet: mocht realtime niet aanstaan of wegvallen, dan pikt deze poll de match alsnog op
 async function checkNieuweMatches() {
   if (!currentUser) return;
   try {
+    if (!matchesInitieelGeladen) { await initMatchMeldingen(); return; }
     const { data } = await sb.from('matches')
       .select('id, gebruiker_a, gebruiker_b')
       .or('gebruiker_a.eq.' + currentUser.id + ',gebruiker_b.eq.' + currentUser.id);
     if (!data) return;
-
-    // Eerste ronde: bestaande matches als bekend markeren, geen melding
-    if (!matchesInitieelGeladen) {
-      bekendeMatchIds = new Set(data.map(m => m.id));
-      matchesInitieelGeladen = true;
-      return;
-    }
-
     const nieuwe = data.filter(m => !bekendeMatchIds.has(m.id));
-    bekendeMatchIds = new Set(data.map(m => m.id));
-    if (!nieuwe.length) return;
-
-    const m = nieuwe[nieuwe.length - 1];
-    const anderId = m.gebruiker_a === currentUser.id ? m.gebruiker_b : m.gebruiker_a;
-    await laadBlokkades();
-    if (geblokkeerdeIds.has(anderId)) return;
-
-    const { data: prof } = await sb.from('profiles').select('naam, foto_url').eq('id', anderId).maybeSingle();
-    toonMatchNotificatie(prof?.naam || 'Iemand', prof?.foto_url);
-    laadMatchesLijst();
+    for (const m of nieuwe) await meldNieuweMatch(m);
   } catch(e) {}
 }
 
@@ -5549,8 +5584,9 @@ async function loginMetGoogle() {
 
 async function uitloggen() {
   await sb.auth.signOut();
-  // Polling stoppen zodat er na uitloggen geen verzoeken meer doorlopen
+  // Polling en live verbindingen stoppen zodat er na uitloggen niets meer doorloopt
   stopAlleIntervals();
+  stopMatchRealtime();
   // In-memory caches legen zodat het volgende account geen data van dit account ziet
   geswipedIds.clear();
   geswipedAdIds.clear();
@@ -5578,6 +5614,7 @@ async function laadOfMaakProfiel(user) {
     sb.from('profiles').update({ actief_op: new Date().toISOString() }).eq('id', user.id);
     // Swipes alvast laden zodat ontdekken snel is
     voorlaadSwipes();
+    initMatchMeldingen();
     showScreen('app');
   } else if (profiel && !profiel.naam) {
     currentProfile = profiel;
