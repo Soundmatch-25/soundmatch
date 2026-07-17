@@ -99,9 +99,25 @@ html, body {
   overflow-x: hidden;
 }
 
-.ob-glow-1 { position: absolute; top: -80px; right: -80px; width: 400px; height: 400px; border-radius: 50%; background: radial-gradient(circle, rgba(124,77,255,0.15) 0%, transparent 70%); pointer-events: none; }
-.ob-glow-2 { position: absolute; bottom: 60px; left: -60px; width: 300px; height: 300px; border-radius: 50%; background: radial-gradient(circle, rgba(68,138,255,0.12) 0%, transparent 70%); pointer-events: none; }
-.ob-glow-3 { position: absolute; top: 40%; right: 5%; width: 200px; height: 200px; border-radius: 50%; background: radial-gradient(circle, rgba(168,85,247,0.1) 0%, transparent 70%); pointer-events: none; }
+/* Achtergrondgloed drijft traag rond; elke gloed z'n eigen baan en tempo,
+   zodat het patroon nooit precies herhaalt en het rustig aanvoelt */
+@keyframes glowDrift1 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33%      { transform: translate(-50px, 40px) scale(1.12); }
+  66%      { transform: translate(30px, -25px) scale(.94); }
+}
+@keyframes glowDrift2 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  40%      { transform: translate(60px, -35px) scale(1.15); }
+  75%      { transform: translate(-25px, 30px) scale(.92); }
+}
+@keyframes glowDrift3 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50%      { transform: translate(-40px, -50px) scale(1.2); }
+}
+.ob-glow-1 { position: absolute; top: -80px; right: -80px; width: 400px; height: 400px; border-radius: 50%; background: radial-gradient(circle, rgba(124,77,255,0.15) 0%, transparent 70%); pointer-events: none; animation: glowDrift1 26s ease-in-out infinite; }
+.ob-glow-2 { position: absolute; bottom: 60px; left: -60px; width: 300px; height: 300px; border-radius: 50%; background: radial-gradient(circle, rgba(68,138,255,0.12) 0%, transparent 70%); pointer-events: none; animation: glowDrift2 34s ease-in-out infinite; }
+.ob-glow-3 { position: absolute; top: 40%; right: 5%; width: 200px; height: 200px; border-radius: 50%; background: radial-gradient(circle, rgba(168,85,247,0.1) 0%, transparent 70%); pointer-events: none; animation: glowDrift3 21s ease-in-out infinite; }
 
 .ob-inner {
   position: relative;
@@ -132,8 +148,59 @@ html, body {
   letter-spacing: 4px;
   text-transform: uppercase;
   line-height: 1;
+  white-space: nowrap; /* letters zijn losse elementen; zonder dit breekt de tekst per letter af */
 }
-.ob-logo .accent { background: var(--grad); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+/* Beginscherm: blokken komen na elkaar rustig in beeld */
+@keyframes obIn {
+  0%   { opacity: 0; transform: translateY(16px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+/* Losse letters wippen omhoog het beeld in */
+@keyframes obLetter {
+  0%   { opacity: 0; transform: translateY(22px) scale(.86); }
+  60%  { opacity: 1; transform: translateY(-3px) scale(1.02); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+/* Gradient schuift naadloos door: de eindkleur is gelijk aan de beginkleur,
+   dus de lus herhaalt zonder zichtbare sprong */
+@keyframes obVloei {
+  0%   { background-position: 0% 50%; }
+  100% { background-position: 200% 50%; }
+}
+.ob-headline, .ob-sub, .ob-btns {
+  opacity: 0;
+  animation: obIn .6s cubic-bezier(.22,1,.36,1) forwards;
+}
+.ob-headline { animation-delay: .55s; }
+.ob-sub      { animation-delay: .7s; }
+.ob-btns     { animation-delay: .85s; }
+
+/* Elke letter apart, maar de gradient loopt over het hele woord */
+.ob-logo .letter {
+  display: inline-block;
+  opacity: 0;
+  animation: obLetter .5s cubic-bezier(.34,1.56,.64,1) forwards;
+  white-space: pre;
+}
+/* Golf door de letters, zoals publiek in een stadion: kort omhoog, dan lang rust */
+@keyframes obGolf {
+  0%   { transform: translateY(0); }
+  3%   { transform: translateY(-7px); }
+  8%   { transform: translateY(0); }
+  100% { transform: translateY(0); }
+}
+.ob-logo .letter-golf {
+  display: inline-block;
+  animation: obGolf 7s ease-in-out infinite;
+}
+.ob-logo .accent {
+  background: linear-gradient(100deg, #7c4dff, #448aff, #7c4dff);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: obVloei 5s linear infinite;
+}
 .ob-logo .dot { color:#fff; -webkit-text-fill-color:#fff; }
 
 .ob-headline {
@@ -144,7 +211,22 @@ html, body {
   line-height: 1.25;
   text-align: center;
 }
-.ob-headline .grad-text { background: var(--grad); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.ob-headline .grad-text {
+  background: linear-gradient(100deg, #7c4dff, #448aff, #7c4dff);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: obVloei 5s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ob-headline, .ob-sub, .ob-btns { opacity: 1; animation: none; }
+  .ob-logo .letter { opacity: 1; animation: none; }
+  .ob-logo .accent, .ob-headline .grad-text { animation: none; transform: none; }
+  .ob-logo .letter-golf { animation: none; }
+  .ob-glow-1, .ob-glow-2, .ob-glow-3 { animation: none; }
+}
 
 .ob-sub {
   font-size: 16px;
@@ -304,7 +386,11 @@ html, body {
 
 /* CONTENT PANELS */
 .panel { display: none; flex: 1; overflow: hidden; flex-direction: column; }
-.panel.active { display: flex; }
+.panel.active { display: flex; animation: panelIn .28s cubic-bezier(.22,1,.36,1); }
+@keyframes panelIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
 
 /* ═══════════════════════════════════════════
    SWIPE / DISCOVER PANEL
@@ -458,6 +544,23 @@ html, body {
   border-radius: 18px; flex-shrink: 0;
 }
 .sw-btn:active { transform: scale(0.92); opacity: .85; }
+@media (hover: hover) {
+  .sw-btn:hover { transform: translateY(-3px) scale(1.04); }
+  .sw-nope:hover { box-shadow: 0 8px 22px rgba(229,57,53,.3); }
+  .sw-like:hover { box-shadow: 0 8px 22px rgba(124,77,255,.35); }
+}
+
+/* Badge wipt op wanneer het aantal verandert */
+@keyframes badgePop {
+  0%   { transform: scale(.4); }
+  60%  { transform: scale(1.18); }
+  100% { transform: scale(1); }
+}
+.badge-pop { animation: badgePop .34s cubic-bezier(.34,1.56,.64,1); }
+@media (prefers-reduced-motion: reduce) {
+  .sw-btn:hover { transform: none; }
+  .badge-pop { animation: none; }
+}
 .sw-nope  { width: 60px; height: 60px; background: #e53935; }
 .sw-like  { width: 72px; height: 72px; background: #2ecc71; border-radius: 20px; }
 .sw-chat  { width: 60px; height: 60px; background: var(--neon); }
@@ -744,7 +847,69 @@ html, body {
   align-items: center;
   justify-content: center;
 }
-.modal-overlay.open { display: flex; }
+/* ══ Interactie-feedback ══
+   Hover-effecten alleen op apparaten met een muis; op touch zou :hover
+   blijven "plakken" na een tik. */
+
+/* Invoervelden lichten op bij focus */
+.input-field, .select-field, textarea.input-field {
+  transition: border-color .18s, box-shadow .18s;
+}
+.input-field:focus, .select-field:focus, textarea.input-field:focus {
+  border-color: var(--neon);
+  box-shadow: 0 0 0 3px rgba(124,77,255,.14);
+}
+
+/* Chips */
+.chip { transition: background .18s, border-color .18s, color .18s, transform .12s; }
+.chip:active { transform: scale(.94); }
+@media (hover: hover) {
+  .chip:hover { border-color: var(--border2); color: var(--text); }
+  .chip.selected:hover { background: rgba(124,77,255,.28); }
+}
+
+/* Navigatie */
+.nav-link { transition: background .18s, color .18s, transform .12s; }
+.nav-link:active { transform: scale(.98); }
+.mob-nav-item { transition: color .18s, transform .12s; }
+.mob-nav-item:active { transform: scale(.92); }
+
+/* Lijstkaarten komen iets naar voren */
+.liked-card { transition: transform .22s cubic-bezier(.22,1,.36,1), border-color .22s, box-shadow .22s; }
+@media (hover: hover) {
+  .liked-card:hover { transform: translateY(-2px); border-color: var(--border2); box-shadow: 0 8px 24px rgba(0,0,0,.3); }
+}
+.liked-card:active { transform: translateY(0) scale(.995); }
+
+/* Knoppen: lift bij hover, indrukken bij klik (de :active hieronder wint) */
+.btn { transition: opacity .15s, transform .12s, box-shadow .2s, border-color .18s; }
+@media (hover: hover) {
+  .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(124,77,255,.32); }
+  .btn-secondary:hover { border-color: var(--border2); }
+}
+
+/* Klikbare profielrijen */
+.profile-row[onclick] { transition: background .16s; }
+@media (hover: hover) {
+  .profile-row[onclick]:hover { background: var(--card2); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chip, .nav-link, .liked-card, .btn, .mob-nav-item { transition: none; }
+  .liked-card:hover, .btn-primary:hover { transform: none; }
+}
+
+.modal-overlay.open { display: flex; animation: modalDim .18s ease-out; }
+.modal-overlay.open > .modal-box { animation: modalVeer .32s cubic-bezier(.34,1.56,.64,1); }
+@keyframes modalDim {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes modalVeer {
+  0%   { opacity: 0; transform: translateY(18px) scale(.96); }
+  60%  { opacity: 1; transform: translateY(-3px) scale(1.008); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
 
 .modal-box {
   background: var(--card);
@@ -2210,7 +2375,7 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
 </div>
 
 <!-- LIJST DETAIL MODAL -->
-<div class="modal-overlay" id="lijstDetailModal" onclick="if(event.target===this)closeLijstDetail()" style="display:none;align-items:center;justify-content:center;">
+<div class="modal-overlay" id="lijstDetailModal" onclick="if(event.target===this)closeLijstDetail()">
   <div class="modal-box" style="max-width:480px;width:90%;padding:0;overflow:hidden;border-radius:24px;max-height:90vh;display:flex;flex-direction:column;">
     <div id="lijstDetailFoto" style="height:220px;min-height:220px;background:var(--grad);display:flex;align-items:center;justify-content:center;position:relative;flex-shrink:0;">
     </div>
@@ -3503,11 +3668,11 @@ function openLijstDetail(id, swipeId) {
   }
 
   const modal = document.getElementById('lijstDetailModal');
-  modal.style.display = 'flex';
+  modal.classList.add('open');
 }
 
 function closeLijstDetail() {
-  document.getElementById('lijstDetailModal').style.display = 'none';
+  document.getElementById('lijstDetailModal').classList.remove('open');
   huidigLijstItem = null;
 }
 
@@ -3871,8 +4036,15 @@ async function updateOngelezen() {
     ['berichtenBadge', 'berichtenBadgeMob'].forEach(id => {
       const b = document.getElementById(id);
       if (!b) return;
-      if (total > 0) { b.textContent = total; b.style.display = 'inline-block'; }
-      else b.style.display = 'none';
+      if (total > 0) {
+        const veranderd = b.textContent !== String(total) || b.style.display === 'none';
+        b.textContent = total;
+        b.style.display = 'inline-block';
+        // Alleen animeren bij een echte wijziging; deze functie draait elke paar seconden
+        if (veranderd) herstartAnimatie(b, 'badge-pop');
+      } else {
+        b.style.display = 'none';
+      }
     });
   } catch(e) {}
 }
@@ -6034,6 +6206,48 @@ setTimeout(initToggle, 50);
 startKeepAlive();
 startBerichtenPoll();
 checkNieuweLikes();
+// Logo op het beginscherm letter voor letter laten inkomen.
+// Werkt recursief zodat de vertraging doorloopt over "SOUND" én de gekleurde "MATCH."
+function splitsLogoLetters() {
+  const logo = document.querySelector('.ob-logo');
+  if (!logo || logo.dataset.gesplitst) return;
+
+  let index = 0; // telt door over alle letters, zodat de golf van links naar rechts loopt
+
+  const verwerk = (el, delay) => {
+    [...el.childNodes].forEach(node => {
+      if (node.nodeType === Node.TEXT_NODE) {
+        const frag = document.createDocumentFragment();
+        [...node.textContent].forEach(teken => {
+          // Buitenste span: entree. Binnenste span: golf.
+          // Gescheiden omdat twee animaties niet dezelfde transform kunnen aansturen.
+          const buiten = document.createElement('span');
+          buiten.className = 'letter';
+          buiten.style.animationDelay = delay.toFixed(2) + 's';
+
+          const binnen = document.createElement('span');
+          binnen.className = 'letter-golf';
+          binnen.textContent = teken;
+          binnen.style.animationDelay = (2 + index * 0.07).toFixed(2) + 's';
+
+          buiten.appendChild(binnen);
+          frag.appendChild(buiten);
+          delay += 0.05;
+          index++;
+        });
+        el.replaceChild(frag, node);
+      } else if (node.nodeType === Node.ELEMENT_NODE) {
+        delay = verwerk(node, delay);
+      }
+    });
+    return delay;
+  };
+
+  verwerk(logo, 0.1);
+  logo.dataset.gesplitst = '1';
+}
+splitsLogoLetters();
+
 initCookieMelding();
 // Alle chip-lijsten vullen vanuit centrale bron
 vulAlleChips();
