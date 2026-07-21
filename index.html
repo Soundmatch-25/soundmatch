@@ -3530,29 +3530,13 @@ async function verwijderMatch(matchId, anderUserId) {
 }
 
 async function _verwijderMatchBevestigd(matchId, anderUserId) {
-  const { error: matchErr } = await sb.from('matches').delete().eq('id', matchId);
+  await sb.from('matches').delete().eq('id', matchId);
   // Al jouw likes op deze persoon omzetten naar 'nope' (ook die op losse advertenties).
   // De swipe van de ánder blijft ongemoeid: die heeft jou immers niet afgewezen.
-  const { error: swipeErr } = await sb.from('swipes').update({ richting: 'nope' })
+  await sb.from('swipes').update({ richting: 'nope' })
     .eq('swiper_id', currentUser.id).eq('target_id', anderUserId);
   await sb.from('directe_berichten').delete().eq('van_user_id', currentUser.id).eq('naar_user_id', anderUserId);
   await sb.from('directe_berichten').delete().eq('van_user_id', anderUserId).eq('naar_user_id', currentUser.id);
-  // Ook het oorspronkelijke berichtverzoek opruimen — anders blijft er een rij met
-  // status 'geaccepteerd' achter, en blokkeert/verwart dat een volgend berichtverzoek
-  // aan dezelfde persoon (die zou dan ten onrechte "jullie zijn al gematcht" zien).
-  await sb.from('berichtverzoeken').delete()
-    .or('and(van_user_id.eq.' + currentUser.id + ',naar_user_id.eq.' + anderUserId + '),and(van_user_id.eq.' + anderUserId + ',naar_user_id.eq.' + currentUser.id + ')');
-
-  if (matchErr || swipeErr) {
-    console.error('Match verwijderen ging niet volledig goed —', { matchErr, swipeErr });
-    const t = document.getElementById('toast');
-    t.textContent = matchErr ? 'Match verwijderen mislukt: ' + matchErr.message : 'Match verwijderd, maar niet correct naar Geskipt gezet: ' + swipeErr.message;
-    t.classList.add('show');
-    setTimeout(() => t.classList.remove('show'), 4000);
-    laadMatchesLijst(); laadOntvangenLikes(); laadSwipeHistory(); laadDirecteBerichten();
-    return;
-  }
-
   laadMatchesLijst(); laadOntvangenLikes(); laadSwipeHistory(); laadDirecteBerichten();
   await laadGezienIds();
   laadAdvertenties();
@@ -3886,8 +3870,6 @@ async function verwijderUitLijst(swipeId, targetId) {
     await sb.from('matches').delete().eq('id', match.id);
     await sb.from('directe_berichten').delete().eq('van_user_id', currentUser.id).eq('naar_user_id', targetId);
     await sb.from('directe_berichten').delete().eq('van_user_id', targetId).eq('naar_user_id', currentUser.id);
-    await sb.from('berichtverzoeken').delete()
-      .or('and(van_user_id.eq.' + currentUser.id + ',naar_user_id.eq.' + targetId + '),and(van_user_id.eq.' + targetId + ',naar_user_id.eq.' + currentUser.id + ')');
     laadMatchesLijst();
   } else {
     await sb.from('swipes').update({ richting: 'nope' }).eq('swiper_id', targetId).eq('target_id', currentUser.id);
@@ -3978,11 +3960,11 @@ async function stuurDirectBericht() {
       return;
     }
     if (bestaand?.status === 'geaccepteerd') {
-      // We zitten in de "geen match"-tak: de matches-tabel is hierboven al gecheckt
-      // en bevat dit paar niet. Deze rij is dus per definitie een wees (bv. van een
-      // inmiddels opgeheven match) en geen actuele match. Opruimen en gewoon doorgaan.
-      await sb.from('berichtverzoeken').delete().eq('id', bestaand.id);
-    } else if (bestaand?.status === 'geweigerd') {
+      document.getElementById('directBerichtError').textContent = 'Jullie zijn al gematcht — ververs de pagina om te chatten.';
+      document.getElementById('directBerichtError').style.display = 'block';
+      return;
+    }
+    if (bestaand?.status === 'geweigerd') {
       document.getElementById('directBerichtError').textContent = 'Deze persoon heeft je vorige berichtverzoek geweigerd.';
       document.getElementById('directBerichtError').style.display = 'block';
       return;
