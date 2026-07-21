@@ -200,6 +200,12 @@ html, body {
   /* Animatie bewust uit: het animeren van background-position op geclipte tekst
      staat erom bekend dat het op sommige mobiele GPU's de tekst onzichtbaar laat blijven. */
 }
+/* Eigen, simpele intree (i.p.v. per-letter golf) — zie splitsLogoLetters() in de JS */
+.ob-logo .accent-in {
+  display: inline-block;
+  opacity: 0;
+  animation: obLetter .5s cubic-bezier(.34,1.56,.64,1) forwards;
+}
 @supports ((-webkit-background-clip: text) or (background-clip: text)) {
   .ob-logo .accent {
     -webkit-background-clip: text;
@@ -234,7 +240,7 @@ html, body {
 
 @media (prefers-reduced-motion: reduce) {
   .ob-headline, .ob-sub, .ob-btns { opacity: 1; animation: none; }
-  .ob-logo .letter { opacity: 1; animation: none; }
+  .ob-logo .letter, .ob-logo .accent-in { opacity: 1; animation: none; }
   .ob-logo .accent, .ob-headline .grad-text { animation: none; transform: none; }
   .ob-logo .letter-golf { animation: none; }
   .ob-glow-1, .ob-glow-2, .ob-glow-3 { animation: none; }
@@ -6296,6 +6302,17 @@ function splitsLogoLetters() {
   let index = 0; // telt door over alle letters, zodat de golf van links naar rechts loopt
 
   const verwerk = (el, delay) => {
+    // .accent ("MATCH.") NIET opknippen in losse letter-spans: background-clip:text
+    // heeft een aaneengesloten tekstnode nodig om aan te knippen. Knip je 'm op in
+    // meerdere kindjes, dan heeft de kleurverloop-tekst niks meer om aan vast te
+    // klikken en blijft-ie op sommige toestellen onzichtbaar (wel selecteerbaar,
+    // niet getekend). "MATCH." krijgt daarom zijn eigen, simpele intree-animatie
+    // i.p.v. de letter-voor-letter golf.
+    if (el.classList && el.classList.contains('accent')) {
+      el.classList.add('accent-in');
+      el.style.animationDelay = delay.toFixed(2) + 's';
+      return delay;
+    }
     [...el.childNodes].forEach(node => {
       if (node.nodeType === Node.TEXT_NODE) {
         const frag = document.createDocumentFragment();
