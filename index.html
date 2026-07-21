@@ -3378,7 +3378,9 @@ function initCardDrag(card) {
     card.classList.add('dragging');
     window._wasDragging = false;
     verbergSwipeHint();
-    e.preventDefault();
+    // Geen preventDefault hier: anders krijgt de browser nooit de kans om een
+    // gewone tik (klik) door te laten, en werken "meer lezen" en de foto-uitvergroting
+    // niet meer op mobiel. Pas bij echte sleepbeweging (zie onMove) blokkeren we scroll.
   };
 
   const onMove = (e) => {
@@ -3391,7 +3393,10 @@ function initCardDrag(card) {
     // Markeer als dragging zodra meer dan 5px bewogen
     if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
       window._wasDragging = true;
+      e.preventDefault(); // pas nú scroll/klik blokkeren, niet al bij de eerste micro-jitter
     }
+
+    if (!window._wasDragging) return; // kleine tik: laat verder niets bewegen/blokkeren
 
     if (window.innerWidth >= 900) {
       // Desktop: puur horizontaal sliden, als een carousel — geen kantelen.
