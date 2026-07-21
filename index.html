@@ -447,7 +447,7 @@ html, body {
   position: relative;
   width: 100%;
   max-width: 420px;
-  height: 520px;
+  height: 580px;
   flex-shrink: 0;
 }
 
@@ -470,7 +470,7 @@ html, body {
 .profile-card.dragging { transition: none; }
 
 .card-visual {
-  height: 58%;
+  height: 66%;
   flex-shrink: 0;
   background: linear-gradient(180deg, #1a1a35 0%, #0d0d20 100%);
   display: flex; align-items: center; justify-content: center;
@@ -1184,9 +1184,9 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
   /* Discover */
   .discover-center { padding: 10px 12px 8px; gap: 10px; }
   .card-stack {
-    height: calc(100dvh - 230px);
-    min-height: 320px;
-    max-height: 520px;
+    height: calc(100dvh - 220px);
+    min-height: 340px;
+    max-height: 580px;
   }
   .discover-header h2 { font-size: 18px; }
   .panel-header h2 { font-size: 18px; }
@@ -2881,15 +2881,13 @@ function buildCard(p, cls) {
   const [activeCls, activeLabel] = getActiveLabel(p.activeMin || 9999);
   const locatieBadge = (p.raw?.stad || p.raw?.locatie) ? `<div style="position:absolute;bottom:14px;right:14px;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:600;background:rgba(0,0,0,0.6);border:1px solid rgba(255,255,255,0.1);color:#fff;backdrop-filter:blur(8px);display:flex;align-items:center;gap:4px;"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>${esc(p.raw?.stad || p.raw?.locatie)}</div>` : '';
   const leeftijdBadge = (p.raw?.leeftijd && p.type !== 'band') ? `<div style="position:absolute;bottom:44px;right:14px;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:600;background:rgba(0,0,0,0.6);border:1px solid rgba(255,255,255,0.1);color:#fff;backdrop-filter:blur(8px);">${p.raw.leeftijd} jaar</div>` : '';
-  // Upload-foto's zijn vierkant, card-visual is breder dan hoog. Een pure object-fit:cover
-  // sneed daardoor altijd een stuk van boven/onder af. Nu: de volledige foto blijft zichtbaar
-  // (object-fit:contain) met een vervaagde, uitvergrote versie van diezelfde foto als achtergrond
-  // zodat er geen kale balken ontstaan.
+  // Kaart nu hoger + vierkanter gemaakt (zie .card-stack/.card-visual CSS) zodat een
+  // vierkante upload-foto er met object-fit:cover nog maar een klein randje bijsnijdt
+  // i.p.v. de eerdere 28%. De blur-achtergrond-truc is weer weg: die zette de badges
+  // per ongeluk erachter (de wrapper-div kreeg een eigen stacking-context) en gaf lelijke
+  // vervaagde balken naast de foto.
   const fotoHTML = p.foto_url
-    ? `<div style="position:relative;width:100%;height:100%;overflow:hidden;">
-         <div style="position:absolute;inset:0;background-image:url('${esc(p.foto_url)}');background-size:cover;background-position:center;filter:blur(28px) brightness(0.55);transform:scale(1.2);"></div>
-         <img src="${esc(p.foto_url)}" style="position:relative;width:100%;height:100%;object-fit:contain;cursor:zoom-in;" onclick="if(!window._wasDragging)openLightbox(this.src)" onerror="this.style.display='none'"/>
-       </div>`
+    ? `<img src="${esc(p.foto_url)}" style="width:100%;height:100%;object-fit:cover;cursor:zoom-in;" onclick="if(!window._wasDragging)openLightbox(this.src)" onerror="this.style.display='none'"/>`
     : `<div style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;">${typeIcon(p.type)}</div>`;
 
   el.innerHTML = `
