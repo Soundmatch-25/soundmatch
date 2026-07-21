@@ -3537,6 +3537,11 @@ async function _verwijderMatchBevestigd(matchId, anderUserId) {
     .eq('swiper_id', currentUser.id).eq('target_id', anderUserId);
   await sb.from('directe_berichten').delete().eq('van_user_id', currentUser.id).eq('naar_user_id', anderUserId);
   await sb.from('directe_berichten').delete().eq('van_user_id', anderUserId).eq('naar_user_id', currentUser.id);
+  // Ook het oorspronkelijke berichtverzoek opruimen — anders blijft er een rij met
+  // status 'geaccepteerd' achter, en blokkeert/verwart dat een volgend berichtverzoek
+  // aan dezelfde persoon (die zou dan ten onrechte "jullie zijn al gematcht" zien).
+  await sb.from('berichtverzoeken').delete()
+    .or('and(van_user_id.eq.' + currentUser.id + ',naar_user_id.eq.' + anderUserId + '),and(van_user_id.eq.' + anderUserId + ',naar_user_id.eq.' + currentUser.id + ')');
   laadMatchesLijst(); laadOntvangenLikes(); laadSwipeHistory(); laadDirecteBerichten();
   await laadGezienIds();
   laadAdvertenties();
@@ -3870,6 +3875,8 @@ async function verwijderUitLijst(swipeId, targetId) {
     await sb.from('matches').delete().eq('id', match.id);
     await sb.from('directe_berichten').delete().eq('van_user_id', currentUser.id).eq('naar_user_id', targetId);
     await sb.from('directe_berichten').delete().eq('van_user_id', targetId).eq('naar_user_id', currentUser.id);
+    await sb.from('berichtverzoeken').delete()
+      .or('and(van_user_id.eq.' + currentUser.id + ',naar_user_id.eq.' + targetId + '),and(van_user_id.eq.' + targetId + ',naar_user_id.eq.' + currentUser.id + ')');
     laadMatchesLijst();
   } else {
     await sb.from('swipes').update({ richting: 'nope' }).eq('swiper_id', targetId).eq('target_id', currentUser.id);
@@ -3943,10 +3950,35 @@ async function stuurDirectBericht() {
     const { error } = await sb.from('directe_berichten').insert({ van_user_id: currentUser.id, naar_user_id: ontvangerI, inhoud: tekst });
     if (error) { document.getElementById('directBerichtError').textContent = 'Versturen mislukt: ' + error.message; document.getElementById('directBerichtError').style.display = 'block'; return; }
   } else {
-    // Geen match — stuur verzoek
-    const { error } = await sb.from('berichtverzoeken').upsert(
-      { van_user_id: currentUser.id, naar_user_id: ontvangerI, inhoud: tekst, status: 'wachtend' },
-      { onConflict: 'van_user_id,naar_user_id' }
+    // Geen match — stuur verzoek.
+    // Let op: bewust GEEN upsert. Een upsert doet bij een bestaande rij een UPDATE,
+    // en de RLS-policy staat alleen de ontvanger toe om te updaten (voor accepteren/
+    // weigeren) — de verzender knalt dan op "violates row-level security policy".
+    // Daarom eerst checken of er al een verzoek bestaat, en anders gewoon inserten.
+    const { data: bestaand } = await sb.from('berichtverzoeken')
+      .select('id, status')
+      .eq('van_user_id', currentUser.id)
+      .eq('naar_user_id', ontvangerI)
+      .maybeSingle();
+
+    if (bestaand?.status === 'wachtend') {
+      document.getElementById('directBerichtError').textContent = 'Je hebt deze persoon al een berichtverzoek gestuurd. Even geduld tot die reageert.';
+      document.getElementById('directBerichtError').style.display = 'block';
+      return;
+    }
+    if (bestaand?.status === 'geaccepteerd') {
+      document.getElementById('directBerichtError').textContent = 'Jullie zijn al gematcht — ververs de pagina om te chatten.';
+      document.getElementById('directBerichtError').style.display = 'block';
+      return;
+    }
+    if (bestaand?.status === 'geweigerd') {
+      document.getElementById('directBerichtError').textContent = 'Deze persoon heeft je vorige berichtverzoek geweigerd.';
+      document.getElementById('directBerichtError').style.display = 'block';
+      return;
+    }
+
+    const { error } = await sb.from('berichtverzoeken').insert(
+      { van_user_id: currentUser.id, naar_user_id: ontvangerI, inhoud: tekst, status: 'wachtend' }
     );
     if (error) { document.getElementById('directBerichtError').textContent = 'Versturen mislukt: ' + error.message; document.getElementById('directBerichtError').style.display = 'block'; return; }
   }
