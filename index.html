@@ -182,16 +182,11 @@ html, body {
   animation: obLetter .5s cubic-bezier(.34,1.56,.64,1) forwards;
   white-space: pre;
 }
-/* Golf door de letters, zoals publiek in een stadion: kort omhoog, dan lang rust */
-@keyframes obGolf {
-  0%   { transform: translateY(0); }
-  3%   { transform: translateY(-7px); }
-  8%   { transform: translateY(0); }
-  100% { transform: translateY(0); }
-}
 .ob-logo .letter-golf {
   display: inline-block;
-  animation: obGolf 7s ease-in-out infinite;
+  /* Golf-animatie bewust verwijderd: viel inconsistent op omdat "MATCH."
+     (als één stuk tekst, zie splitsLogoLetters()) er niet meer aan meedeed.
+     Nu alleen nog de eenmalige intro-animatie hierboven. */
 }
 .ob-logo .accent {
   color: #7c4dff; /* zichtbare fallback-kleur; blijft staan als de browser onderstaande clip niet steunt */
@@ -242,7 +237,6 @@ html, body {
   .ob-headline, .ob-sub, .ob-btns { opacity: 1; animation: none; }
   .ob-logo .letter, .ob-logo .accent-in { opacity: 1; animation: none; }
   .ob-logo .accent, .ob-headline .grad-text { animation: none; transform: none; }
-  .ob-logo .letter-golf { animation: none; }
   .ob-glow-1, .ob-glow-2, .ob-glow-3 { animation: none; }
 }
 
