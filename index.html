@@ -3768,6 +3768,9 @@ async function laadSwipeHistory() {
     .or('gebruiker_a.eq.' + currentUser.id + ',gebruiker_b.eq.' + currentUser.id);
   const matchIds = new Set((matchData || []).map(m => m.gebruiker_a === currentUser.id ? m.gebruiker_b : m.gebruiker_a));
 
+  // Geblokkeerde gebruikers horen ook hier nergens meer te staan
+  await laadBlokkades();
+
   swipeHistory = swipes.map(s => {
     const profiel = profielMap[s.target_id];
     const ad = s.advertentie_id ? adMap[s.advertentie_id] : null;
@@ -3775,7 +3778,9 @@ async function laadSwipeHistory() {
     if (ad) return { ...advertentieNaarKaart(ad), status: s.richting, swipe_id: s.id, target_user_id: s.target_id };
     if (profiel) return { ...profielNaarKaart(profiel), status: s.richting, swipe_id: s.id, target_user_id: s.target_id };
     return null;
-  }).filter(Boolean).filter(p => !matchIds.has(p.target_user_id || p.id));
+  }).filter(Boolean)
+    .filter(p => !matchIds.has(p.target_user_id || p.id))
+    .filter(p => !geblokkeerdeIds.has(p.target_user_id || p.id));
 
   renderLiked();
 }
@@ -4827,6 +4832,8 @@ async function _blokkeerBevestigd() {
   resetChatHeader();
   laadDirecteBerichten();
   laadMatchesLijst();
+  laadSwipeHistory();
+  laadOntvangenLikes();
   const t = document.getElementById('toast');
   t.textContent = 'Gebruiker geblokkeerd.'; t.classList.add('show');
   setTimeout(() => t.classList.remove('show'), 2200);
