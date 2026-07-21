@@ -947,6 +947,20 @@ select option { background: #1a1a2e; }
 .chip { padding: 8px 14px; border-radius: 20px; border: 1px solid var(--border); background: var(--bg); color: var(--sub); font-size: 13px; cursor: pointer; transition: all .15s; font-family: var(--font-body); }
 .chip.selected { background: rgba(124,77,255,0.2); border-color: var(--neon); color: #c4b0ff; }
 
+/* Veld-validatie: ontbrekend/ongeldig veld licht rood op zodat je niet hoeft te zoeken */
+.input-field.veld-fout, .select-field.veld-fout {
+  border-color: #e53935 !important;
+  box-shadow: 0 0 0 3px rgba(229,57,53,0.14) !important;
+}
+#regFotoPreview.veld-fout, #adFotoPreview.veld-fout {
+  border-color: #e53935 !important;
+}
+.chip-group.veld-fout {
+  outline: 2px solid #e53935;
+  outline-offset: 6px;
+  border-radius: 12px;
+}
+
 .role-toggle { display: flex; background: var(--bg); border-radius: 12px; padding: 4px; gap: 4px; border: 1px solid var(--border); }
 .role-opt { flex: 1; padding: 10px; border-radius: 10px; text-align: center; font-size: 14px; color: var(--sub); cursor: pointer; font-weight: 500; transition: all .15s; font-family: var(--font-body); }
 .role-opt.active { background: var(--neon); color: #fff; font-weight: 600; }
@@ -1118,7 +1132,9 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
   /* Welkomstscherm */
   .ob-inner { padding: 32px 20px 40px; }
   .ob-left { gap: 20px; }
-  .ob-logo { font-size: 30px; letter-spacing: 2px; }
+  /* vw-relatief i.p.v. vaste px: op smalle telefoons (~320-360px) liep de tekst anders
+     alsnog over de rand en verdween "MATCH." achter overflow-x:hidden van het scherm. */
+  .ob-logo { font-size: clamp(22px, 7.5vw, 30px); letter-spacing: 1px; }
   .ob-headline { font-size: 20px; }
   .ob-sub { font-size: 14px; }
   .ob-btns { max-width: 100%; }
@@ -2842,8 +2858,15 @@ function buildCard(p, cls) {
   const [activeCls, activeLabel] = getActiveLabel(p.activeMin || 9999);
   const locatieBadge = (p.raw?.stad || p.raw?.locatie) ? `<div style="position:absolute;bottom:14px;right:14px;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:600;background:rgba(0,0,0,0.6);border:1px solid rgba(255,255,255,0.1);color:#fff;backdrop-filter:blur(8px);display:flex;align-items:center;gap:4px;"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>${esc(p.raw?.stad || p.raw?.locatie)}</div>` : '';
   const leeftijdBadge = (p.raw?.leeftijd && p.type !== 'band') ? `<div style="position:absolute;bottom:44px;right:14px;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:600;background:rgba(0,0,0,0.6);border:1px solid rgba(255,255,255,0.1);color:#fff;backdrop-filter:blur(8px);">${p.raw.leeftijd} jaar</div>` : '';
+  // Upload-foto's zijn vierkant, card-visual is breder dan hoog. Een pure object-fit:cover
+  // sneed daardoor altijd een stuk van boven/onder af. Nu: de volledige foto blijft zichtbaar
+  // (object-fit:contain) met een vervaagde, uitvergrote versie van diezelfde foto als achtergrond
+  // zodat er geen kale balken ontstaan.
   const fotoHTML = p.foto_url
-    ? `<img src="${esc(p.foto_url)}" style="width:100%;height:100%;object-fit:cover;cursor:zoom-in;" onclick="if(!window._wasDragging)openLightbox(this.src)" onerror="this.style.display='none'"/>`
+    ? `<div style="position:relative;width:100%;height:100%;overflow:hidden;">
+         <div style="position:absolute;inset:0;background-image:url('${esc(p.foto_url)}');background-size:cover;background-position:center;filter:blur(28px) brightness(0.55);transform:scale(1.2);"></div>
+         <img src="${esc(p.foto_url)}" style="position:relative;width:100%;height:100%;object-fit:contain;cursor:zoom-in;" onclick="if(!window._wasDragging)openLightbox(this.src)" onerror="this.style.display='none'"/>
+       </div>`
     : `<div style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;">${typeIcon(p.type)}</div>`;
 
   el.innerHTML = `
@@ -4817,6 +4840,26 @@ async function handleAdFoto(input) {
   });
 }
 
+// ═══════════════ VELD-VALIDATIE (rode highlight bij ontbrekend veld) ═══════════════
+function wisVeldFouten() {
+  document.querySelectorAll('.veld-fout').forEach(el => el.classList.remove('veld-fout'));
+}
+function markeerVeldFout(idOfIds) {
+  const ids = Array.isArray(idOfIds) ? idOfIds : [idOfIds];
+  ids.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.classList.add('veld-fout');
+    const wis = () => { el.classList.remove('veld-fout'); el.removeEventListener('input', wis); el.removeEventListener('change', wis); el.removeEventListener('click', wis); };
+    el.addEventListener('input', wis, { once: true });
+    el.addEventListener('change', wis, { once: true });
+    el.addEventListener('click', wis, { once: true });
+  });
+  // Scroll het eerste foutieve veld in beeld op mobiel
+  const eerste = document.getElementById(ids[0]);
+  if (eerste) eerste.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
 async function slaAdvertentieOp() {
   if (!currentUser) { 
     const errEl = document.getElementById('adError');
@@ -4853,14 +4896,15 @@ async function slaAdvertentieOp() {
 
   // Validatie
   const errEl = document.getElementById('adError');
-  if (!naam) { errEl.textContent = 'Vul je naam in.'; errEl.style.display = 'block'; return; }
-  if (!adFotoUrl) { errEl.textContent = 'Voeg een foto toe \u2014 advertenties met foto krijgen veel meer reacties.'; errEl.style.display = 'block'; return; }
+  wisVeldFouten();
+  if (!naam) { errEl.textContent = 'Vul je naam in.'; errEl.style.display = 'block'; markeerVeldFout('adNaam'); return; }
+  if (!adFotoUrl) { errEl.textContent = 'Voeg een foto toe \u2014 advertenties met foto krijgen veel meer reacties.'; errEl.style.display = 'block'; markeerVeldFout('adFotoPreview'); return; }
   // Leeftijd valideren: minimaal 16, maximaal 99
   const leeftijdOngeldig = v => v && (parseInt(v) < 16 || parseInt(v) > 99);
-  if (isIndustry && instrumenten.length === 0) { errEl.textContent = 'Kies wat voor soort je bent (bijv. Studio of Producer).'; errEl.style.display = 'block'; return; }
-  if (!isBand && !isIndustry && leeftijdOngeldig(leeftijdEnkel)) { errEl.textContent = 'Leeftijd moet tussen 16 en 99 zijn — Soundmatch is voor 16 jaar en ouder.'; errEl.style.display = 'block'; return; }
-  if (isBand && (leeftijdOngeldig(leeftijdVan) || leeftijdOngeldig(leeftijdTot))) { errEl.textContent = 'Leeftijden moeten tussen 16 en 99 zijn — Soundmatch is voor 16 jaar en ouder.'; errEl.style.display = 'block'; return; }
-  if (isBand && leeftijdVan && leeftijdTot && parseInt(leeftijdVan) > parseInt(leeftijdTot)) { errEl.textContent = '"Van" leeftijd kan niet hoger zijn dan "tot".'; errEl.style.display = 'block'; return; }
+  if (isIndustry && instrumenten.length === 0) { errEl.textContent = 'Kies wat voor soort je bent (bijv. Studio of Producer).'; errEl.style.display = 'block'; markeerVeldFout('adIndustrySoort'); return; }
+  if (!isBand && !isIndustry && leeftijdOngeldig(leeftijdEnkel)) { errEl.textContent = 'Leeftijd moet tussen 16 en 99 zijn — Soundmatch is voor 16 jaar en ouder.'; errEl.style.display = 'block'; markeerVeldFout('adLeeftijd'); return; }
+  if (isBand && (leeftijdOngeldig(leeftijdVan) || leeftijdOngeldig(leeftijdTot))) { errEl.textContent = 'Leeftijden moeten tussen 16 en 99 zijn — Soundmatch is voor 16 jaar en ouder.'; errEl.style.display = 'block'; markeerVeldFout(['adLeeftijdVan', 'adLeeftijdTot']); return; }
+  if (isBand && leeftijdVan && leeftijdTot && parseInt(leeftijdVan) > parseInt(leeftijdTot)) { errEl.textContent = '"Van" leeftijd kan niet hoger zijn dan "tot".'; errEl.style.display = 'block'; markeerVeldFout(['adLeeftijdVan', 'adLeeftijdTot']); return; }
   errEl.style.display = 'none';
 
   const opslaanBtn = document.getElementById('adOpslaanBtn');
@@ -5769,7 +5813,8 @@ async function verstuurWwReset() {
     if (status) { status.style.color = '#ff8a80'; status.textContent = 'Verificatie mislukt, probeer het opnieuw.'; status.style.display = 'block'; }
     return;
   }
-  const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin, captchaToken: token });
+  const resetUrl = window.location.hostname.includes('vercel.app') ? 'https://soundmatch.nl' : window.location.origin;
+  const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: resetUrl, captchaToken: token });
   knopKlaar('wwVergetenBtn');
   if (status) {
     const m = (error?.message || '').toLowerCase();
@@ -5788,10 +5833,11 @@ async function verstuurWwReset() {
 }
 
 async function loginMetGoogle() {
+  const siteUrl = window.location.hostname.includes('vercel.app') ? 'https://soundmatch.nl' : window.location.origin;
   const { error } = await sb.auth.signInWithOAuth({
     provider: 'google',
     options: {
-      redirectTo: window.location.origin
+      redirectTo: siteUrl
     }
   });
   if (error) {
@@ -5891,13 +5937,14 @@ async function slaProfielOp() {
   const genres = [...document.querySelectorAll('#regGenres .chip.selected')].map(c => c.textContent);
 
   const err = document.getElementById('regError');
-  if (!naam) { err.textContent = 'Vul je naam in.'; err.style.display = 'block'; return; }
-  if (type !== 'band' && type !== 'industry' && !leeftijd) { err.textContent = 'Vul je leeftijd in.'; err.style.display = 'block'; return; }
-  if (type !== 'band' && type !== 'industry' && leeftijd && (parseInt(leeftijd) < 16 || parseInt(leeftijd) > 99)) { err.textContent = 'Leeftijd moet tussen 16 en 99 zijn \u2014 Soundmatch is voor 16 jaar en ouder.'; err.style.display = 'block'; return; }
-  if (type === 'industry' && instrumenten.length === 0) { err.textContent = 'Kies wat voor soort je bent (bijv. Studio of Producer).'; err.style.display = 'block'; return; }
-  if (!provincie) { err.textContent = 'Selecteer een provincie.'; err.style.display = 'block'; return; }
-  if (!stad) { err.textContent = 'Selecteer een stad.'; err.style.display = 'block'; return; }
-  if (!uploadedFotoUrl && !currentProfile?.foto_url) { err.textContent = 'Voeg een foto toe \u2014 dit hoeft geen foto van jezelf te zijn.'; err.style.display = 'block'; return; }
+  wisVeldFouten();
+  if (!naam) { err.textContent = 'Vul je naam in.'; err.style.display = 'block'; markeerVeldFout('regNaam'); return; }
+  if (type !== 'band' && type !== 'industry' && !leeftijd) { err.textContent = 'Vul je leeftijd in.'; err.style.display = 'block'; markeerVeldFout('regLeeftijd'); return; }
+  if (type !== 'band' && type !== 'industry' && leeftijd && (parseInt(leeftijd) < 16 || parseInt(leeftijd) > 99)) { err.textContent = 'Leeftijd moet tussen 16 en 99 zijn \u2014 Soundmatch is voor 16 jaar en ouder.'; err.style.display = 'block'; markeerVeldFout('regLeeftijd'); return; }
+  if (type === 'industry' && instrumenten.length === 0) { err.textContent = 'Kies wat voor soort je bent (bijv. Studio of Producer).'; err.style.display = 'block'; markeerVeldFout('regIndustrySoort'); return; }
+  if (!provincie) { err.textContent = 'Selecteer een provincie.'; err.style.display = 'block'; markeerVeldFout('regProvincie'); return; }
+  if (!stad) { err.textContent = 'Selecteer een stad.'; err.style.display = 'block'; markeerVeldFout('regStad'); return; }
+  if (!uploadedFotoUrl && !currentProfile?.foto_url) { err.textContent = 'Voeg een foto toe \u2014 dit hoeft geen foto van jezelf te zijn.'; err.style.display = 'block'; markeerVeldFout('regFotoPreview'); return; }
   err.style.display = 'none';
 
 
