@@ -194,12 +194,18 @@ html, body {
   animation: obGolf 7s ease-in-out infinite;
 }
 .ob-logo .accent {
+  color: #7c4dff; /* zichtbare fallback-kleur; blijft staan als de browser onderstaande clip niet steunt */
   background: linear-gradient(100deg, #7c4dff, #448aff, #7c4dff);
   background-size: 200% auto;
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
   animation: obVloei 5s linear infinite;
+}
+@supports ((-webkit-background-clip: text) or (background-clip: text)) {
+  .ob-logo .accent {
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+  }
 }
 .ob-logo .dot { color:#fff; -webkit-text-fill-color:#fff; }
 
@@ -212,12 +218,18 @@ html, body {
   text-align: center;
 }
 .ob-headline .grad-text {
+  color: #7c4dff;
   background: linear-gradient(100deg, #7c4dff, #448aff, #7c4dff);
   background-size: 200% auto;
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
   animation: obVloei 5s linear infinite;
+}
+@supports ((-webkit-background-clip: text) or (background-clip: text)) {
+  .ob-headline .grad-text {
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -327,7 +339,10 @@ html, body {
 }
 @keyframes typingDot { 0%,60%,100% { opacity:0.3; transform:scale(0.8); } 30% { opacity:1; transform:scale(1.2); } }
 @keyframes spin { to { transform: rotate(360deg); } }
-.sidebar-logo .acc { background: var(--grad); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.sidebar-logo .acc { color: #7c4dff; background: var(--grad); }
+@supports ((-webkit-background-clip: text) or (background-clip: text)) {
+  .sidebar-logo .acc { -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent; }
+}
 .sidebar-logo .dot { color:#fff; -webkit-text-fill-color:#fff; }
 
 .nav-link {
@@ -1105,7 +1120,15 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
   text-align: center;
   margin-bottom: 8px;
 }
-.auth-logo .acc { background: var(--grad); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.auth-logo .acc { color: #7c4dff; background: var(--grad); }
+@supports ((-webkit-background-clip: text) or (background-clip: text)) {
+  .auth-logo .acc { -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent; }
+}
+/* Herbruikbare klasse voor kleinere, eenmalige verlopen-tekst-plekjes (bv. match-popup) */
+.grad-clip-text { color: #7c4dff; background: var(--grad); }
+@supports ((-webkit-background-clip: text) or (background-clip: text)) {
+  .grad-clip-text { -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent; }
+}
 .auth-logo .dot { color:#fff; -webkit-text-fill-color:#fff; }
 .auth-title { font-family: var(--font-head); font-size: 26px; font-weight: 700; text-align: center; }
 .auth-sub { font-size: 14px; color: var(--sub); text-align: center; margin-top: -8px; }
@@ -2510,7 +2533,7 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
       <div style="width:80px;height:80px;border-radius:20px;background:var(--grad);overflow:hidden;border:3px solid rgba(124,77,255,0.5);" id="matchEmojiMij"></div>
     </div>
     <div>
-      <div style="font-family:var(--font-head);font-size:30px;font-weight:900;background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">It's a Match!</div>
+      <div class="grad-clip-text" style="font-family:var(--font-head);font-size:30px;font-weight:900;">It's a Match!</div>
       <div style="font-size:14px;color:var(--sub);margin-top:8px;line-height:1.6;">Jij en <strong style="color:var(--text)" id="matchName"></strong> hebben allebei interesse!</div>
       <div id="matchViaAd" style="display:none;font-size:12px;color:var(--neon2);margin-top:6px;"></div>
     </div>
