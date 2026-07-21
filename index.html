@@ -3530,10 +3530,10 @@ async function verwijderMatch(matchId, anderUserId) {
 }
 
 async function _verwijderMatchBevestigd(matchId, anderUserId) {
-  await sb.from('matches').delete().eq('id', matchId);
+  const { error: matchErr } = await sb.from('matches').delete().eq('id', matchId);
   // Al jouw likes op deze persoon omzetten naar 'nope' (ook die op losse advertenties).
   // De swipe van de ánder blijft ongemoeid: die heeft jou immers niet afgewezen.
-  await sb.from('swipes').update({ richting: 'nope' })
+  const { error: swipeErr } = await sb.from('swipes').update({ richting: 'nope' })
     .eq('swiper_id', currentUser.id).eq('target_id', anderUserId);
   await sb.from('directe_berichten').delete().eq('van_user_id', currentUser.id).eq('naar_user_id', anderUserId);
   await sb.from('directe_berichten').delete().eq('van_user_id', anderUserId).eq('naar_user_id', currentUser.id);
@@ -3542,6 +3542,17 @@ async function _verwijderMatchBevestigd(matchId, anderUserId) {
   // aan dezelfde persoon (die zou dan ten onrechte "jullie zijn al gematcht" zien).
   await sb.from('berichtverzoeken').delete()
     .or('and(van_user_id.eq.' + currentUser.id + ',naar_user_id.eq.' + anderUserId + '),and(van_user_id.eq.' + anderUserId + ',naar_user_id.eq.' + currentUser.id + ')');
+
+  if (matchErr || swipeErr) {
+    console.error('Match verwijderen ging niet volledig goed —', { matchErr, swipeErr });
+    const t = document.getElementById('toast');
+    t.textContent = matchErr ? 'Match verwijderen mislukt: ' + matchErr.message : 'Match verwijderd, maar niet correct naar Geskipt gezet: ' + swipeErr.message;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 4000);
+    laadMatchesLijst(); laadOntvangenLikes(); laadSwipeHistory(); laadDirecteBerichten();
+    return;
+  }
+
   laadMatchesLijst(); laadOntvangenLikes(); laadSwipeHistory(); laadDirecteBerichten();
   await laadGezienIds();
   laadAdvertenties();
