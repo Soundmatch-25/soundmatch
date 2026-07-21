@@ -197,7 +197,8 @@ html, body {
   color: #7c4dff; /* zichtbare fallback-kleur; blijft staan als de browser onderstaande clip niet steunt */
   background: linear-gradient(100deg, #7c4dff, #448aff, #7c4dff);
   background-size: 200% auto;
-  animation: obVloei 5s linear infinite;
+  /* Animatie bewust uit: het animeren van background-position op geclipte tekst
+     staat erom bekend dat het op sommige mobiele GPU's de tekst onzichtbaar laat blijven. */
 }
 @supports ((-webkit-background-clip: text) or (background-clip: text)) {
   .ob-logo .accent {
@@ -221,7 +222,6 @@ html, body {
   color: #7c4dff;
   background: linear-gradient(100deg, #7c4dff, #448aff, #7c4dff);
   background-size: 200% auto;
-  animation: obVloei 5s linear infinite;
 }
 @supports ((-webkit-background-clip: text) or (background-clip: text)) {
   .ob-headline .grad-text {
