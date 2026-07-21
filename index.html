@@ -3967,11 +3967,11 @@ async function stuurDirectBericht() {
       return;
     }
     if (bestaand?.status === 'geaccepteerd') {
-      document.getElementById('directBerichtError').textContent = 'Jullie zijn al gematcht — ververs de pagina om te chatten.';
-      document.getElementById('directBerichtError').style.display = 'block';
-      return;
-    }
-    if (bestaand?.status === 'geweigerd') {
+      // We zitten in de "geen match"-tak: de matches-tabel is hierboven al gecheckt
+      // en bevat dit paar niet. Deze rij is dus per definitie een wees (bv. van een
+      // inmiddels opgeheven match) en geen actuele match. Opruimen en gewoon doorgaan.
+      await sb.from('berichtverzoeken').delete().eq('id', bestaand.id);
+    } else if (bestaand?.status === 'geweigerd') {
       document.getElementById('directBerichtError').textContent = 'Deze persoon heeft je vorige berichtverzoek geweigerd.';
       document.getElementById('directBerichtError').style.display = 'block';
       return;
