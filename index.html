@@ -4344,6 +4344,14 @@ async function laadDirecteBerichten() {
     .eq('status', 'wachtend')
     .order('aangemaakt_op', { ascending: false });
 
+  // Verzoeken die ík heb verstuurd en nog open staan — daarvoor tonen we een
+  // "in afwachting"-label bij het gesprek, zodat je weet dat het nog niet geaccepteerd is.
+  const { data: verstuurdeVerzoeken } = await sb.from('berichtverzoeken')
+    .select('naar_user_id')
+    .eq('van_user_id', currentUser.id)
+    .eq('status', 'wachtend');
+  const wachtOpAcceptatie = new Set((verstuurdeVerzoeken || []).map(v => v.naar_user_id));
+
   // Laad gesprekken
   const [{ data: ontvangen }, { data: verstuurd }] = await Promise.all([
     sb.from('directe_berichten').select('*, van:van_user_id(id, naam, foto_url, type)').eq('naar_user_id', currentUser.id).order('aangemaakt_op', { ascending: false }),
@@ -4432,8 +4440,12 @@ async function laadDirecteBerichten() {
 
     const infoEl = document.createElement('div');
     infoEl.style.cssText = 'flex:1;overflow:hidden;';
+    const wachtBadge = wachtOpAcceptatie.has(userId)
+      ? '<div style="font-size:11px;color:#f5a623;font-weight:600;margin-top:2px;display:flex;align-items:center;gap:4px;">⏳ In afwachting van acceptatie</div>'
+      : '';
     infoEl.innerHTML = '<div class="msg-name">' + esc(g.user?.naam || 'Onbekend') + '</div>' +
-      '<div class="msg-preview">' + esc((g.laasteBericht || '').substring(0, 40)) + '</div>';
+      '<div class="msg-preview">' + esc((g.laasteBericht || '').substring(0, 40)) + '</div>' +
+      wachtBadge;
 
     const rightEl = document.createElement('div');
     rightEl.style.cssText = 'display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0;';
