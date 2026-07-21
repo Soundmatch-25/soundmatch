@@ -3172,6 +3172,12 @@ async function doSwipe(dir) {
     );
     if (swipeError) {
       console.error('Swipe opslaan mislukt:', swipeError.message, swipeError.code, swipeError.details);
+      const t = document.getElementById('toast');
+      if (t) {
+        t.textContent = 'Like/skip opslaan mislukt: ' + swipeError.message;
+        t.classList.add('show');
+        setTimeout(() => t.classList.remove('show'), 4000);
+      }
       return;
     }
 
@@ -3532,13 +3538,22 @@ async function verwijderMatch(matchId, anderUserId) {
 async function _verwijderMatchBevestigd(matchId, anderUserId) {
   await sb.from('matches').delete().eq('id', matchId);
   // Al jouw likes op deze persoon omzetten naar 'nope' (ook die op losse advertenties).
-  // Upsert i.p.v. update: zo komt de persoon altijd in Geskipt terecht, ook als er om
-  // wat voor reden dan ook nog geen swipe-rij voor 'm bestond.
+  // Swipes zijn per kaart (advertentie_id kan verschillen), dus eerst kijken of er al
+  // rijen bestaan en die allemaal bijwerken; bestaat er nog geen enkele, dan pas een
+  // nieuwe aanmaken. (De echte unieke sleutel is swiper_id+target_id+advertentie_id,
+  // dus een onConflict zonder advertentie_id matcht geen bestaande constraint.)
   // De swipe van de ánder blijft ongemoeid: die heeft jou immers niet afgewezen.
-  await sb.from('swipes').upsert(
-    { swiper_id: currentUser.id, target_id: anderUserId, richting: 'nope' },
-    { onConflict: 'swiper_id,target_id' }
-  );
+  const { data: bestaandeSwipes } = await sb.from('swipes').select('id')
+    .eq('swiper_id', currentUser.id).eq('target_id', anderUserId);
+  if (bestaandeSwipes?.length) {
+    await sb.from('swipes').update({ richting: 'nope' })
+      .eq('swiper_id', currentUser.id).eq('target_id', anderUserId);
+  } else {
+    await sb.from('swipes').upsert(
+      { swiper_id: currentUser.id, target_id: anderUserId, richting: 'nope', advertentie_id: null },
+      { onConflict: 'swiper_id,target_id,advertentie_id' }
+    );
+  }
   await sb.from('directe_berichten').delete().eq('van_user_id', currentUser.id).eq('naar_user_id', anderUserId);
   await sb.from('directe_berichten').delete().eq('van_user_id', anderUserId).eq('naar_user_id', currentUser.id);
   laadMatchesLijst(); laadOntvangenLikes(); laadSwipeHistory(); laadDirecteBerichten();
@@ -3558,10 +3573,10 @@ async function _verwijderMatchBevestigd(matchId, anderUserId) {
 async function likeTerug(userId, naam, fotoUrl, type) {
   if (!currentUser) return;
 
-  // Swipe opslaan
+  // Swipe opslaan (de echte unieke sleutel is swiper_id+target_id+advertentie_id)
   await sb.from('swipes').upsert(
-    { swiper_id: currentUser.id, target_id: userId, richting: 'like' },
-    { onConflict: 'swiper_id,target_id' }
+    { swiper_id: currentUser.id, target_id: userId, richting: 'like', advertentie_id: null },
+    { onConflict: 'swiper_id,target_id,advertentie_id' }
   );
 
   // Match aanmaken
@@ -3982,8 +3997,8 @@ async function stuurDirectBericht() {
     // Meteen een like-swipe erbij, zodat deze persoon direct in "Geliked" staat,
     // ook al heeft die nog niet gereageerd op het verzoek.
     await sb.from('swipes').upsert(
-      { swiper_id: currentUser.id, target_id: ontvangerI, richting: 'like' },
-      { onConflict: 'swiper_id,target_id' }
+      { swiper_id: currentUser.id, target_id: ontvangerI, richting: 'like', advertentie_id: null },
+      { onConflict: 'swiper_id,target_id,advertentie_id' }
     );
     // En het bericht meteen ook in directe_berichten zetten, zodat het gesprek al
     // in "Berichten" staat en zichtbaar is vóór de ander heeft geaccepteerd.
@@ -4475,7 +4490,7 @@ async function accepteerVerzoek(verzoekId, vanUserId) {
   // dus hier niet nogmaals invoegen — dat zou het bericht dubbel laten zien.
 
   // Swipe aanmaken zodat beide gezien zijn
-  await sb.from('swipes').upsert({ swiper_id: currentUser.id, target_id: vanUserId, richting: 'like' }, { onConflict: 'swiper_id,target_id' });
+  await sb.from('swipes').upsert({ swiper_id: currentUser.id, target_id: vanUserId, richting: 'like', advertentie_id: null }, { onConflict: 'swiper_id,target_id,advertentie_id' });
 
   // Gesprek openen
   laadDirecteBerichten();
