@@ -2729,8 +2729,12 @@ async function laadGezienIds() {
     if (s.advertentie_id) geswipedAdIds.add(s.advertentie_id);
     else geswipedIds.add(s.target_id);
   });
-  // Geen extra blokkering op match-niveau: per-kaart swipes bepalen wat uit het deck is.
-  // Zo blijft bv. iemands band-advertentie zichtbaar ook al matchte je op z'n muzikant-profiel.
+  // Matches: hier géén uitzondering op — ben je eenmaal gematcht met iemand, dan hoort
+  // die persoon nérgens meer in Ontdekken te verschijnen, ook niet via een andere kaart.
+  const { data: matches } = await sb.from('matches')
+    .select('gebruiker_a, gebruiker_b')
+    .or('gebruiker_a.eq.' + currentUser.id + ',gebruiker_b.eq.' + currentUser.id);
+  (matches || []).forEach(m => geswipedIds.add(m.gebruiker_a === currentUser.id ? m.gebruiker_b : m.gebruiker_a));
 }
 
 async function checkSessie() {
@@ -2801,7 +2805,7 @@ async function laadAdvertenties() {
     .map(p => profielNaarKaart(p));
 
   let adKaarten = (advertenties || [])
-    .filter(a => !geswipedAdIds.has(a.id) && !geblokkeerdeIds.has(a.user_id))
+    .filter(a => !geswipedAdIds.has(a.id) && !geblokkeerdeIds.has(a.user_id) && !geswipedIds.has(a.user_id))
     .map(a => advertentieNaarKaart(a));
 
   // Client-side genre/instrument filter toepassen
@@ -3208,7 +3212,9 @@ async function doSwipe(dir) {
           else console.error('Match aanmaken mislukt:', res2.error.message);
         }
         if (matchOk) {
-          // Alleen de geswipete kaart is al geblokkeerd (bovenaan); andere kaarten van deze persoon blijven beschikbaar
+          // Nu er een match is, hoort deze persoon nérgens meer in Ontdekken te
+          // verschijnen — niet alleen de kaart die je zojuist swipete.
+          geswipedIds.add(targetUserId);
           // Haal match ID op voor lastMatchId
           const { data: newMatch } = await sb.from('matches').select('id')
             .or('and(gebruiker_a.eq.' + currentUser.id + ',gebruiker_b.eq.' + targetUserId + '),and(gebruiker_a.eq.' + targetUserId + ',gebruiker_b.eq.' + currentUser.id + ')')
@@ -3584,6 +3590,7 @@ async function likeTerug(userId, naam, fotoUrl, type) {
     { gebruiker_a: currentUser.id, gebruiker_b: userId },
     { onConflict: 'gebruiker_a,gebruiker_b' }
   );
+  geswipedIds.add(userId); // nergens meer in Ontdekken, ook niet via een andere kaart
 
   // Match popup tonen
   showMatch({ naam, foto_url: fotoUrl, type, id: userId, raw: {} });
@@ -3978,15 +3985,17 @@ async function stuurDirectBericht() {
       document.getElementById('directBerichtError').style.display = 'block';
       return;
     }
-    if (bestaand?.status === 'geaccepteerd') {
-      document.getElementById('directBerichtError').textContent = 'Jullie zijn al gematcht — ververs de pagina om te chatten.';
-      document.getElementById('directBerichtError').style.display = 'block';
-      return;
-    }
-    if (bestaand?.status === 'geweigerd') {
-      document.getElementById('directBerichtError').textContent = 'Deze persoon heeft je vorige berichtverzoek geweigerd.';
-      document.getElementById('directBerichtError').style.display = 'block';
-      return;
+    if (bestaand?.status === 'geaccepteerd' || bestaand?.status === 'geweigerd') {
+      // We zitten in de "geen match"-tak (hierboven al gecheckt): een rij met status
+      // 'geaccepteerd' zonder bijbehorende match, of 'geweigerd', is dus altijd oud en
+      // niet meer relevant. Opruimen i.p.v. de verzender voor altijd blokkeren — de
+      // unique(van_user_id, naar_user_id) op deze tabel laat maar één rij tegelijk toe.
+      const { error: cleanupErr } = await sb.from('berichtverzoeken').delete().eq('id', bestaand.id);
+      if (cleanupErr) {
+        document.getElementById('directBerichtError').textContent = 'Kon oud verzoek niet opruimen: ' + cleanupErr.message;
+        document.getElementById('directBerichtError').style.display = 'block';
+        return;
+      }
     }
 
     const { error } = await sb.from('berichtverzoeken').insert(
@@ -4506,6 +4515,7 @@ async function accepteerVerzoek(verzoekId, vanUserId) {
 
   // Match aanmaken
   await sb.from('matches').upsert({ gebruiker_a: currentUser.id, gebruiker_b: vanUserId }, { onConflict: 'gebruiker_a,gebruiker_b' });
+  geswipedIds.add(vanUserId); // nergens meer in Ontdekken, ook niet via een andere kaart
 
   // Het eerste bericht staat al in directe_berichten (sinds het verzoek verstuurd is),
   // dus hier niet nogmaals invoegen — dat zou het bericht dubbel laten zien.
