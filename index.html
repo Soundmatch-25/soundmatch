@@ -4526,6 +4526,24 @@ async function openGesprek(userId, user) {
   if (blokkeerBtn) blokkeerBtn.style.display = 'block';
   const meldBtn = document.getElementById('meldBtn');
   if (meldBtn) meldBtn.style.display = 'flex';
+
+  // Nog geen match? Dan wacht dit gesprek nog op acceptatie — invoerveld dichtzetten
+  // zodat het niet lijkt alsof je vrij kunt chatten terwijl dat nog niet zo is.
+  const { data: matchCheck } = await sb.from('matches')
+    .select('id')
+    .or(`and(gebruiker_a.eq.${currentUser.id},gebruiker_b.eq.${userId}),and(gebruiker_a.eq.${userId},gebruiker_b.eq.${currentUser.id})`)
+    .maybeSingle();
+  const chatInputEl = document.getElementById('chatInput');
+  if (chatInputEl) {
+    if (matchCheck) {
+      chatInputEl.disabled = false;
+      chatInputEl.placeholder = 'Typ een bericht...';
+    } else {
+      chatInputEl.disabled = true;
+      chatInputEl.placeholder = 'Wacht tot ' + (user?.naam || 'deze persoon') + ' je verzoek accepteert...';
+    }
+  }
+
   const av = document.getElementById('chatAvatar');
   if (av) {
     av.style.width = '';
@@ -4656,6 +4674,16 @@ async function sendMsg() {
     resetChatHeader();
     laadDirecteBerichten();
     laadMatchesLijst();
+    return;
+  }
+  // Zolang er geen match is, staat de eerste boodschap nog als berichtverzoek te
+  // wachten op accepteren — pas dán mag er vrij verder gechat worden.
+  const { data: match } = await sb.from('matches')
+    .select('id')
+    .or(`and(gebruiker_a.eq.${currentUser.id},gebruiker_b.eq.${huidigChatUserId}),and(gebruiker_a.eq.${huidigChatUserId},gebruiker_b.eq.${currentUser.id})`)
+    .maybeSingle();
+  if (!match) {
+    toonInfo('Nog geen match', 'Deze persoon heeft je berichtverzoek nog niet geaccepteerd. Je kunt pas verder chatten zodra dat is gebeurd.', '\u23f3');
     return;
   }
   inp.value = '';
