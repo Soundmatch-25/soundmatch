@@ -4003,7 +4003,16 @@ async function stuurDirectBericht() {
     // En het bericht meteen ook in directe_berichten zetten, zodat het gesprek al
     // in "Berichten" staat en zichtbaar is vóór de ander heeft geaccepteerd.
     // (accepteerVerzoek moet dit bericht dus niet nogmaals invoegen — anders dubbel.)
-    await sb.from('directe_berichten').insert({ van_user_id: currentUser.id, naar_user_id: ontvangerI, inhoud: tekst });
+    const { error: dbErr } = await sb.from('directe_berichten').insert({ van_user_id: currentUser.id, naar_user_id: ontvangerI, inhoud: tekst });
+    if (dbErr) {
+      console.error('Bericht kon niet meteen in directe_berichten gezet worden:', dbErr.message, dbErr.code, dbErr.details);
+      closeDirectBericht();
+      const t2 = document.getElementById('toast');
+      t2.textContent = 'Verzoek verstuurd, maar niet zichtbaar in Berichten: ' + dbErr.message;
+      t2.classList.add('show');
+      setTimeout(() => t2.classList.remove('show'), 4500);
+      return;
+    }
   }
 
   closeDirectBericht();
