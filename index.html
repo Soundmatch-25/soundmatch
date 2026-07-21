@@ -3532,9 +3532,13 @@ async function verwijderMatch(matchId, anderUserId) {
 async function _verwijderMatchBevestigd(matchId, anderUserId) {
   await sb.from('matches').delete().eq('id', matchId);
   // Al jouw likes op deze persoon omzetten naar 'nope' (ook die op losse advertenties).
+  // Upsert i.p.v. update: zo komt de persoon altijd in Geskipt terecht, ook als er om
+  // wat voor reden dan ook nog geen swipe-rij voor 'm bestond.
   // De swipe van de ánder blijft ongemoeid: die heeft jou immers niet afgewezen.
-  await sb.from('swipes').update({ richting: 'nope' })
-    .eq('swiper_id', currentUser.id).eq('target_id', anderUserId);
+  await sb.from('swipes').upsert(
+    { swiper_id: currentUser.id, target_id: anderUserId, richting: 'nope' },
+    { onConflict: 'swiper_id,target_id' }
+  );
   await sb.from('directe_berichten').delete().eq('van_user_id', currentUser.id).eq('naar_user_id', anderUserId);
   await sb.from('directe_berichten').delete().eq('van_user_id', anderUserId).eq('naar_user_id', currentUser.id);
   laadMatchesLijst(); laadOntvangenLikes(); laadSwipeHistory(); laadDirecteBerichten();
@@ -3974,6 +3978,17 @@ async function stuurDirectBericht() {
       { van_user_id: currentUser.id, naar_user_id: ontvangerI, inhoud: tekst, status: 'wachtend' }
     );
     if (error) { document.getElementById('directBerichtError').textContent = 'Versturen mislukt: ' + error.message; document.getElementById('directBerichtError').style.display = 'block'; return; }
+
+    // Meteen een like-swipe erbij, zodat deze persoon direct in "Geliked" staat,
+    // ook al heeft die nog niet gereageerd op het verzoek.
+    await sb.from('swipes').upsert(
+      { swiper_id: currentUser.id, target_id: ontvangerI, richting: 'like' },
+      { onConflict: 'swiper_id,target_id' }
+    );
+    // En het bericht meteen ook in directe_berichten zetten, zodat het gesprek al
+    // in "Berichten" staat en zichtbaar is vóór de ander heeft geaccepteerd.
+    // (accepteerVerzoek moet dit bericht dus niet nogmaals invoegen — anders dubbel.)
+    await sb.from('directe_berichten').insert({ van_user_id: currentUser.id, naar_user_id: ontvangerI, inhoud: tekst });
   }
 
   closeDirectBericht();
@@ -4456,8 +4471,8 @@ async function accepteerVerzoek(verzoekId, vanUserId) {
   // Match aanmaken
   await sb.from('matches').upsert({ gebruiker_a: currentUser.id, gebruiker_b: vanUserId }, { onConflict: 'gebruiker_a,gebruiker_b' });
 
-  // Eerste bericht sturen via directe_berichten
-  await sb.from('directe_berichten').insert({ van_user_id: vanUserId, naar_user_id: currentUser.id, inhoud: verzoek.inhoud });
+  // Het eerste bericht staat al in directe_berichten (sinds het verzoek verstuurd is),
+  // dus hier niet nogmaals invoegen — dat zou het bericht dubbel laten zien.
 
   // Swipe aanmaken zodat beide gezien zijn
   await sb.from('swipes').upsert({ swiper_id: currentUser.id, target_id: vanUserId, richting: 'like' }, { onConflict: 'swiper_id,target_id' });
