@@ -2765,8 +2765,13 @@ async function laadAdvertenties() {
     }
   }, 20000);
 
-  // Laad gezien IDs als nog niet gedaan (incl. matches)
-  if (geswipedIds.size === 0 && currentUser) {
+  // Altijd vers ophalen wie ik al gezien heb (swipes + matches). Dit voorkomt de
+  // eerdere bug waarbij een match die op een ander toestel/door de ander ontstond,
+  // pas na een volledige herlaad uit Ontdekken verdween. laadGezienIds wist de sets
+  // zelf niet, dus we resetten ze hier eerst.
+  if (currentUser) {
+    geswipedIds.clear();
+    geswipedAdIds.clear();
     await laadGezienIds();
   }
 
@@ -2852,7 +2857,10 @@ async function laadAdvertenties() {
     if (middelpunt) {
       const binnenBereik = (loc) => {
         const c = coordVoorLocatie(loc);
-        if (!c) return false; // locatie onbekend → niet tonen bij afstand-filter
+        // Locatie onbekend → NIET wegfilteren. Iemand die geen (herkenbare) locatie
+        // heeft ingevuld verdween anders onterecht uit elk afstandsfilter. Beter iemand
+        // te veel tonen dan een potentiële match onzichtbaar maken.
+        if (!c) return true;
         const d = afstandKm(middelpunt, c);
         return d != null && d <= filterState.afstand;
       };
@@ -3185,43 +3193,26 @@ async function doSwipe(dir) {
       return;
     }
 
-    // Check wederzijdse like op user-niveau: heeft de ander minstens 1 like op een van mijn kaarten?
+    // Check wederzijdse like: heeft de ander mij ook geliked? Zo ja, dan heeft de
+    // database-trigger de match al automatisch aangemaakt. Wij hoeven 'm alleen op
+    // te halen en de match-popup te tonen — niet zelf de match maken.
     if (dir === 'like' && !swipeError) {
-      const { data: wederzijds, error: wErr } = await sb.from('swipes')
+      const { data: wederzijds } = await sb.from('swipes')
         .select('id')
         .eq('swiper_id', targetUserId)
         .eq('target_id', currentUser.id)
         .eq('richting', 'like')
         .limit(1);
 
-
       if (wederzijds?.length) {
-        // Probeer eerst (currentUser, target), dan omgekeerd
-        let matchOk = false;
-        const res1 = await sb.from('matches').upsert(
-          { gebruiker_a: currentUser.id, gebruiker_b: targetUserId },
-          { onConflict: 'gebruiker_a,gebruiker_b' }
-        );
-        if (!res1.error) { matchOk = true; }
-        else {
-          const res2 = await sb.from('matches').upsert(
-            { gebruiker_a: targetUserId, gebruiker_b: currentUser.id },
-            { onConflict: 'gebruiker_a,gebruiker_b' }
-          );
-          if (!res2.error) matchOk = true;
-          else console.error('Match aanmaken mislukt:', res2.error.message);
-        }
-        if (matchOk) {
-          // Nu er een match is, hoort deze persoon nérgens meer in Ontdekken te
-          // verschijnen — niet alleen de kaart die je zojuist swipete.
-          geswipedIds.add(targetUserId);
-          // Haal match ID op voor lastMatchId
-          const { data: newMatch } = await sb.from('matches').select('id')
-            .or('and(gebruiker_a.eq.' + currentUser.id + ',gebruiker_b.eq.' + targetUserId + '),and(gebruiker_a.eq.' + targetUserId + ',gebruiker_b.eq.' + currentUser.id + ')')
-            .maybeSingle();
-          if (newMatch?.id) bekendeMatchIds.add(newMatch.id); // eigen match: geen popup, je ziet al de match-modal
-          setTimeout(() => showMatch({ ...p, id: targetUserId, matchId: newMatch?.id }), 400);
-        }
+        // Nu er een match is, hoort deze persoon nérgens meer in Ontdekken te verschijnen.
+        geswipedIds.add(targetUserId);
+        // De trigger heeft de match aangemaakt; haal 'm op voor de popup.
+        const { data: newMatch } = await sb.from('matches').select('id')
+          .or('and(gebruiker_a.eq.' + currentUser.id + ',gebruiker_b.eq.' + targetUserId + '),and(gebruiker_a.eq.' + targetUserId + ',gebruiker_b.eq.' + currentUser.id + ')')
+          .maybeSingle();
+        if (newMatch?.id) bekendeMatchIds.add(newMatch.id); // eigen match: geen dubbele popup
+        setTimeout(() => showMatch({ ...p, id: targetUserId, matchId: newMatch?.id }), 400);
       }
     }
   }
@@ -3542,13 +3533,10 @@ async function verwijderMatch(matchId, anderUserId) {
 }
 
 async function _verwijderMatchBevestigd(matchId, anderUserId) {
-  await sb.from('matches').delete().eq('id', matchId);
-  // Al jouw likes op deze persoon omzetten naar 'nope' (ook die op losse advertenties).
-  // Swipes zijn per kaart (advertentie_id kan verschillen), dus eerst kijken of er al
-  // rijen bestaan en die allemaal bijwerken; bestaat er nog geen enkele, dan pas een
-  // nieuwe aanmaken. (De echte unieke sleutel is swiper_id+target_id+advertentie_id,
-  // dus een onConflict zonder advertentie_id matcht geen bestaande constraint.)
-  // De swipe van de ánder blijft ongemoeid: die heeft jou immers niet afgewezen.
+  // Match NIET zelf verwijderen — dat doet de database-trigger automatisch zodra
+  // mijn swipe niet meer 'like' is. Al mijn likes op deze persoon (ook op losse
+  // advertenties) omzetten naar 'nope', zodat de match vervalt én de persoon in
+  // Geskipt komt. De swipe van de ánder blijft ongemoeid.
   const { data: bestaandeSwipes } = await sb.from('swipes').select('id')
     .eq('swiper_id', currentUser.id).eq('target_id', anderUserId);
   if (bestaandeSwipes?.length) {
@@ -3585,11 +3573,8 @@ async function likeTerug(userId, naam, fotoUrl, type) {
     { onConflict: 'swiper_id,target_id,advertentie_id' }
   );
 
-  // Match aanmaken
-  await sb.from('matches').upsert(
-    { gebruiker_a: currentUser.id, gebruiker_b: userId },
-    { onConflict: 'gebruiker_a,gebruiker_b' }
-  );
+  // De match wordt automatisch door de database-trigger aangemaakt zodra beide
+  // kanten 'like' zijn — hier dus niet meer zelf doen.
   geswipedIds.add(userId); // nergens meer in Ontdekken, ook niet via een andere kaart
 
   // Match popup tonen
@@ -3692,9 +3677,10 @@ async function laadOntvangenLikes() {
 
 async function checkNieuweLikes() {
   if (!currentUser) return;
-  
+  await laadBlokkades();
+
   const laaatsBekeken = localStorage.getItem('likesLaatstBekeken');
-  
+
   // Matches na laatste bezoek
   const matchQuery = sb.from('matches')
     .select('gebruiker_a, gebruiker_b, aangemaakt_op')
@@ -3718,11 +3704,15 @@ async function checkNieuweLikes() {
   const nopeIds = new Set((nopes || []).map(s => s.target_id));
   const matchUserIds = new Set((nieuweMatches || []).map(m => m.gebruiker_a === currentUser.id ? m.gebruiker_b : m.gebruiker_a));
 
-  const likeCount = (nieuweLikes || []).filter(l => 
-    l.swiper_id !== currentUser.id && !nopeIds.has(l.swiper_id) && !matchUserIds.has(l.swiper_id)
+  const likeCount = (nieuweLikes || []).filter(l =>
+    l.swiper_id !== currentUser.id && !nopeIds.has(l.swiper_id) && !matchUserIds.has(l.swiper_id) && !geblokkeerdeIds.has(l.swiper_id)
   ).length;
+  const nieuweMatchesOnbelokkeerd = (nieuweMatches || []).filter(m => {
+    const anderId = m.gebruiker_a === currentUser.id ? m.gebruiker_b : m.gebruiker_a;
+    return !geblokkeerdeIds.has(anderId);
+  });
 
-  const totalCount = likeCount + (nieuweMatches?.length || 0);
+  const totalCount = likeCount + nieuweMatchesOnbelokkeerd.length;
 
   updateLikesBadge(totalCount);
 }
@@ -3891,19 +3881,19 @@ async function verwijderUitLijst(swipeId, targetId) {
 
   if (restLikes?.length) return; // andere like houdt de match/interesse in stand
 
-  // Geen likes meer van mij op deze persoon: match + chat opruimen, of de ander uit "heeft jou geliked" halen
+  // Geen likes meer van mij op deze persoon. De match wordt (indien aanwezig) al
+  // automatisch door de trigger opgeruimd doordat mijn swipe hierboven verwijderd is.
+  // We ruimen alleen nog de bijbehorende chat op en verversen de lijst.
   const { data: match } = await sb.from('matches')
     .select('id')
     .or('and(gebruiker_a.eq.' + currentUser.id + ',gebruiker_b.eq.' + targetId + '),and(gebruiker_a.eq.' + targetId + ',gebruiker_b.eq.' + currentUser.id + ')')
     .maybeSingle();
 
   if (match) {
-    await sb.from('matches').delete().eq('id', match.id);
+    // (De trigger heeft de match al verwijderd; hier alleen chat opruimen.)
     await sb.from('directe_berichten').delete().eq('van_user_id', currentUser.id).eq('naar_user_id', targetId);
     await sb.from('directe_berichten').delete().eq('van_user_id', targetId).eq('naar_user_id', currentUser.id);
     laadMatchesLijst();
-  } else {
-    await sb.from('swipes').update({ richting: 'nope' }).eq('swiper_id', targetId).eq('target_id', currentUser.id);
   }
 }
 
@@ -4216,6 +4206,39 @@ function stopMatchRealtime() {
   matchKanaal = null;
 }
 
+// Live chat: nieuwe berichten in het open gesprek komen direct binnen i.p.v. elke
+// paar seconden pollen. De trage vangnet-poll (8s) blijft draaien voor het geval
+// de realtime-verbinding wegvalt.
+let chatKanaal = null;
+function startChatRealtime(partnerId) {
+  stopChatRealtime();
+  if (!currentUser || !partnerId) return;
+  try {
+    chatKanaal = sb.channel('chat-' + partnerId)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'directe_berichten' }, (payload) => {
+        const b = payload.new;
+        if (!b || huidigChatUserId !== partnerId) return;
+        // Alleen berichten binnen dít gesprek
+        const inGesprek = (b.van_user_id === partnerId && b.naar_user_id === currentUser.id)
+                       || (b.van_user_id === currentUser.id && b.naar_user_id === partnerId);
+        if (!inGesprek) return;
+        laadGesprekBerichten(partnerId);
+        // Binnenkomend bericht meteen als gelezen markeren (chat staat immers open)
+        if (b.van_user_id === partnerId) {
+          sb.from('directe_berichten').update({ gelezen: true })
+            .eq('van_user_id', partnerId).eq('naar_user_id', currentUser.id).eq('gelezen', false)
+            .then(() => updateOngelezen(), () => {});
+        }
+      })
+      .subscribe();
+  } catch(e) {}
+}
+function stopChatRealtime() {
+  if (!chatKanaal) return;
+  try { sb.removeChannel(chatKanaal); } catch(e) {}
+  chatKanaal = null;
+}
+
 // Vangnet: mocht realtime niet aanstaan of wegvallen, dan pikt deze poll de match alsnog op
 async function checkNieuweMatches() {
   if (!currentUser) return;
@@ -4345,7 +4368,7 @@ function toonChatNietBeschikbaar() {
 }
 
 function sluitNietBeschikbareChat() {
-  stopAppInterval('gesprek');
+  stopAppInterval('gesprek'); stopChatRealtime();
   huidigChatUserId = null;
   document.getElementById('chatMsgs').innerHTML = '';
   document.querySelector('.chat-name').textContent = 'Selecteer een gesprek';
@@ -4404,8 +4427,8 @@ async function laadDirecteBerichten() {
         '</div>' +
         '<div style="font-size:13px;color:var(--sub);margin-bottom:10px;font-style:italic;">"' + esc(v.inhoud.substring(0, 80)) + (v.inhoud.length > 80 ? '...' : '') + '"</div>' +
         '<div style="display:flex;gap:8px;">' +
-          '<button onclick="accepteerVerzoek(\'' + v.id + '\',\'' + u.id + '\')" class="btn btn-primary btn-sm" style="flex:1;">Accepteren</button>' +
-          '<button onclick="weigerVerzoek(\'' + v.id + '\')" class="btn btn-ghost btn-sm" style="flex:1;">Weigeren</button>' +
+          '<button onclick="accepteerVerzoek(\'' + v.id + '\',\'' + u.id + '\', event)" class="btn btn-primary btn-sm" style="flex:1;">Accepteren</button>' +
+          '<button onclick="weigerVerzoek(\'' + v.id + '\', event)" class="btn btn-ghost btn-sm" style="flex:1;">Weigeren</button>' +
         '</div>';
       sectie.appendChild(card);
     });
@@ -4508,38 +4531,48 @@ async function laadDirecteBerichten() {
   updateOngelezen();
 }
 
-async function accepteerVerzoek(verzoekId, vanUserId) {
+async function accepteerVerzoek(verzoekId, vanUserId, ev) {
   if (!currentUser) return;
+  const btn = ev?.target;
+  if (btn) { if (btn.disabled) return; btn.disabled = true; btn.textContent = 'Bezig...'; }
 
-  // Verzoek ophalen voor bericht
-  const { data: verzoek } = await sb.from('berichtverzoeken').select('*, van:van_user_id(naam, foto_url, type)').eq('id', verzoekId).single();
-  if (!verzoek) return;
+  try {
+    // Verzoek ophalen voor bericht
+    const { data: verzoek } = await sb.from('berichtverzoeken').select('*, van:van_user_id(naam, foto_url, type)').eq('id', verzoekId).single();
+    if (!verzoek) { if (btn) { btn.disabled = false; btn.textContent = 'Accepteren'; } return; }
 
-  // Status updaten
-  await sb.from('berichtverzoeken').update({ status: 'geaccepteerd' }).eq('id', verzoekId);
+    // Status updaten
+    await sb.from('berichtverzoeken').update({ status: 'geaccepteerd' }).eq('id', verzoekId);
 
-  // Match aanmaken
-  await sb.from('matches').upsert({ gebruiker_a: currentUser.id, gebruiker_b: vanUserId }, { onConflict: 'gebruiker_a,gebruiker_b' });
-  geswipedIds.add(vanUserId); // nergens meer in Ontdekken, ook niet via een andere kaart
+    // De verzender heeft al een 'like'-swipe (gezet bij het versturen). Door nu ook
+    // míjn 'like'-swipe te zetten, maakt de database-trigger automatisch de match aan.
+    await sb.from('swipes').upsert({ swiper_id: currentUser.id, target_id: vanUserId, richting: 'like', advertentie_id: null }, { onConflict: 'swiper_id,target_id,advertentie_id' });
+    geswipedIds.add(vanUserId); // nergens meer in Ontdekken, ook niet via een andere kaart
 
-  // Het eerste bericht staat al in directe_berichten (sinds het verzoek verstuurd is),
-  // dus hier niet nogmaals invoegen — dat zou het bericht dubbel laten zien.
+    // Het eerste bericht staat al in directe_berichten (sinds het verzoek verstuurd is),
+    // dus hier niet nogmaals invoegen — dat zou het bericht dubbel laten zien.
 
-  // Swipe aanmaken zodat beide gezien zijn
-  await sb.from('swipes').upsert({ swiper_id: currentUser.id, target_id: vanUserId, richting: 'like', advertentie_id: null }, { onConflict: 'swiper_id,target_id,advertentie_id' });
+    // Gesprek openen
+    laadDirecteBerichten();
+    const user = verzoek.van;
+    setTimeout(() => openGesprek(vanUserId, user), 300);
 
-  // Gesprek openen
-  laadDirecteBerichten();
-  const user = verzoek.van;
-  setTimeout(() => openGesprek(vanUserId, user), 300);
-
-  const t = document.getElementById('toast');
-  t.textContent = 'Match! Je kan nu chatten.'; t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 2200);
+    const t = document.getElementById('toast');
+    t.textContent = 'Match! Je kan nu chatten.'; t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2200);
+  } catch (e) {
+    if (btn) { btn.disabled = false; btn.textContent = 'Accepteren'; }
+    const t = document.getElementById('toast');
+    t.textContent = 'Accepteren mislukt, probeer opnieuw.'; t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2600);
+  }
 }
 
-async function weigerVerzoek(verzoekId) {
-  await sb.from('berichtverzoeken').update({ status: 'geweigerd' }).eq('id', verzoekId);
+async function weigerVerzoek(verzoekId, ev) {
+  const btn = ev?.target;
+  if (btn) { if (btn.disabled) return; btn.disabled = true; btn.textContent = 'Bezig...'; }
+  const { error } = await sb.from('berichtverzoeken').update({ status: 'geweigerd' }).eq('id', verzoekId);
+  if (error && btn) { btn.disabled = false; btn.textContent = 'Weigeren'; return; }
   laadDirecteBerichten();
 }
 
@@ -4597,10 +4630,12 @@ async function openGesprek(userId, user) {
   await sb.from('directe_berichten').update({ gelezen: true }).eq('van_user_id', userId).eq('naar_user_id', currentUser.id).eq('gelezen', false);
   await laadGesprekBerichten(userId);
   updateOngelezen();
+  startChatRealtime(userId);
+  // Vangnet-poll: veel trager nu realtime het meeste werk doet (was 2000ms).
   setAppInterval('gesprek', () => {
     if (!huidigChatUserId) return;
     laadGesprekBerichten(userId);
-  }, 2000);
+  }, 8000);
   // Online status minder frequent
   setAppInterval('onlinelezen', () => {
     if (huidigChatUserId) updateChatOnlineStatus(userId);
@@ -4622,7 +4657,7 @@ function sluitMobieleChat() {
   document.querySelector('.chat-col').style.display = 'none';
   const terugBtn = document.getElementById('chatTerugBtn');
   if (terugBtn) terugBtn.style.display = 'none';
-  stopAppInterval('gesprek');
+  stopAppInterval('gesprek'); stopChatRealtime();
 }
 
 async function updateChatOnlineStatus(userId) {
@@ -4745,7 +4780,7 @@ function resetChatHeader() {
   if (viaEl) { viaEl.textContent = ''; viaEl.style.display = 'none'; }
   const av = document.getElementById('chatAvatar');
   if (av) av.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>';
-  stopAppInterval('gesprek');
+  stopAppInterval('gesprek'); stopChatRealtime();
   stopAppInterval('onlinelezen');
 }
 
@@ -4823,10 +4858,15 @@ async function blokkeerGebruiker() {
 async function _blokkeerBevestigd() {
   const ander = huidigChatUserId;
   await sb.from('blokkades').upsert({ blokkeerder_id: currentUser.id, geblokkeerde_id: ander }, { onConflict: 'blokkeerder_id,geblokkeerde_id' });
-  // Match en chat permanent verwijderen (komt ook na deblokkeren niet terug)
-  await sb.from('matches').delete().or('and(gebruiker_a.eq.' + currentUser.id + ',gebruiker_b.eq.' + ander + '),and(gebruiker_a.eq.' + ander + ',gebruiker_b.eq.' + currentUser.id + ')');
+  // De blokkade-trigger ruimt de match automatisch op. Wij verwijderen hier alleen de
+  // dingen die de trigger niet aanraakt: chat, berichtverzoeken en mijn eigen swipes.
   await sb.from('directe_berichten').delete().or('and(van_user_id.eq.' + currentUser.id + ',naar_user_id.eq.' + ander + '),and(van_user_id.eq.' + ander + ',naar_user_id.eq.' + currentUser.id + ')');
   await sb.from('berichtverzoeken').delete().or('and(van_user_id.eq.' + currentUser.id + ',naar_user_id.eq.' + ander + '),and(van_user_id.eq.' + ander + ',naar_user_id.eq.' + currentUser.id + ')');
+  // Mijn eigen swipe op deze persoon weg (de swipe van de ánder mag/kan ik niet
+  // verwijderen — dat verhindert de RLS — maar dat hoeft ook niet, want de blokkade
+  // verbergt en ontkoppelt alles al).
+  await sb.from('swipes').delete().eq('swiper_id', currentUser.id).eq('target_id', ander);
+  geswipedIds.delete(ander); // lokale cache ook opschonen
   geblokkeerdeIds.add(ander);
   huidigChatUserId = null;
   resetChatHeader();
