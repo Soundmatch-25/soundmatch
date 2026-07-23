@@ -632,6 +632,29 @@ html, body {
   .blader-btn:disabled { opacity: 0.2; cursor: default; box-shadow: none; }
 }
 
+/* Tags in groepen met een klein kopje, zodat je in één oogopslag ziet wat wat is:
+   welk instrument iemand speelt (of zoekt), welke genres, en welk niveau. */
+.card-tags { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+.tag-groep { display: flex; align-items: baseline; gap: 8px; }
+.tag-label {
+  flex-shrink: 0;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: var(--sub);
+  opacity: 0.75;
+  min-width: 54px;
+}
+.tag-rij { display: flex; flex-wrap: wrap; gap: 6px; }
+/* Instrumenten springen eruit: dat is meestal waar het om draait. */
+.tag-primair {
+  border-color: rgba(124,77,255,0.5);
+  background: rgba(124,77,255,0.14);
+  color: #c4b0ff;
+  font-weight: 600;
+}
+
 /* Meta-informatie in de tekstkolom: op mobiel verborgen (daar staat het op de
    foto, zoals het was), op desktop juist zichtbaar zodat de foto schoon blijft. */
 .card-meta-top, .card-meta-regel, .card-leeftijd { display: none; }
@@ -693,7 +716,9 @@ html, body {
   .card-desc-meer { margin-top: 6px; }
 
   /* Tags altijd onderaan, zodat kaarten met korte en lange teksten hetzelfde ogen */
-  .card-tags { margin-top: auto; padding-top: 16px; }
+  .card-tags { margin-top: auto; padding-top: 16px; gap: 10px; }
+  .tag-label { min-width: 62px; font-size: 11px; }
+  .tag-rij { gap: 7px; }
 }
 
 /* SWIPE FEEDBACK */
@@ -1355,10 +1380,20 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
   .panel-header h2 { font-size: 18px; }
   .msg-list-header { font-size: 18px; padding: 14px 16px 10px; }
   .panel-titel { font-size: 18px; }
-  .card-name { font-size: 16px; }
-  .card-role { font-size: 11px; }
-  .card-desc { font-size: 12px; -webkit-line-clamp: 3; }
-  .card-body { padding: 14px 16px 12px; gap: 4px; }
+  /* Mobiel: duidelijkere opbouw. De rol ("wat zoekt/is deze persoon") is het
+     belangrijkst, dus die krijgt meer nadruk; daaronder de beschrijving en
+     tenslotte de gegroepeerde tags. */
+  /* Iets meer ruimte voor de tekst nu daar de gegroepeerde tags bij staan. */
+  .card-visual { height: 60%; }
+  .card-name { font-size: 18px; line-height: 1.2; }
+  .card-role { font-size: 13px; font-weight: 700; margin-top: 3px; }
+  .card-desc { font-size: 12.5px; -webkit-line-clamp: 2; margin-top: 6px; }
+  .card-desc-meer { font-size: 12px; margin-top: 2px; }
+  .card-body { padding: 14px 16px 12px; gap: 0; }
+  .card-tags { margin-top: 10px; gap: 6px; }
+  .tag-label { min-width: 48px; font-size: 9px; }
+  .tag-rij { gap: 5px; }
+  .card-tags .tag { font-size: 10.5px; padding: 3px 9px; }
   .swipe-actions { gap: 12px; }
   .sw-like { width: 60px !important; height: 60px !important; }
   .sw-nope { width: 50px !important; height: 50px !important; }
@@ -2782,11 +2817,7 @@ function profielNaarKaart(p) {
   const stad = p.stad || p.locatie || '';
   const naam = p.naam || 'Onbekend';
   const type = p.type || 'muzikant';
-  const eersteItem = (p.instrument || [])[0];
-  const rol = type === 'band'
-    ? (eersteItem ? 'Band zoekt ' + eersteItem.toLowerCase() : 'Band zoekt muzikant')
-    : type === 'industry' ? (eersteItem || 'Industry')
-    : 'Muzikant zoekt band';
+  const rol = maakRolTekst(type, p.instrument);
   const tags = [...(p.instrument || []).slice(0,2), ...(p.genres || []).slice(0,1), p.niveau, stad].filter(Boolean);
   return {
     id: p.id,
@@ -2796,6 +2827,10 @@ function profielNaarKaart(p) {
     type,
     desc: p.bio || 'Geen beschrijving beschikbaar.',
     tags,
+    instrumenten: (p.instrument || []).filter(Boolean),
+    genreLijst: (p.genres || []).filter(Boolean),
+    niveau: p.niveau || '',
+    stad,
     activeMin: getActiefMinuten(p.actief_op),
     spotlight: p.spotlight || false,
     foto_url: p.foto_url || null,
@@ -3019,16 +3054,30 @@ async function laadAdvertenties() {
   renderCards();
 }
 
+// Roltekst opbouwen. Zoekt een band meerdere muzikanten, dan tonen we die allemaal
+// ("Band zoekt zanger/es, toetsenist en drummer") in plaats van alleen de eerste.
+function maakRolTekst(type, items) {
+  const lijst = (items || []).filter(Boolean);
+  if (type === 'band') {
+    if (!lijst.length) return 'Band zoekt muzikant';
+    const klein = lijst.map(i => String(i).toLowerCase());
+    const tonen = klein.slice(0, 3);
+    let tekst = tonen.length > 1
+      ? tonen.slice(0, -1).join(', ') + ' en ' + tonen[tonen.length - 1]
+      : tonen[0];
+    if (klein.length > 3) tekst += ' +' + (klein.length - 3);
+    return 'Band zoekt ' + tekst;
+  }
+  if (type === 'industry') return lijst[0] || 'Industry';
+  return 'Muzikant zoekt band';
+}
+
 function advertentieNaarKaart(a) {
   const profiel = a.profiel || {};
   const genres = (a.genres || []).slice(0,2).join(' / ') || 'Muzikant';
   const naam = a.titel || profiel.naam || 'Onbekend';
   const type = a.type || 'muzikant';
-  const eersteItem = (a.instrumenten || [])[0];
-  const rol = type === 'band'
-    ? (eersteItem ? 'Band zoekt ' + eersteItem.toLowerCase() : 'Band zoekt muzikant')
-    : type === 'industry' ? (eersteItem || 'Industry')
-    : 'Muzikant zoekt band';
+  const rol = maakRolTekst(type, a.instrumenten);
   const tags = [...(a.instrumenten || []).slice(0,2), ...(a.genres || []).slice(0,1), a.niveau, profiel.stad || profiel.locatie].filter(Boolean);
   return {
     id: a.id,
@@ -3038,6 +3087,11 @@ function advertentieNaarKaart(a) {
     type,
     desc: a.omschrijving || 'Geen beschrijving beschikbaar.',
     tags,
+    // Losse groepen, zodat de kaart ze gescheiden kan tonen i.p.v. één bak tags
+    instrumenten: (a.instrumenten || []).filter(Boolean),
+    genreLijst: (a.genres || []).filter(Boolean),
+    niveau: a.niveau || '',
+    stad: profiel.stad || profiel.locatie || '',
     activeMin: getActiefMinuten(a.aangemaakt_op),
     spotlight: a.spotlight || false,
     foto_url: a.foto_url || profiel.foto_url || null,
@@ -3068,7 +3122,7 @@ function buildCard(p, cls) {
   el.className = 'profile-card ' + cls;
   if (!p) return el;
 
-  const [activeCls, activeLabel] = getActiveLabel(p.activeMin || 9999);
+  const [activeCls, activeLabel] = getActiveLabel(p.activeMin ?? 9999);
   const locatieBadge = (p.raw?.stad || p.raw?.locatie) ? `<div class="foto-badge foto-badge-locatie" style="position:absolute;bottom:14px;right:14px;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:600;background:rgba(0,0,0,0.6);border:1px solid rgba(255,255,255,0.1);color:#fff;backdrop-filter:blur(8px);display:flex;align-items:center;gap:4px;"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>${esc(p.raw?.stad || p.raw?.locatie)}</div>` : '';
   const leeftijdBadge = (p.raw?.leeftijd && p.type !== 'band') ? `<div class="foto-badge foto-badge-leeftijd" style="position:absolute;bottom:44px;right:14px;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:600;background:rgba(0,0,0,0.6);border:1px solid rgba(255,255,255,0.1);color:#fff;backdrop-filter:blur(8px);">${p.raw.leeftijd} jaar</div>` : '';
   // Kaart nu hoger + vierkanter gemaakt (zie .card-stack/.card-visual CSS) zodat een
@@ -3103,7 +3157,20 @@ function buildCard(p, cls) {
       </div>
       <div class="card-desc" onclick="event.stopPropagation();openKaartDetail(${advertentiesData.indexOf(p)})" style="cursor:pointer;">${esc(p.desc)}</div>
       ${p.desc && p.desc.length > 100 ? `<span class="card-desc-meer" onclick="event.stopPropagation();openKaartDetail(${advertentiesData.indexOf(p)})">Meer lezen...</span>` : ''}
-      <div class="card-tags">${(p.tags||[]).map(t=>`<div class="tag">${esc(t)}</div>`).join('')}</div>
+      <div class="card-tags">
+        ${(p.instrumenten||[]).length ? `<div class="tag-groep">
+          <span class="tag-label">${p.type === 'band' ? 'Gezocht' : p.type === 'industry' ? 'Aanbod' : 'Speelt'}</span>
+          <div class="tag-rij">${p.instrumenten.slice(0,4).map(t=>`<div class="tag tag-primair">${esc(t)}</div>`).join('')}</div>
+        </div>` : ''}
+        ${(p.genreLijst||[]).length ? `<div class="tag-groep">
+          <span class="tag-label">Genres</span>
+          <div class="tag-rij">${p.genreLijst.slice(0,4).map(t=>`<div class="tag">${esc(t)}</div>`).join('')}</div>
+        </div>` : ''}
+        ${p.niveau ? `<div class="tag-groep">
+          <span class="tag-label">Niveau</span>
+          <div class="tag-rij"><div class="tag">${esc(p.niveau)}</div></div>
+        </div>` : ''}
+      </div>
     </div>
     <div class="swipe-fb fb-like">LIKE!</div>
     <div class="swipe-fb fb-nope">NOPE</div>`;
@@ -5902,8 +5969,44 @@ function openKaartDetail(index) {
     foto.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;">' + typeIcon(p.type) + '</div>';
   }
 
+  // Tags gegroepeerd tonen, net als op de kaart zelf
   const tags = document.getElementById('kdTags');
-  tags.innerHTML = (p.tags || []).map(t => '<span class="tag">' + esc(t) + '</span>').join('');
+  const groep = (label, items, primair) => {
+    const lijst = (items || []).filter(Boolean);
+    if (!lijst.length) return '';
+    return '<div class="tag-groep"><span class="tag-label">' + label + '</span><div class="tag-rij">' +
+      lijst.map(t => '<div class="tag' + (primair ? ' tag-primair' : '') + '">' + esc(t) + '</div>').join('') +
+      '</div></div>';
+  };
+  const instrumentLabel = p.type === 'band' ? 'Gezocht' : p.type === 'industry' ? 'Aanbod' : 'Speelt';
+  tags.innerHTML = groep(instrumentLabel, p.instrumenten, true) +
+                   groep('Genres', p.genreLijst) +
+                   groep('Niveau', p.niveau ? [p.niveau] : []);
+  tags.style.cssText = 'display:flex;flex-direction:column;gap:8px;';
+
+  // Extra gegevens netjes onder elkaar, zodat het detailvenster echt meer vertelt
+  const rijen = document.getElementById('kdRijen');
+  const items = [];
+  const voegToe = (icoon, label, waarde) => {
+    if (!waarde) return;
+    items.push('<div style="display:flex;align-items:flex-start;gap:10px;font-size:14px;">' +
+      '<span style="width:18px;flex-shrink:0;opacity:.6;text-align:center;">' + icoon + '</span>' +
+      '<span style="color:var(--sub);min-width:96px;flex-shrink:0;">' + label + '</span>' +
+      '<span style="color:var(--text);flex:1;">' + esc(waarde) + '</span></div>');
+  };
+  voegToe('\uD83D\uDCCD', 'Locatie', p.stad || raw.stad || raw.locatie);
+  if (p.type !== 'band') voegToe('\uD83C\uDF82', 'Leeftijd', raw.leeftijd ? raw.leeftijd + ' jaar' : '');
+  voegToe('\uD83D\uDCC5', 'Beschikbaar', raw.beschikbaarheid);
+  voegToe('\uD83C\uDFB5', 'Type', p.type ? p.type.charAt(0).toUpperCase() + p.type.slice(1) : '');
+  const [, actiefLabel] = getActiveLabel(p.activeMin ?? 9999);
+  voegToe('\u23F1', 'Laatst actief', actiefLabel.replace('\u25CF ', ''));
+
+  if (items.length) {
+    rijen.innerHTML = '<div style="display:flex;flex-direction:column;gap:9px;padding-top:14px;border-top:1px solid var(--border);">' + items.join('') + '</div>';
+    rijen.style.display = 'block';
+  } else {
+    rijen.style.display = 'none';
+  }
 
   const links = document.getElementById('kdLinks');
   if (p.link) {
