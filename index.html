@@ -476,11 +476,33 @@ html, body {
 }
 .profile-card.cc-current { z-index: 10; transform: translateX(0) scale(1); opacity: 1; filter: none; }
 .profile-card.cc-prev,
-.profile-card.cc-next { z-index: 5; opacity: 0; pointer-events: none; }
-/* Mobiel: buren netjes buiten beeld, zodat het voelt als doorschuiven */
-.profile-card.cc-prev { transform: translateX(-115%) scale(0.92); }
-.profile-card.cc-next { transform: translateX(115%) scale(0.92); }
+.profile-card.cc-next {
+  z-index: 5;
+  opacity: 0.35;
+  filter: blur(2px);
+  pointer-events: none;
+}
+/* Mobiel: buren steken er een randje uit, zodat je ziet dat er meer kaarten zijn.
+   De kleinere schaal zorgt ervoor dat een kaart "groeit" als hij naar voren komt
+   en weer "krimpt" als hij naar de zijkant verdwijnt. */
+.profile-card.cc-prev { transform: translateX(-88%) scale(0.84); }
+.profile-card.cc-next { transform: translateX(88%) scale(0.84); }
 .profile-card.dragging { transition: none; }
+/* Wiebel bij het openen van Ontdekken: laat zien dat je de kaart kunt slepen.
+   Alleen op mobiel — op desktop wijzen de pijlknoppen de weg al. */
+@keyframes kaartWiebel {
+  0%, 100% { transform: translateX(0) scale(1); }
+  12% { transform: translateX(-22px) scale(1); }
+  26% { transform: translateX(18px) scale(1); }
+  40% { transform: translateX(-16px) scale(1); }
+  54% { transform: translateX(13px) scale(1); }
+  68% { transform: translateX(-7px) scale(1); }
+  84% { transform: translateX(4px) scale(1); }
+}
+@media (max-width: 899px) {
+  .profile-card.cc-current.wiebel { animation: kaartWiebel 1.6s cubic-bezier(.36,.07,.19,.97) .45s 1; }
+}
+
 /* Kaart die zojuist geliked/geskipt is: wegvliegen */
 .profile-card.cc-weg-like { transform: translateX(140%) rotate(12deg); opacity: 0; }
 .profile-card.cc-weg-nope { transform: translateX(-140%) rotate(-12deg); opacity: 0; }
@@ -3070,6 +3092,14 @@ function renderCards() {
   const huidigeKaart = buildCard(advertentiesData[cardIndex], 'cc-current');
   stack.appendChild(huidigeKaart);
 
+  // Eén keer per sessie de kaart even laten wiebelen, zodat duidelijk is dat je
+  // 'm opzij kunt slepen. Alleen op mobiel (desktop heeft de pijlknoppen).
+  if (!window._wiebelGetoond && window.innerWidth < 900) {
+    window._wiebelGetoond = true;
+    huidigeKaart.classList.add('wiebel');
+    huidigeKaart.addEventListener('animationend', () => huidigeKaart.classList.remove('wiebel'), { once: true });
+  }
+
   initCardDrag(huidigeKaart);
   updateBladerKnoppen();
 }
@@ -3549,6 +3579,27 @@ function initCardDrag(card) {
     const aanBegin = cardIndex <= 0 && dx > 0;
     const aanEind = cardIndex >= advertentiesData.length - 1 && dx < 0;
     const verplaatsing = (aanBegin || aanEind) ? dx * 0.25 : dx;
+
+    // Sleep je ver genoeg door (voorbij de pijlknoppen), dan schuift de kaart
+    // vanzelf door naar de volgende en "laat hij je muis los" — je hoeft dus niet
+    // eerst los te laten. Voelt een stuk vloeiender dan wachten op mouseup.
+    const stackBreedte = card.parentElement?.offsetWidth || 420;
+    const autoDrempel = Math.min(stackBreedte * 0.30, 190);
+    if (!aanBegin && !aanEind && Math.abs(dx) > autoDrempel) {
+      const richting = dx < 0 ? 'volgende' : 'vorige';
+      // Sleep beëindigen vóór het bladeren, anders blijven de inline transforms staan.
+      card.classList.remove('dragging');
+      card.style.transition = '';
+      card.style.transform = '';
+      const stackEl2 = card.parentElement;
+      if (stackEl2) stackEl2.querySelectorAll('.profile-card.cc-prev, .profile-card.cc-next')
+        .forEach(el => { el.style.transition = ''; el.style.transform = ''; });
+      dragState = null;
+      setTimeout(() => { window._wasDragging = false; }, 100);
+      bladerNaar(richting);
+      return;
+    }
+
     card.style.transform = `translateX(${verplaatsing}px)`;
 
     // Buurkaarten laten meebewegen, zodat het één geheel voelt.
