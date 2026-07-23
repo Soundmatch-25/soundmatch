@@ -464,10 +464,26 @@ html, body {
   display: flex;
   flex-direction: column;
 }
-.profile-card.stack-1 { transform: scale(0.97) translateY(8px); z-index: 1; }
-.profile-card.stack-2 { transform: scale(0.94) translateY(16px); z-index: 0; }
-.profile-card.top { z-index: 10; transform: scale(1); }
+/* ── Carousel: vorige / huidige / volgende kaart ──────────────────
+   Bladeren doe je met slepen of de pijltoetsen; liken/skippen met de
+   knoppen eronder. Buren zijn op mobiel buiten beeld, op desktop
+   zichtbaar als vervaagde, doorschijnende kaarten. */
+.profile-card {
+  transition: transform .42s cubic-bezier(.22,.68,.34,1),
+              opacity .42s ease,
+              filter .42s ease;
+  will-change: transform, opacity;
+}
+.profile-card.cc-current { z-index: 10; transform: translateX(0) scale(1); opacity: 1; filter: none; }
+.profile-card.cc-prev,
+.profile-card.cc-next { z-index: 5; opacity: 0; pointer-events: none; }
+/* Mobiel: buren netjes buiten beeld, zodat het voelt als doorschuiven */
+.profile-card.cc-prev { transform: translateX(-115%) scale(0.92); }
+.profile-card.cc-next { transform: translateX(115%) scale(0.92); }
 .profile-card.dragging { transition: none; }
+/* Kaart die zojuist geliked/geskipt is: wegvliegen */
+.profile-card.cc-weg-like { transform: translateX(140%) rotate(12deg); opacity: 0; }
+.profile-card.cc-weg-nope { transform: translateX(-140%) rotate(-12deg); opacity: 0; }
 
 .card-visual {
   height: 66%;
@@ -550,9 +566,39 @@ html, body {
   .card-desc { font-size: 14px; -webkit-line-clamp: 8; margin-top: 4px; }
   .card-tags { margin-top: 14px; }
 
-  /* Carousel-gevoel i.p.v. gestapelde kaarten: de "onder"-kaarten niet meer als
-     verschoven/verkleinde stapel tonen. */
-  .profile-card.stack-1, .profile-card.stack-2 { opacity: 0; pointer-events: none; }
+  /* Buren wél tonen op desktop: vervaagd en doorschijnend, zodat je ziet dat
+     er kaarten voor en na de huidige staan. */
+  .profile-card.cc-prev,
+  .profile-card.cc-next {
+    opacity: 0.45;
+    filter: blur(3px);
+    z-index: 5;
+  }
+  .profile-card.cc-prev { transform: translateX(-62%) scale(0.86); }
+  .profile-card.cc-next { transform: translateX(62%) scale(0.86); }
+}
+
+/* Blader-knoppen naast de kaart (alleen desktop; op mobiel swipe je gewoon) */
+.card-stack-wrap { display: flex; align-items: center; justify-content: center; gap: 0; width: 100%; }
+.blader-btn { display: none; }
+@media (min-width: 900px) {
+  .blader-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px; height: 44px;
+    flex-shrink: 0;
+    margin: 0 10px;
+    border-radius: 50%;
+    border: 1px solid var(--border2);
+    background: var(--card2);
+    color: var(--sub);
+    cursor: pointer;
+    transition: background .15s, color .15s, transform .15s, opacity .15s;
+    z-index: 20;
+  }
+  .blader-btn:hover:not(:disabled) { background: var(--card); color: var(--text); transform: scale(1.08); }
+  .blader-btn:disabled { opacity: 0.25; cursor: default; }
 }
 
 .swipe-hint { display: none; }
@@ -1968,12 +2014,20 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
         </div>
 
         <!-- Card stack -->
-        <div class="card-stack" id="cardStack"></div>
+        <div class="card-stack-wrap">
+          <button class="blader-btn blader-links" id="bladerVorige" onclick="bladerNaar('vorige')" aria-label="Vorige kaart">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+          </button>
+          <div class="card-stack" id="cardStack"></div>
+          <button class="blader-btn blader-rechts" id="bladerVolgende" onclick="bladerNaar('volgende')" aria-label="Volgende kaart">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+          </button>
+        </div>
 
         <!-- Sleep-hint (alleen desktop, verdwijnt vanzelf) -->
         <div class="swipe-hint" id="swipeHint">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
-          <span>Sleep de kaart om te swipen</span>
+          <span>Sleep of gebruik &larr; &rarr; om te bladeren &middot; knoppen om te liken of skippen</span>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
         </div>
 
@@ -2809,8 +2863,12 @@ async function laadAdvertenties() {
     .filter(p => !geswipedIds.has(p.id) && !geblokkeerdeIds.has(p.id))
     .map(p => profielNaarKaart(p));
 
+  // Advertenties staan los van het profiel: als je iemand als persoon liket of
+  // met 'm matcht, blijft zijn losse band-/industry-advertentie gewoon zichtbaar.
+  // (Alleen die specifieke advertentie verdwijnt als je díé weg-swipet.)
+  // Geblokkeerden natuurlijk wel altijd verbergen.
   let adKaarten = (advertenties || [])
-    .filter(a => !geswipedAdIds.has(a.id) && !geblokkeerdeIds.has(a.user_id) && !geswipedIds.has(a.user_id))
+    .filter(a => !geswipedAdIds.has(a.id) && !geblokkeerdeIds.has(a.user_id))
     .map(a => advertentieNaarKaart(a));
 
   // Client-side genre/instrument filter toepassen
@@ -2990,33 +3048,62 @@ function renderCards() {
     return;
   }
 
-  const remaining = advertentiesData.length - cardIndex;
-  if (remaining >= 3) stack.appendChild(buildCard(advertentiesData[cardIndex+2], 'stack-2'));
-  if (remaining >= 2) stack.appendChild(buildCard(advertentiesData[cardIndex+1], 'stack-1'));
-
-  const topCard = buildCard(advertentiesData[cardIndex], 'top');
-  stack.appendChild(topCard);
-
-  // Op desktop: nieuwe kaart van de andere kant laten inschuiven, als een carousel/filmstrip
-  if (window.innerWidth >= 900 && laatsteSwipeRichting) {
-    const dist = (stack.offsetWidth || 820) + 160;
-    const startX = laatsteSwipeRichting === 'like' ? -dist : dist;
-    topCard.style.transition = 'none';
-    topCard.style.transform = `translateX(${startX}px)`;
-    topCard.style.opacity = '0';
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        topCard.style.transition = 'transform .35s ease, opacity .35s ease';
-        topCard.style.transform = 'translateX(0)';
-        topCard.style.opacity = '1';
-      });
-    });
-    laatsteSwipeRichting = null;
+  // Carousel: vorige, huidige en volgende kaart tegelijk in de DOM. Bladeren
+  // verandert alleen de posities (vloeiend), niet de inhoud — dat voelt als
+  // doorschuiven i.p.v. verspringen.
+  if (cardIndex > 0) {
+    stack.appendChild(buildCard(advertentiesData[cardIndex - 1], 'cc-prev'));
+  }
+  if (cardIndex + 1 < advertentiesData.length) {
+    stack.appendChild(buildCard(advertentiesData[cardIndex + 1], 'cc-next'));
   }
 
-  // Drag initialiseren op top card
-  initCardDrag(topCard);
+  const huidigeKaart = buildCard(advertentiesData[cardIndex], 'cc-current');
+  stack.appendChild(huidigeKaart);
+
+  initCardDrag(huidigeKaart);
+  updateBladerKnoppen();
 }
+
+// ── Bladeren door de kaarten (matchen/skippen gebeurt met de knoppen) ──
+function bladerNaar(richting) {
+  if (!advertentiesData.length) return;
+  const nieuw = cardIndex + (richting === 'volgende' ? 1 : -1);
+  if (nieuw < 0 || nieuw >= advertentiesData.length) {
+    // Grens bereikt: klein stuitertje als feedback dat er niets meer is.
+    const kaart = document.querySelector('.profile-card.cc-current');
+    if (kaart) {
+      const kant = richting === 'volgende' ? -1 : 1;
+      kaart.style.transition = 'transform .18s ease';
+      kaart.style.transform = `translateX(${kant * 26}px)`;
+      setTimeout(() => { kaart.style.transform = 'translateX(0)'; }, 180);
+    }
+    return;
+  }
+  verbergSwipeHint();
+  cardIndex = nieuw;
+  renderCards();
+}
+
+function updateBladerKnoppen() {
+  const vorige = document.getElementById('bladerVorige');
+  const volgende = document.getElementById('bladerVolgende');
+  if (vorige) vorige.disabled = cardIndex <= 0;
+  if (volgende) volgende.disabled = cardIndex >= advertentiesData.length - 1;
+}
+
+// Pijltoetsen: links/rechts bladeren door de kaarten.
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+  // Niet bladeren terwijl je typt of een venster openstaat.
+  const el = document.activeElement;
+  if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable)) return;
+  if (document.querySelector('.modal.open, .modal-overlay.open')) return;
+  const discoverActief = document.getElementById('panel-discover')?.classList.contains('active');
+  if (!discoverActief) return;
+  e.preventDefault();
+  bladerNaar(e.key === 'ArrowRight' ? 'volgende' : 'vorige');
+});
 
 // ═══════════════ FOTO HERPOSITIONERING ═══════════════
 
@@ -3149,25 +3236,18 @@ function sluitKaartDetail() {
 }
 async function doSwipe(dir) {
   const stack = document.getElementById('cardStack');
-  const top = stack?.querySelector('.top');
+  const top = stack?.querySelector('.cc-current');
   if (!top || cardIndex >= advertentiesData.length) return;
 
   const p = advertentiesData[cardIndex];
 
-  // Animatie
+  // Animatie: de kaart vliegt weg (rechts bij like, links bij skip). Bladeren
+  // gebeurt met slepen/pijltjes; liken en skippen alleen via de knoppen.
   const fb = top.querySelector(dir==='like' ? '.fb-like' : '.fb-nope');
   if (fb) fb.style.opacity = '1';
   laatsteSwipeRichting = dir;
-  if (window.innerWidth >= 900) {
-    // Desktop: carousel-stijl — recht opzij schuiven en vervagen, niet kantelen.
-    const dist = (stack?.offsetWidth || 820) + 160;
-    top.style.transition = 'transform .35s ease, opacity .35s ease';
-    top.style.transform = `translateX(${dir==='like' ? dist : -dist}px)`;
-    top.style.opacity = '0';
-  } else {
-    top.style.transition = 'transform .35s ease';
-    top.style.transform = `translateX(${dir==='like'?600:-600}px) rotate(${dir==='like'?15:-15}deg)`;
-  }
+  top.classList.remove('cc-current');
+  top.classList.add(dir === 'like' ? 'cc-weg-like' : 'cc-weg-nope');
 
   // Gebruik altijd de user_id als target, niet het advertentie ID
   const targetUserId = p.isAdvertentie ? p.raw?.user_id : p.id;
@@ -3218,7 +3298,13 @@ async function doSwipe(dir) {
   }
 
   swipeHistory.push({ ...p, status: dir });
-  setTimeout(() => { cardIndex++; renderCards(); }, 360);
+  // Kaart uit het stapeltje halen (die is nu afgehandeld) en de volgende tonen.
+  // cardIndex blijft staan: de volgende kaart schuift op deze plek in.
+  setTimeout(() => {
+    advertentiesData.splice(cardIndex, 1);
+    if (cardIndex >= advertentiesData.length) cardIndex = Math.max(0, advertentiesData.length - 1);
+    renderCards();
+  }, 380);
 }
 
 let matchPartner = null;
@@ -3401,41 +3487,56 @@ function initCardDrag(card) {
 
     if (!window._wasDragging) return; // kleine tik: laat verder niets bewegen/blokkeren
 
-    if (window.innerWidth >= 900) {
-      // Desktop: puur horizontaal sliden, als een carousel — geen kantelen.
-      card.style.transform = `translateX(${dx}px)`;
-    } else {
-      const rot = dx * 0.08;
-      card.style.transform = `translateX(${dx}px) translateY(${dy * 0.2}px) rotate(${rot}deg)`;
-    }
+    // Slepen = bladeren door de kaarten (niet meer liken/skippen — dat doen de
+    // knoppen). Puur horizontaal meebewegen, met wat weerstand aan de uiteinden.
+    const aanBegin = cardIndex <= 0 && dx > 0;
+    const aanEind = cardIndex >= advertentiesData.length - 1 && dx < 0;
+    const verplaatsing = (aanBegin || aanEind) ? dx * 0.25 : dx;
+    card.style.transform = `translateX(${verplaatsing}px)`;
 
-    // Toon like/nope feedback
-    const fbLike = card.querySelector('.fb-like');
-    const fbNope = card.querySelector('.fb-nope');
-    const threshold = 60;
-    if (fbLike) fbLike.style.opacity = dx > threshold ? Math.min((dx - threshold) / 60, 1) : 0;
-    if (fbNope) fbNope.style.opacity = dx < -threshold ? Math.min((-dx - threshold) / 60, 1) : 0;
+    // Buurkaarten laten meebewegen, zodat het één geheel voelt.
+    const stackEl = card.parentElement;
+    if (stackEl) {
+      const breedte = stackEl.offsetWidth || 1;
+      const fractie = verplaatsing / breedte;
+      const prev = stackEl.querySelector('.profile-card.cc-prev');
+      const next = stackEl.querySelector('.profile-card.cc-next');
+      const desktop = window.innerWidth >= 900;
+      const rustPrev = desktop ? -62 : -115;
+      const rustNext = desktop ? 62 : 115;
+      if (prev) { prev.style.transition = 'none'; prev.style.transform = `translateX(${rustPrev + fractie * 100}%) scale(${desktop ? 0.86 : 0.92})`; }
+      if (next) { next.style.transition = 'none'; next.style.transform = `translateX(${rustNext + fractie * 100}%) scale(${desktop ? 0.86 : 0.92})`; }
+    }
     e.preventDefault();
   };
 
   const onEnd = (e) => {
     if (!dragState || dragState.card !== card) return;
     const dx = dragState.curX;
-    const threshold = 100;
+    const drempel = 70;
     card.classList.remove('dragging');
+    // Inline transforms weghalen zodat de CSS-klassen de animatie overnemen.
+    const stackEl = card.parentElement;
+    const herstel = () => {
+      card.style.transition = '';
+      card.style.transform = '';
+      if (stackEl) stackEl.querySelectorAll('.profile-card.cc-prev, .profile-card.cc-next')
+        .forEach(el => { el.style.transition = ''; el.style.transform = ''; });
+    };
 
-    if (dx > threshold) {
-      doSwipe('like');
-    } else if (dx < -threshold) {
-      doSwipe('nope');
+    if (dx < -drempel) {        // naar links slepen = volgende kaart
+      herstel();
+      bladerNaar('volgende');
+    } else if (dx > drempel) {  // naar rechts slepen = vorige kaart
+      herstel();
+      bladerNaar('vorige');
     } else {
-      // Terug naar midden
-      card.style.transition = 'transform .3s ease';
-      card.style.transform = 'scale(1)';
-      const fbLike = card.querySelector('.fb-like');
-      const fbNope = card.querySelector('.fb-nope');
-      if (fbLike) fbLike.style.opacity = 0;
-      if (fbNope) fbNope.style.opacity = 0;
+      // Niet ver genoeg: netjes terugveren.
+      card.style.transition = 'transform .3s cubic-bezier(.22,.68,.34,1)';
+      card.style.transform = 'translateX(0)';
+      if (stackEl) stackEl.querySelectorAll('.profile-card.cc-prev, .profile-card.cc-next')
+        .forEach(el => { el.style.transition = 'transform .3s cubic-bezier(.22,.68,.34,1)'; el.style.transform = ''; });
+      setTimeout(herstel, 320);
     }
     dragState = null;
     setTimeout(() => { window._wasDragging = false; }, 100);
@@ -3533,23 +3634,20 @@ async function verwijderMatch(matchId, anderUserId) {
 }
 
 async function _verwijderMatchBevestigd(matchId, anderUserId) {
-  // Match NIET zelf verwijderen — dat doet de database-trigger automatisch zodra
-  // mijn swipe niet meer 'like' is. Al mijn likes op deze persoon (ook op losse
-  // advertenties) omzetten naar 'nope', zodat de match vervalt én de persoon in
-  // Geskipt komt. De swipe van de ánder blijft ongemoeid.
-  const { data: bestaandeSwipes } = await sb.from('swipes').select('id')
-    .eq('swiper_id', currentUser.id).eq('target_id', anderUserId);
-  if (bestaandeSwipes?.length) {
-    await sb.from('swipes').update({ richting: 'nope' })
-      .eq('swiper_id', currentUser.id).eq('target_id', anderUserId);
-  } else {
-    await sb.from('swipes').upsert(
-      { swiper_id: currentUser.id, target_id: anderUserId, richting: 'nope', advertentie_id: null },
-      { onConflict: 'swiper_id,target_id,advertentie_id' }
-    );
+  // Alles in één database-functie: beide swipes op 'nope' (die van de ander mét
+  // reden 'match_verbroken'), chat en berichtverzoeken opruimen, match weg.
+  // Dit moet server-side omdat de RLS terecht verbiedt dat ik de swipe van een
+  // ander aanpas — zo blijft er niets achter dat later voor spookmatches zorgt.
+  const { error } = await sb.rpc('verbreek_match', { ander: anderUserId });
+  if (error) {
+    console.error('verbreek_match mislukt:', error.message);
+    const te = document.getElementById('toast');
+    te.textContent = 'Match verwijderen mislukt: ' + error.message;
+    te.classList.add('show');
+    setTimeout(() => te.classList.remove('show'), 4000);
+    return;
   }
-  await sb.from('directe_berichten').delete().eq('van_user_id', currentUser.id).eq('naar_user_id', anderUserId);
-  await sb.from('directe_berichten').delete().eq('van_user_id', anderUserId).eq('naar_user_id', currentUser.id);
+  geswipedIds.add(anderUserId);
   laadMatchesLijst(); laadOntvangenLikes(); laadSwipeHistory(); laadDirecteBerichten();
   await laadGezienIds();
   laadAdvertenties();
@@ -3580,9 +3678,12 @@ async function likeTerug(userId, naam, fotoUrl, type) {
   // Match popup tonen
   showMatch({ naam, foto_url: fotoUrl, type, id: userId, raw: {} });
 
-  // UI updaten
+  // UI updaten. laadDirecteBerichten hoort erbij: als er nog een berichtverzoek
+  // tussen ons openstond, is dat door de match automatisch afgehandeld en moet
+  // het verzoek-kaartje meteen uit de lijst verdwijnen (geen dubbele chat meer).
   laadOntvangenLikes();
   laadMatchesLijst();
+  laadDirecteBerichten();
 }
 
 async function laadOntvangenLikes() {
@@ -3765,8 +3866,8 @@ async function laadSwipeHistory() {
     const profiel = profielMap[s.target_id];
     const ad = s.advertentie_id ? adMap[s.advertentie_id] : null;
     // Geswipede advertentie tonen als die nog bestaat, anders terugvallen op het profiel
-    if (ad) return { ...advertentieNaarKaart(ad), status: s.richting, swipe_id: s.id, target_user_id: s.target_id };
-    if (profiel) return { ...profielNaarKaart(profiel), status: s.richting, swipe_id: s.id, target_user_id: s.target_id };
+    if (ad) return { ...advertentieNaarKaart(ad), status: s.richting, swipe_id: s.id, target_user_id: s.target_id, reden: s.reden };
+    if (profiel) return { ...profielNaarKaart(profiel), status: s.richting, swipe_id: s.id, target_user_id: s.target_id, reden: s.reden };
     return null;
   }).filter(Boolean)
     .filter(p => !matchIds.has(p.target_user_id || p.id))
@@ -3797,6 +3898,7 @@ function renderLiked() {
         <div class="liked-card-name">${esc(p.naam)}</div>
         <div class="liked-card-role">${p.rol}</div>
         <div class="liked-card-meta">${esc((p.tags||[]).slice(0,2).join(' · '))}</div>
+        ${p.reden === 'match_verbroken' ? '<div style="font-size:11px;color:#f5a623;margin-top:3px;">💔 Deze persoon heeft de match beëindigd</div>' : ''}
       </div>
       <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0;">
         <div class="liked-badge ${p.status==='like'?'badge-liked':'badge-skipped'}">${p.status==='like'?'♥ Like':'✕ Skip'}</div>
@@ -4321,8 +4423,11 @@ function startBerichtenPoll() {
 async function updateOnlineStatus() {
   if (!currentUser) return;
   try {
+    // Beide velden bijwerken: online_op voor de "Online"-indicator in de chat,
+    // actief_op voor het "Nu actief"-badge op de kaarten in Ontdekken.
+    const nu = new Date().toISOString();
     const { error } = await sb.from('profiles')
-      .update({ online_op: new Date().toISOString() })
+      .update({ online_op: nu, actief_op: nu })
       .eq('id', currentUser.id);
     if (error) console.error('online_op update fout:', error.message);
   } catch(e) { console.error('online_op exception:', e.message); }
@@ -4578,6 +4683,9 @@ async function weigerVerzoek(verzoekId, ev) {
 
 async function openGesprek(userId, user) {
   huidigChatUserId = userId;
+  // Eventuele oude "chat niet meer beschikbaar"-melding weghalen: bij het openen
+  // van een (nieuw) gesprek mag die nooit blijven hangen.
+  document.querySelector('.chat-niet-beschikbaar')?.remove();
   // Nieuwe chat: geschiedenis stil laten verschijnen (geen animatie/geluid voor bestaande berichten)
   bekendeChatBerichtIds = new Set();
   const naamEl = document.querySelector('.chat-name');
@@ -6157,7 +6265,7 @@ async function laadOfMaakProfiel(user) {
     currentProfile = profiel;
     vulProfielIn(profiel);
     // actief_op updaten op de achtergrond
-    sb.from('profiles').update({ actief_op: new Date().toISOString() }).eq('id', user.id);
+    sb.from('profiles').update({ actief_op: new Date().toISOString() }).eq('id', user.id).then(()=>{}, ()=>{});
     // Swipes alvast laden zodat ontdekken snel is
     voorlaadSwipes();
     initMatchMeldingen();
@@ -6534,7 +6642,7 @@ function startKeepAlive() {
       await sb.from('profiles').select('id').limit(1);
       // Update actief_op zodat online status klopt
       if (currentUser) {
-        sb.from('profiles').update({ actief_op: new Date().toISOString() }).eq('id', currentUser.id);
+        await sb.from('profiles').update({ actief_op: new Date().toISOString() }).eq('id', currentUser.id);
       }
     } catch(e) {}
   }, 2 * 60 * 1000);
