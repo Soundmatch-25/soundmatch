@@ -579,7 +579,15 @@ html, body {
    beschikbare breedte: de foto blijft vierkant, maar staat naast de tekst i.p.v.
    erboven. Zo blijft de foto intact én is er veel meer ruimte voor de beschrijving. */
 @media (min-width: 900px) {
-  .card-stack { max-width: 820px; height: 460px; overflow: visible; }
+  /* Kaart groter: er was zeeën van lege ruimte op de Ontdekken-pagina, terwijl de
+     tekstkolom te krap was. De hoogte schaalt mee met het scherm (met onder- en
+     bovengrens), en de breedte volgt: vierkante foto + ~430px tekstruimte. */
+  .card-stack {
+    height: clamp(460px, calc(100vh - 300px), 600px);
+    max-width: calc(clamp(460px, 100vh - 300px, 600px) + 430px);
+    width: 100%;
+    overflow: visible;
+  }
   .profile-card { flex-direction: row; }
   .card-visual { width: auto; height: 100%; aspect-ratio: 1; flex-shrink: 0; }
   .card-body { border-top: none; border-left: 1px solid var(--border); justify-content: center; padding: 28px 32px; gap: 10px; }
@@ -712,11 +720,13 @@ html, body {
   }
   .card-meta-item { display: inline-flex; align-items: center; gap: 5px; }
 
-  .card-desc { margin-top: 14px; -webkit-line-clamp: 6; }
-  .card-desc-meer { margin-top: 6px; }
+  /* De beschrijving krijgt de ruimte die overblijft en wordt daarbinnen netjes
+     afgekapt, in plaats van onderaan tegen de tags aan te lopen en af te snijden. */
+  .card-desc { margin-top: 14px; -webkit-line-clamp: 7; flex: 0 1 auto; min-height: 0; overflow: hidden; }
+  .card-desc-meer { margin-top: 6px; flex-shrink: 0; }
 
   /* Tags altijd onderaan, zodat kaarten met korte en lange teksten hetzelfde ogen */
-  .card-tags { margin-top: auto; padding-top: 16px; gap: 10px; }
+  .card-tags { margin-top: auto; padding-top: 16px; gap: 10px; flex-shrink: 0; }
   .tag-label { min-width: 62px; font-size: 11px; }
   .tag-rij { gap: 7px; }
 }
