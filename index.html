@@ -2044,9 +2044,9 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
 
     <!-- Eigen kop: standaard ingevuld, mag aangepast worden -->
     <div>
-      <div class="field-label">Kop op je kaart</div>
+      <div class="field-label">Titel</div>
       <input class="input-field" id="regKop" maxlength="60" placeholder="Bijv. Gitarist zoekt serieuze rockband"/>
-      <div style="font-size:11px;color:var(--sub);margin-top:6px;">Dit is de regel onder je naam in Ontdekken. Laat 'm staan zoals hij is, of maak er iets persoonlijks van.</div>
+      <div style="font-size:11px;color:var(--sub);margin-top:6px;">De regel onder je naam in Ontdekken. Laat 'm staan, of maak er iets persoonlijks van.</div>
     </div>
 
     <!-- Bio -->
@@ -2396,9 +2396,9 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
 
             <!-- Eigen kop: standaard ingevuld, mag aangepast worden -->
             <div>
-              <div class="field-label">Kop op je kaart</div>
+              <div class="field-label">Titel</div>
               <input class="input-field" id="adKop" maxlength="60" placeholder="Bijv. Drummer zoekt serieuze rockband"/>
-              <div style="font-size:11px;color:var(--sub);margin-top:6px;">Dit is de regel onder je naam. Laat 'm staan zoals hij is, of maak er iets persoonlijks van.</div>
+              <div style="font-size:11px;color:var(--sub);margin-top:6px;">De regel onder je naam in Ontdekken. Laat 'm staan, of maak er iets persoonlijks van.</div>
             </div>
 
             <!-- Locatie -->
@@ -3143,18 +3143,30 @@ async function laadAdvertenties() {
 // Roltekst opbouwen. Zoekt een band meerdere muzikanten, dan tonen we die allemaal
 // ("Band zoekt zanger/es, toetsenist en drummer") in plaats van alleen de eerste.
 function maakRolTekst(type, items) {
-  const lijst = (items || []).filter(Boolean);
-  if (type === 'band') {
-    if (!lijst.length) return 'Band zoekt muzikant';
-    const klein = lijst.map(i => String(i).toLowerCase());
-    const tonen = klein.slice(0, 3);
+  // Vulopties als "Overig" en "Alles" zijn geen echte instrumenten en lezen raar in
+  // een zin ("Band zoekt toetsenist, organist en overig"), dus die laten we weg.
+  const vulwoorden = ['overig', 'overige', 'anders', 'alles', 'rest'];
+  const lijst = (items || [])
+    .filter(Boolean)
+    .filter(i => !vulwoorden.includes(String(i).trim().toLowerCase()));
+
+  const opsomming = (arr, max) => {
+    const tonen = arr.slice(0, max);
     let tekst = tonen.length > 1
       ? tonen.slice(0, -1).join(', ') + ' en ' + tonen[tonen.length - 1]
       : tonen[0];
-    if (klein.length > 3) tekst += ' +' + (klein.length - 3);
-    return 'Band zoekt ' + tekst;
+    if (arr.length > max) tekst += ' +' + (arr.length - max);
+    return tekst;
+  };
+
+  if (type === 'band') {
+    if (!lijst.length) return 'Band zoekt muzikanten';
+    return 'Band zoekt ' + opsomming(lijst.map(i => String(i).toLowerCase()), 3);
   }
-  if (type === 'industry') return lijst[0] || 'Industry';
+  if (type === 'industry') {
+    if (!lijst.length) return 'Industry professional';
+    return opsomming(lijst, 2);
+  }
   return 'Muzikant zoekt band';
 }
 
