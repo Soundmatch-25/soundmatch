@@ -27,7 +27,7 @@
 /* ═══════════════════════════════════════════
    ROOT & RESET
 ═══════════════════════════════════════════ */
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 
 :root {
   --bg: #0d0d14;
@@ -632,34 +632,6 @@ html, body {
   .blader-btn:disabled { opacity: 0.2; cursor: default; box-shadow: none; }
 }
 
-.swipe-hint { display: none; }
-@media (min-width: 900px) {
-  .swipe-hint {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    width: fit-content;
-    margin: 14px auto 0;
-    background: rgba(20,20,35,0.85);
-    border: 1px solid var(--border2);
-    padding: 8px 18px;
-    border-radius: 20px;
-    font-size: 13px;
-    color: var(--sub);
-    pointer-events: none;
-    opacity: 0;
-    animation: swipeHintPlay 4s ease forwards;
-  }
-}
-@keyframes swipeHintPlay {
-  0%   { opacity: 0; transform: translateY(6px); }
-  8%   { opacity: 1; transform: translateY(0); }
-  22%  { transform: translateX(-10px); }
-  36%  { transform: translateX(10px); }
-  50%  { transform: translateX(-6px); }
-  64%  { transform: translateX(0); }
-  88%  { opacity: 1; }
-  100% { opacity: 0; }
 }
 
 /* SWIPE FEEDBACK */
@@ -767,6 +739,10 @@ html, body {
 .type-toggle-opt {
   position: relative;
   z-index: 1;
+  /* Geen blauwe tik-highlight of focus-kader: dit zijn geen links, dus dat
+     rechthoekje eromheen bij het klikken hoort er niet te zijn. */
+  -webkit-tap-highlight-color: transparent;
+  outline: none;
   padding: 9px 22px;
   border-radius: 30px;
   font-size: 14px;
@@ -2055,12 +2031,6 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
           </button>
         </div>
 
-        <!-- Sleep-hint (alleen desktop, verdwijnt vanzelf) -->
-        <div class="swipe-hint" id="swipeHint">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
-          <span>Sleep of gebruik &larr; &rarr; om te bladeren &middot; knoppen om te liken of skippen</span>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
-        </div>
 
         <!-- Swipe actions -->
         <div class="swipe-actions">
@@ -3076,8 +3046,11 @@ function renderCards() {
 
   if (!advertentiesData.length || cardIndex >= advertentiesData.length) {
     stack.innerHTML = `<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--sub);flex-direction:column;gap:12px;"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="opacity:.4"><polyline points="20 6 9 17 4 12"/></svg><div style="font-size:16px;font-weight:600;">Je hebt iedereen gezien!</div><div style="font-size:13px;">Kom later terug voor nieuwe profielen</div></div>`;
+    // Geen kaarten = niets om doorheen te bladeren: pijlen verbergen.
+    document.querySelectorAll('.blader-btn').forEach(b => b.style.display = 'none');
     return;
   }
+  document.querySelectorAll('.blader-btn').forEach(b => b.style.display = '');
 
   // Carousel: vorige, huidige en volgende kaart tegelijk in de DOM. Bladeren
   // verandert alleen de posities (vloeiend), niet de inhoud — dat voelt als
@@ -3095,8 +3068,11 @@ function renderCards() {
   // Eén keer per sessie de kaart even laten wiebelen, zodat duidelijk is dat je
   // 'm opzij kunt slepen. Alleen op mobiel (desktop heeft de pijlknoppen).
   if (!window._wiebelGetoond && window.innerWidth < 900) {
-    window._wiebelGetoond = true;
     huidigeKaart.classList.add('wiebel');
+    // Vlag pas zetten zodra de animatie écht begint. renderCards() draait vaak
+    // twee keer kort na elkaar (eerst leeg, dan met data); zetten we de vlag
+    // meteen, dan wordt de wiebelende kaart vervangen vóór je iets ziet.
+    huidigeKaart.addEventListener('animationstart', () => { window._wiebelGetoond = true; }, { once: true });
     huidigeKaart.addEventListener('animationend', () => huidigeKaart.classList.remove('wiebel'), { once: true });
   }
 
@@ -3124,7 +3100,6 @@ function bladerNaar(richting) {
     return;
   }
 
-  verbergSwipeHint();
   bezigMetBladeren = true;
 
   // Belangrijk: NIET opnieuw opbouwen met renderCards() — dan worden de kaarten
@@ -3540,20 +3515,12 @@ function initToggle() {
 let dragState = null;
 let laatsteSwipeRichting = null; // voor carousel-intree-animatie op desktop
 
-function verbergSwipeHint() {
-  const hint = document.getElementById('swipeHint');
-  if (hint) hint.remove();
-}
-// Automatisch opruimen zodra de eenmalige animatie klaar is, ook als niemand sleept
-document.getElementById('swipeHint')?.addEventListener('animationend', verbergSwipeHint);
-
 function initCardDrag(card) {
   const onStart = (e) => {
     const touch = e.touches ? e.touches[0] : e;
     dragState = { startX: touch.clientX, startY: touch.clientY, curX: 0, card };
     card.classList.add('dragging');
     window._wasDragging = false;
-    verbergSwipeHint();
     // Geen preventDefault hier: anders krijgt de browser nooit de kans om een
     // gewone tik (klik) door te laten, en werken "meer lezen" en de foto-uitvergroting
     // niet meer op mobiel. Pas bij echte sleepbeweging (zie onMove) blokkeren we scroll.
