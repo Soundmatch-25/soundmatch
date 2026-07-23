@@ -640,6 +640,39 @@ html, body {
   .blader-btn:disabled { opacity: 0.2; cursor: default; box-shadow: none; }
 }
 
+/* Eindkaart: sluit de rij af met uitleg en een tip, in plaats van abrupt stoppen. */
+.eind-kaart {
+  background: var(--card2);
+  border: 1px dashed var(--border2);
+  flex-direction: column !important;
+}
+.eind-kaart-inhoud {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  height: 100%;
+  gap: 12px;
+  padding: 32px 28px;
+}
+.eind-kaart-icoon {
+  width: 62px; height: 62px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 50%;
+  background: rgba(124,77,255,0.14);
+  color: var(--neon);
+  margin-bottom: 4px;
+}
+.eind-kaart-titel { font-family: var(--font-head); font-size: 20px; font-weight: 700; color: var(--text); }
+.eind-kaart-tekst { font-size: 13.5px; color: var(--sub); line-height: 1.5; max-width: 320px; }
+.eind-kaart .btn { margin-top: 8px; }
+@media (min-width: 900px) {
+  .eind-kaart-titel { font-size: 24px; }
+  .eind-kaart-tekst { font-size: 14.5px; max-width: 380px; }
+  .eind-kaart-icoon { width: 72px; height: 72px; }
+}
+
 /* Tags in groepen met een klein kopje, zodat je in één oogopslag ziet wat wat is:
    welk instrument iemand speelt (of zoekt), welke genres, en welk niveau. */
 .card-tags { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
@@ -2354,6 +2387,13 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
               <input class="input-field" id="adNaam" maxlength="50" placeholder="Jouw naam"/>
             </div>
 
+            <!-- Eigen kop: standaard ingevuld, mag aangepast worden -->
+            <div>
+              <div class="field-label">Kop op je kaart</div>
+              <input class="input-field" id="adKop" maxlength="60" placeholder="Bijv. Drummer zoekt serieuze rockband"/>
+              <div style="font-size:11px;color:var(--sub);margin-top:6px;">Dit is de regel onder je naam. Laat 'm staan zoals hij is, of maak er iets persoonlijks van.</div>
+            </div>
+
             <!-- Locatie -->
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
               <div>
@@ -2789,6 +2829,11 @@ function tc(el) {
       });
     }
   }
+  // Verandert de instrumentkeuze, dan de voorgestelde kop meteen bijwerken.
+  const grp = el.closest('.chip-group');
+  if (grp && ['adInstrumenten','adWijZoeken','adIndustrySoort'].includes(grp.id)) {
+    if (typeof werkAdKopBij === 'function') werkAdKopBij();
+  }
 }
 
 // ═══════════════ DATA ═══════════════
@@ -2827,7 +2872,7 @@ function profielNaarKaart(p) {
   const stad = p.stad || p.locatie || '';
   const naam = p.naam || 'Onbekend';
   const type = p.type || 'muzikant';
-  const rol = maakRolTekst(type, p.instrument);
+  const rol = p.kop || maakRolTekst(type, p.instrument);
   const tags = [...(p.instrument || []).slice(0,2), ...(p.genres || []).slice(0,1), p.niveau, stad].filter(Boolean);
   return {
     id: p.id,
@@ -3013,13 +3058,15 @@ async function laadAdvertenties() {
     adKaarten = adKaarten.filter(a => (a.raw?.niveau || '') === filterState.niveau);
   }
 
-  // Afstand-filter: bepaal het middelpunt (gekozen stad > provincie > eigen locatie) en filter binnen X km
-  if (filterState.afstand < 200) {
-    let middelpunt = null;
-    if (filterState.stad) middelpunt = coordVoorLocatie(filterState.stad);
-    else if (filterState.provincie) middelpunt = coordVoorLocatie(filterState.provincie);
-    else if (currentProfile?.locatie) middelpunt = coordVoorLocatie(currentProfile.locatie);
+  // Middelpunt bepalen (gekozen stad > provincie > eigen locatie). Dit gebruiken we
+  // zowel voor het afstandsfilter als om de kaarten van dichtbij naar ver te sorteren.
+  let middelpunt = null;
+  if (filterState.stad) middelpunt = coordVoorLocatie(filterState.stad);
+  else if (filterState.provincie) middelpunt = coordVoorLocatie(filterState.provincie);
+  else if (currentProfile?.locatie) middelpunt = coordVoorLocatie(currentProfile.locatie);
 
+  // Afstand-filter: alles buiten de gekozen straal weglaten
+  if (filterState.afstand < 200) {
     if (middelpunt) {
       const binnenBereik = (loc) => {
         const c = coordVoorLocatie(loc);
@@ -3050,8 +3097,27 @@ async function laadAdvertenties() {
     profielKaarten = [];
   }
 
-  // Mix: spotlight eerst, dan afwisselend profielen en advertenties
-  advertentiesData = [...adKaarten, ...profielKaarten].sort((a, b) => (b.spotlight ? 1 : 0) - (a.spotlight ? 1 : 0));
+  // Sorteren: spotlight bovenaan, daarna van dichtbij naar ver. Zo krijg je eerst
+  // de mensen bij je in de buurt te zien in plaats van een willekeurige volgorde.
+  const afstandVoorKaart = (k) => {
+    if (!middelpunt) return null;
+    const loc = k.raw?.locatie || k.raw?.stad || k.raw?.provincie || k.raw?.profiel?.locatie || k.raw?.profiel?.stad;
+    const c = coordVoorLocatie(loc);
+    if (!c) return null;
+    return afstandKm(middelpunt, c);
+  };
+  advertentiesData = [...adKaarten, ...profielKaarten];
+  advertentiesData.forEach(k => { k._afstand = afstandVoorKaart(k); });
+  advertentiesData.sort((a, b) => {
+    // Spotlight altijd eerst
+    const sp = (b.spotlight ? 1 : 0) - (a.spotlight ? 1 : 0);
+    if (sp !== 0) return sp;
+    // Onbekende locatie achteraan, maar wel gewoon zichtbaar
+    if (a._afstand == null && b._afstand == null) return 0;
+    if (a._afstand == null) return 1;
+    if (b._afstand == null) return -1;
+    return a._afstand - b._afstand;
+  });
 
   if (!advertentiesData.length) {
     if (stack) stack.innerHTML = `<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--sub);flex-direction:column;gap:12px;"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="opacity:.4"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg><div style="font-size:16px;font-weight:600;">Niemand gevonden</div><div style="font-size:13px;">Probeer een andere filter</div></div>`;
@@ -3087,7 +3153,7 @@ function advertentieNaarKaart(a) {
   const genres = (a.genres || []).slice(0,2).join(' / ') || 'Muzikant';
   const naam = a.titel || profiel.naam || 'Onbekend';
   const type = a.type || 'muzikant';
-  const rol = maakRolTekst(type, a.instrumenten);
+  const rol = a.kop || maakRolTekst(type, a.instrumenten);
   const tags = [...(a.instrumenten || []).slice(0,2), ...(a.genres || []).slice(0,1), a.niveau, profiel.stad || profiel.locatie].filter(Boolean);
   return {
     id: a.id,
@@ -3188,12 +3254,31 @@ function buildCard(p, cls) {
 }
 
 
+// Laatste kaart in de rij: geen profiel maar een nette afsluiting met een tip.
+// Staat op positie advertentiesData.length, dus je kunt er gewoon naartoe bladeren.
+function bouwEindKaart(cls) {
+  const el = document.createElement('div');
+  el.className = 'profile-card eind-kaart ' + cls;
+  el.innerHTML = `
+    <div class="eind-kaart-inhoud">
+      <div class="eind-kaart-icoon">
+        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+      </div>
+      <div class="eind-kaart-titel">Dat was iedereen</div>
+      <div class="eind-kaart-tekst">Je hebt alle profielen bekeken die bij je filters passen. Zoek je meer? Verruim je zoekgebied of laat wat filters los.</div>
+      <button class="btn btn-primary" onclick="event.stopPropagation();openFilter()">Filters aanpassen</button>
+    </div>`;
+  return el;
+}
+
 function renderCards() {
   const stack = document.getElementById('cardStack');
   if (!stack) return;
   stack.innerHTML = '';
 
-  if (!advertentiesData.length || cardIndex >= advertentiesData.length) {
+  // cardIndex mag tot en met advertentiesData.length lopen: die laatste positie is
+  // de eindkaart. Alleen als er echt niets is, tonen we de lege staat.
+  if (!advertentiesData.length || cardIndex > advertentiesData.length) {
     stack.innerHTML = `<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--sub);flex-direction:column;gap:12px;"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="opacity:.4"><polyline points="20 6 9 17 4 12"/></svg><div style="font-size:16px;font-weight:600;">Je hebt iedereen gezien!</div><div style="font-size:13px;">Kom later terug voor nieuwe profielen</div></div>`;
     // Geen kaarten = niets om doorheen te bladeren: pijlen verbergen.
     document.querySelectorAll('.blader-btn').forEach(b => b.style.display = 'none');
@@ -3204,14 +3289,22 @@ function renderCards() {
   // Carousel: vorige, huidige en volgende kaart tegelijk in de DOM. Bladeren
   // verandert alleen de posities (vloeiend), niet de inhoud — dat voelt als
   // doorschuiven i.p.v. verspringen.
+  const isEind = (i) => i === advertentiesData.length;
+
   if (cardIndex > 0) {
-    stack.appendChild(buildCard(advertentiesData[cardIndex - 1], 'cc-prev'));
+    stack.appendChild(isEind(cardIndex - 1)
+      ? bouwEindKaart('cc-prev')
+      : buildCard(advertentiesData[cardIndex - 1], 'cc-prev'));
   }
-  if (cardIndex + 1 < advertentiesData.length) {
-    stack.appendChild(buildCard(advertentiesData[cardIndex + 1], 'cc-next'));
+  if (cardIndex + 1 <= advertentiesData.length) {
+    stack.appendChild(isEind(cardIndex + 1)
+      ? bouwEindKaart('cc-next')
+      : buildCard(advertentiesData[cardIndex + 1], 'cc-next'));
   }
 
-  const huidigeKaart = buildCard(advertentiesData[cardIndex], 'cc-current');
+  const huidigeKaart = isEind(cardIndex)
+    ? bouwEindKaart('cc-current')
+    : buildCard(advertentiesData[cardIndex], 'cc-current');
   stack.appendChild(huidigeKaart);
 
   // Eén keer per sessie de kaart even laten wiebelen, zodat duidelijk is dat je
@@ -3237,7 +3330,7 @@ function bladerNaar(richting) {
   if (!stack) return;
   const nieuw = cardIndex + (richting === 'volgende' ? 1 : -1);
 
-  if (nieuw < 0 || nieuw >= advertentiesData.length) {
+  if (nieuw < 0 || nieuw > advertentiesData.length) {
     // Grens bereikt: klein stuitertje als feedback dat er niets meer is.
     const kaart = stack.querySelector('.profile-card.cc-current');
     if (kaart) {
@@ -3284,8 +3377,12 @@ function bladerNaar(richting) {
   // Nieuwe buurkaart aan de andere kant erbij zetten (verschijnt meteen op z'n
   // plek, dus zonder ongewenste animatie vanuit het midden).
   const nieuweBuurIndex = richting === 'volgende' ? nieuw + 1 : nieuw - 1;
-  if (nieuweBuurIndex >= 0 && nieuweBuurIndex < advertentiesData.length) {
-    const buur = buildCard(advertentiesData[nieuweBuurIndex], richting === 'volgende' ? 'cc-next' : 'cc-prev');
+  // <= length, want positie 'length' is de eindkaart en hoort ook als buur te tonen.
+  if (nieuweBuurIndex >= 0 && nieuweBuurIndex <= advertentiesData.length) {
+    const buurPositie = richting === 'volgende' ? 'cc-next' : 'cc-prev';
+    const buur = nieuweBuurIndex === advertentiesData.length
+      ? bouwEindKaart(buurPositie)
+      : buildCard(advertentiesData[nieuweBuurIndex], buurPositie);
     buur.style.transition = 'none';
     stack.appendChild(buur);
     requestAnimationFrame(() => { buur.style.transition = ''; });
@@ -3300,7 +3397,7 @@ function updateBladerKnoppen() {
   const vorige = document.getElementById('bladerVorige');
   const volgende = document.getElementById('bladerVolgende');
   if (vorige) vorige.disabled = cardIndex <= 0;
-  if (volgende) volgende.disabled = cardIndex >= advertentiesData.length - 1;
+  if (volgende) volgende.disabled = cardIndex >= advertentiesData.length;
 }
 
 // Pijltoetsen: links/rechts bladeren door de kaarten.
@@ -3448,7 +3545,8 @@ function sluitKaartDetail() {
 async function doSwipe(dir) {
   const stack = document.getElementById('cardStack');
   const top = stack?.querySelector('.cc-current');
-  if (!top || cardIndex >= advertentiesData.length) return;
+  // Op de eindkaart valt niets te liken of te skippen.
+  if (!top || cardIndex >= advertentiesData.length || top.classList.contains('eind-kaart')) return;
 
   const p = advertentiesData[cardIndex];
 
@@ -3693,7 +3791,7 @@ function initCardDrag(card) {
     // Slepen = bladeren door de kaarten (niet meer liken/skippen — dat doen de
     // knoppen). Puur horizontaal meebewegen, met wat weerstand aan de uiteinden.
     const aanBegin = cardIndex <= 0 && dx > 0;
-    const aanEind = cardIndex >= advertentiesData.length - 1 && dx < 0;
+    const aanEind = cardIndex >= advertentiesData.length && dx < 0;
     const verplaatsing = (aanBegin || aanEind) ? dx * 0.25 : dx;
 
     // Sleep je ver genoeg door (voorbij de pijlknoppen), dan schuift de kaart
@@ -5381,6 +5479,8 @@ function toonAdFormulier() {
   document.getElementById('adBio').value = '';
   document.getElementById('adNiveau').value = 'Gevorderd';
   document.getElementById('adBeschikbaarheid').value = 'Serieus';
+  const kopLeeg = document.getElementById('adKop');
+  if (kopLeeg) { kopLeeg.value = ''; delete kopLeeg.dataset.standaard; }
   document.querySelectorAll('#adInstrumenten .chip, #adGenres .chip, #adWijZoeken .chip, #adIndustrySoort .chip').forEach(c => c.classList.remove('selected'));
   const cb1 = document.getElementById('adCoverband'); if (cb1) cb1.checked = false;
   const cbEW = document.getElementById('adEigenWerk'); if (cbEW) cbEW.checked = false;
@@ -5441,6 +5541,28 @@ function setAdTypeNieuw(adType) {
   if (label) label.textContent = isBand ? 'Bandnaam *' : 'Naam *';
   const input = document.getElementById('adNaam');
   if (input) input.placeholder = isBand ? 'Naam van de band' : 'Jouw naam';
+  werkAdKopBij();
+}
+
+// Kopveld gelijk houden met de standaardtekst zolang de gebruiker 'm niet zelf
+// heeft aangepast. Zo staat er altijd iets zinnigs voorgevuld, maar overschrijven
+// we nooit wat iemand zelf heeft ingetypt.
+function werkAdKopBij() {
+  const kopEl = document.getElementById('adKop');
+  if (!kopEl) return;
+  const adType = document.getElementById('adTypeBand')?.classList.contains('active') ? 'band'
+    : document.getElementById('adTypeIndustry')?.classList.contains('active') ? 'industry' : 'muzikant';
+  const items = adType === 'band'
+    ? [...document.querySelectorAll('#adWijZoeken .chip.selected')].map(c => c.textContent)
+    : adType === 'industry'
+    ? [...document.querySelectorAll('#adIndustrySoort .chip.selected')].map(c => c.textContent)
+    : [...document.querySelectorAll('#adInstrumenten .chip.selected')].map(c => c.textContent);
+  const standaard = maakRolTekst(adType, items);
+  // Alleen bijwerken als het veld leeg is of nog een eerdere standaardtekst bevat.
+  if (!kopEl.value.trim() || kopEl.dataset.standaard === kopEl.value.trim()) {
+    kopEl.value = standaard;
+  }
+  kopEl.dataset.standaard = standaard;
 }
 
 function voegAdLink() {
@@ -5559,7 +5681,15 @@ async function slaAdvertentieOp() {
   const locatie = stad && provincie ? stad + ', ' + provincie : stad || provincie || null;
 
   try {
+    // Eigen kop opslaan. Is het veld leeg of nog exact de standaardtekst, dan slaan
+    // we niets op — dan blijft de kaart automatisch de standaardregel tonen, ook als
+    // die later verandert (bv. omdat er een instrument bijkomt).
+    const kopInvoer = (document.getElementById('adKop')?.value || '').trim();
+    const standaardKop = maakRolTekst(adType, instrumenten);
+    const kop = (!kopInvoer || kopInvoer === standaardKop) ? null : kopInvoer;
+
     const adData = {
+      kop,
       titel: naam, type: adType, instrumenten, genres,
       niveau: isBand ? null : niveau,
       beschikbaarheid: isBand ? null : beschikbaarheid,
@@ -5628,6 +5758,8 @@ async function bewerkAd(id) {
   setAdTypeNieuw(ad.type || 'muzikant');
 
   // Chips
+  const kopEl = document.getElementById('adKop');
+  if (kopEl) kopEl.value = ad.kop || '';
   document.querySelectorAll('#adInstrumenten .chip').forEach(c => c.classList.toggle('selected', (ad.instrumenten||[]).includes(c.textContent)));
   document.querySelectorAll('#adWijZoeken .chip').forEach(c => c.classList.toggle('selected', (ad.instrumenten||[]).includes(c.textContent)));
   document.querySelectorAll('#adIndustrySoort .chip').forEach(c => c.classList.toggle('selected', (ad.instrumenten||[]).includes(c.textContent)));
