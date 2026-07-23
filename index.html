@@ -469,9 +469,9 @@ html, body {
    knoppen eronder. Buren zijn op mobiel buiten beeld, op desktop
    zichtbaar als vervaagde, doorschijnende kaarten. */
 .profile-card {
-  transition: transform .42s cubic-bezier(.22,.68,.34,1),
-              opacity .42s ease,
-              filter .42s ease;
+  transition: transform .55s cubic-bezier(.25,.85,.32,1),
+              opacity .55s cubic-bezier(.25,.85,.32,1),
+              filter .55s ease;
   will-change: transform, opacity;
 }
 .profile-card.cc-current { z-index: 10; transform: translateX(0) scale(1); opacity: 1; filter: none; }
@@ -570,7 +570,7 @@ html, body {
      er kaarten voor en na de huidige staan. */
   .profile-card.cc-prev,
   .profile-card.cc-next {
-    opacity: 0.45;
+    opacity: 0.40;
     filter: blur(3px);
     z-index: 5;
   }
@@ -590,15 +590,17 @@ html, body {
     flex-shrink: 0;
     margin: 0 10px;
     border-radius: 50%;
-    border: 1px solid var(--border2);
-    background: var(--card2);
-    color: var(--sub);
+    border: none;
+    background: var(--grad);
+    color: #fff;
     cursor: pointer;
-    transition: background .15s, color .15s, transform .15s, opacity .15s;
+    box-shadow: 0 4px 16px rgba(124,77,255,0.35);
+    transition: transform .18s cubic-bezier(.34,1.4,.64,1), box-shadow .18s ease, opacity .18s ease;
     z-index: 20;
   }
-  .blader-btn:hover:not(:disabled) { background: var(--card); color: var(--text); transform: scale(1.08); }
-  .blader-btn:disabled { opacity: 0.25; cursor: default; }
+  .blader-btn:hover:not(:disabled) { transform: scale(1.12); box-shadow: 0 6px 22px rgba(124,77,255,0.5); }
+  .blader-btn:active:not(:disabled) { transform: scale(0.96); }
+  .blader-btn:disabled { opacity: 0.2; cursor: default; box-shadow: none; }
 }
 
 .swipe-hint { display: none; }
@@ -3012,7 +3014,7 @@ function buildCard(p, cls) {
   // per ongeluk erachter (de wrapper-div kreeg een eigen stacking-context) en gaf lelijke
   // vervaagde balken naast de foto.
   const fotoHTML = p.foto_url
-    ? `<img src="${esc(p.foto_url)}" style="width:100%;height:100%;object-fit:cover;cursor:zoom-in;" onclick="if(!window._wasDragging)openLightbox(this.src)" onerror="this.style.display='none'"/>`
+    ? `<img src="${esc(p.foto_url)}" style="width:100%;height:100%;object-fit:cover;cursor:${window.innerWidth >= 900 ? 'grab' : 'zoom-in'};" onclick="if(!window._wasDragging && window.innerWidth < 900)openLightbox(this.src)" onerror="this.style.display='none'"/>`
     : `<div style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;">${typeIcon(p.type)}</div>`;
 
   el.innerHTML = `
@@ -3532,11 +3534,11 @@ function initCardDrag(card) {
       bladerNaar('vorige');
     } else {
       // Niet ver genoeg: netjes terugveren.
-      card.style.transition = 'transform .3s cubic-bezier(.22,.68,.34,1)';
+      card.style.transition = 'transform .42s cubic-bezier(.25,.85,.32,1)';
       card.style.transform = 'translateX(0)';
       if (stackEl) stackEl.querySelectorAll('.profile-card.cc-prev, .profile-card.cc-next')
-        .forEach(el => { el.style.transition = 'transform .3s cubic-bezier(.22,.68,.34,1)'; el.style.transform = ''; });
-      setTimeout(herstel, 320);
+        .forEach(el => { el.style.transition = 'transform .42s cubic-bezier(.25,.85,.32,1)'; el.style.transform = ''; });
+      setTimeout(herstel, 440);
     }
     dragState = null;
     setTimeout(() => { window._wasDragging = false; }, 100);
@@ -3712,13 +3714,28 @@ async function laadOntvangenLikes() {
 
   // Filter matches én genopeden eruit
   await laadBlokkades();
-  const gezien = new Set();
-  const uniek = (likes || []).filter(s => {
-    if (s.swiper_id === currentUser.id || matchIds.has(s.swiper_id) || nopeIds.has(s.swiper_id) || geblokkeerdeIds.has(s.swiper_id)) return false;
-    if (gezien.has(s.swiper_id)) return false; // meerdere kaart-likes van dezelfde persoon: 1x tonen
-    gezien.add(s.swiper_id);
-    return true;
+  const relevant = (likes || []).filter(s =>
+    !(s.swiper_id === currentUser.id || matchIds.has(s.swiper_id) || nopeIds.has(s.swiper_id) || geblokkeerdeIds.has(s.swiper_id))
+  );
+
+  // Titels ophalen van MIJN advertenties waarop geliket is, zodat je ziet wát
+  // er precies geliket is (je band-advertentie of jij als persoon).
+  const advIds = [...new Set(relevant.map(s => s.advertentie_id).filter(Boolean))];
+  let advMap = {};
+  if (advIds.length) {
+    const { data: advs } = await sb.from('advertenties').select('id, titel, type').in('id', advIds);
+    (advs || []).forEach(a => { advMap[a.id] = a; });
+  }
+
+  // Per persoon één regel, maar mét een lijstje van waaróp geliket is.
+  const perPersoon = new Map();
+  relevant.forEach(s => {
+    if (!perPersoon.has(s.swiper_id)) perPersoon.set(s.swiper_id, { ...s, doelen: [] });
+    const bundel = perPersoon.get(s.swiper_id);
+    const adv = s.advertentie_id ? advMap[s.advertentie_id] : null;
+    bundel.doelen.push(adv ? { soort: 'advertentie', titel: adv.titel, type: adv.type } : { soort: 'profiel' });
   });
+  const uniek = [...perPersoon.values()];
 
   // Update badge
   const count = uniek.length;
@@ -3745,8 +3762,22 @@ async function laadOntvangenLikes() {
 
     const info = document.createElement('div');
     info.style.cssText = 'flex:1;overflow:hidden;';
+    // Wat is er precies geliket? Toon de advertentietitel(s), of "jouw profiel".
+    const omschrijvingen = (like.doelen || []).map(d =>
+      d.soort === 'advertentie'
+        ? 'je advertentie \u201c' + esc(d.titel || 'zonder titel') + '\u201d'
+        : 'je profiel'
+    );
+    const uniekeOmschrijvingen = [...new Set(omschrijvingen)];
+    const watGeliket = uniekeOmschrijvingen.length
+      ? '\u2665 Liket ' + (uniekeOmschrijvingen.length > 1
+          ? uniekeOmschrijvingen.slice(0, -1).join(', ') + ' en ' + uniekeOmschrijvingen.slice(-1)
+          : uniekeOmschrijvingen[0])
+      : '';
+
     info.innerHTML = '<div style="font-weight:700;font-size:14px;">' + esc(u.naam || 'Onbekend') + '</div>' +
-      '<div style="font-size:12px;color:var(--sub);margin-top:2px;">' + (u.type ? esc(u.type.charAt(0).toUpperCase()+u.type.slice(1)) : '') + (u.stad ? ' · ' + esc(u.stad) : '') + '</div>';
+      '<div style="font-size:12px;color:var(--sub);margin-top:2px;">' + (u.type ? esc(u.type.charAt(0).toUpperCase()+u.type.slice(1)) : '') + (u.stad ? ' · ' + esc(u.stad) : '') + '</div>' +
+      (watGeliket ? '<div style="font-size:12px;color:#ff6b8a;margin-top:3px;">' + watGeliket + '</div>' : '');
 
     const btn = document.createElement('button');
     btn.className = 'btn btn-primary btn-sm';
