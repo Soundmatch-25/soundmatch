@@ -2042,6 +2042,13 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
       </div>
     </div>
 
+    <!-- Eigen kop: standaard ingevuld, mag aangepast worden -->
+    <div>
+      <div class="field-label">Kop op je kaart</div>
+      <input class="input-field" id="regKop" maxlength="60" placeholder="Bijv. Gitarist zoekt serieuze rockband"/>
+      <div style="font-size:11px;color:var(--sub);margin-top:6px;">Dit is de regel onder je naam in Ontdekken. Laat 'm staan zoals hij is, of maak er iets persoonlijks van.</div>
+    </div>
+
     <!-- Bio -->
     <div>
       <div class="field-label">Bio <span style="color:var(--sub);font-weight:400;">— vertel wie je bent en wat je zoekt</span></div>
@@ -2833,6 +2840,9 @@ function tc(el) {
   const grp = el.closest('.chip-group');
   if (grp && ['adInstrumenten','adWijZoeken','adIndustrySoort'].includes(grp.id)) {
     if (typeof werkAdKopBij === 'function') werkAdKopBij();
+  }
+  if (grp && ['regInstrumenten','regWijZoeken','regIndustrySoort'].includes(grp.id)) {
+    if (typeof werkRegKopBij === 'function') werkRegKopBij();
   }
 }
 
@@ -5544,6 +5554,27 @@ function setAdTypeNieuw(adType) {
   werkAdKopBij();
 }
 
+// Zelfde principe voor het profielformulier.
+function werkRegKopBij() {
+  const kopEl = document.getElementById('regKop');
+  if (!kopEl) return;
+  const typeMap = { regMuz: 'muzikant', regBand: 'band', regIndustry: 'industry' };
+  let type = 'muzikant';
+  for (const [id, val] of Object.entries(typeMap)) {
+    if (document.getElementById(id)?.classList.contains('active')) { type = val; break; }
+  }
+  const items = type === 'band'
+    ? [...document.querySelectorAll('#regWijZoeken .chip.selected')].map(c => c.textContent)
+    : type === 'industry'
+    ? [...document.querySelectorAll('#regIndustrySoort .chip.selected')].map(c => c.textContent)
+    : [...document.querySelectorAll('#regInstrumenten .chip.selected')].map(c => c.textContent);
+  const standaard = maakRolTekst(type, items);
+  if (!kopEl.value.trim() || kopEl.dataset.standaard === kopEl.value.trim()) {
+    kopEl.value = standaard;
+  }
+  kopEl.dataset.standaard = standaard;
+}
+
 // Kopveld gelijk houden met de standaardtekst zolang de gebruiker 'm niet zelf
 // heeft aangepast. Zo staat er altijd iets zinnigs voorgevuld, maar overschrijven
 // we nooit wat iemand zelf heeft ingetypt.
@@ -5801,6 +5832,7 @@ function bewerkProfiel() {
   if (document.getElementById('regNaam')) document.getElementById('regNaam').value = p.naam || '';
   if (document.getElementById('regLeeftijd')) document.getElementById('regLeeftijd').value = p.leeftijd || '';
   if (document.getElementById('regBio')) document.getElementById('regBio').value = p.bio || '';
+  if (document.getElementById('regKop')) document.getElementById('regKop').value = p.kop || '';
   if (document.getElementById('regNiveau')) document.getElementById('regNiveau').value = p.niveau || 'Gevorderd';
   if (document.getElementById('regBeschikbaarheid')) document.getElementById('regBeschikbaarheid').value = p.beschikbaarheid || 'Serieus';
 
@@ -6252,6 +6284,7 @@ function setRegRole(r) {
     el.classList.toggle('active', type === r);
   });
   document.getElementById('regHint').textContent = regHints[r] || regHints.muzikant;
+  werkRegKopBij();
 
   const isBand = r === 'band';
 
@@ -6759,6 +6792,13 @@ async function slaProfielOp() {
   err.style.display = 'none';
 
 
+  // Eigen kop. Leeg of nog exact de standaardtekst? Dan niets opslaan, zodat de
+  // kaart automatisch de standaardregel blijft tonen (die meebeweegt als je later
+  // bijvoorbeeld een instrument toevoegt).
+  const kopInvoer = (document.getElementById('regKop')?.value || '').trim();
+  const standaardKop = maakRolTekst(type, instrumenten);
+  const kop = (!kopInvoer || kopInvoer === standaardKop) ? null : kopInvoer;
+
   const { data, error } = await sb
     .from('profiles')
     .upsert({
@@ -6775,6 +6815,7 @@ async function slaProfielOp() {
       beschikbaarheid: type === 'band' ? null : beschikbaarheid,
       muzieklink,
       bio,
+      kop,
       foto_url: uploadedFotoUrl || currentProfile?.foto_url || null,
       actief_op: new Date().toISOString()
     })
@@ -6789,7 +6830,7 @@ async function slaProfielOp() {
   }
 
   // Profiel bijwerken in geheugen
-  currentProfile = data || { ...currentProfile, naam, type, leeftijd, locatie, provincie, stad, instrument: instrumenten, genres, niveau, beschikbaarheid, muzieklink, bio };
+  currentProfile = data || { ...currentProfile, naam, type, leeftijd, locatie, provincie, stad, instrument: instrumenten, genres, niveau, beschikbaarheid, muzieklink, bio, kop };
   uploadedFotoUrl = null;
   const regTitel = document.getElementById('regTitel');
   if (regTitel) regTitel.textContent = 'Maak je profiel';
