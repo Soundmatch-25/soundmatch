@@ -578,6 +578,13 @@ html, body {
   .profile-card.cc-next { transform: translateX(62%) scale(0.86); }
 }
 
+/* Kaartfoto op desktop: niet klikbaar en niet sleepbaar, zodat het slepen van de
+   kaart nooit onderbroken wordt door de native afbeelding-drag of de lightbox. */
+.card-visual img { -webkit-user-drag: none; user-select: none; }
+@media (min-width: 900px) {
+  .card-visual img { pointer-events: none; }
+}
+
 /* Blader-knoppen naast de kaart (alleen desktop; op mobiel swipe je gewoon) */
 .card-stack-wrap { display: flex; align-items: center; justify-content: center; gap: 0; width: 100%; }
 .blader-btn { display: none; }
@@ -3014,7 +3021,7 @@ function buildCard(p, cls) {
   // per ongeluk erachter (de wrapper-div kreeg een eigen stacking-context) en gaf lelijke
   // vervaagde balken naast de foto.
   const fotoHTML = p.foto_url
-    ? `<img src="${esc(p.foto_url)}" style="width:100%;height:100%;object-fit:cover;cursor:${window.innerWidth >= 900 ? 'grab' : 'zoom-in'};" onclick="if(!window._wasDragging && window.innerWidth < 900)openLightbox(this.src)" onerror="this.style.display='none'"/>`
+    ? `<img src="${esc(p.foto_url)}" draggable="false" class="${window.innerWidth >= 900 ? 'kaart-foto-desktop' : ''}" style="width:100%;height:100%;object-fit:cover;cursor:${window.innerWidth >= 900 ? 'grab' : 'zoom-in'};" onclick="if(!window._wasDragging && window.innerWidth < 900)openLightbox(this.src)" onerror="this.style.display='none'"/>`
     : `<div style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;">${typeIcon(p.type)}</div>`;
 
   el.innerHTML = `
@@ -3068,23 +3075,71 @@ function renderCards() {
 }
 
 // ── Bladeren door de kaarten (matchen/skippen gebeurt met de knoppen) ──
+let bezigMetBladeren = false;
 function bladerNaar(richting) {
-  if (!advertentiesData.length) return;
+  if (!advertentiesData.length || bezigMetBladeren) return;
+  const stack = document.getElementById('cardStack');
+  if (!stack) return;
   const nieuw = cardIndex + (richting === 'volgende' ? 1 : -1);
+
   if (nieuw < 0 || nieuw >= advertentiesData.length) {
     // Grens bereikt: klein stuitertje als feedback dat er niets meer is.
-    const kaart = document.querySelector('.profile-card.cc-current');
+    const kaart = stack.querySelector('.profile-card.cc-current');
     if (kaart) {
       const kant = richting === 'volgende' ? -1 : 1;
       kaart.style.transition = 'transform .18s ease';
       kaart.style.transform = `translateX(${kant * 26}px)`;
-      setTimeout(() => { kaart.style.transform = 'translateX(0)'; }, 180);
+      setTimeout(() => { kaart.style.transform = ''; setTimeout(() => { kaart.style.transition = ''; }, 200); }, 180);
     }
     return;
   }
+
   verbergSwipeHint();
+  bezigMetBladeren = true;
+
+  // Belangrijk: NIET opnieuw opbouwen met renderCards() — dan worden de kaarten
+  // vervangen door nieuwe elementen en animeert er niets (hij "springt"). In plaats
+  // daarvan wisselen de bestaande kaarten van positieklasse, waardoor de CSS-
+  // transition het vloeiende schuiven verzorgt.
+  const oudePrev = stack.querySelector('.profile-card.cc-prev');
+  const oudeCurrent = stack.querySelector('.profile-card.cc-current');
+  const oudeNext = stack.querySelector('.profile-card.cc-next');
+
+  // Inline transforms van een sleepbeweging weghalen, anders overrulen die de klassen.
+  [oudePrev, oudeCurrent, oudeNext].forEach(el => {
+    if (!el) return;
+    el.style.transition = '';
+    el.style.transform = '';
+  });
+
+  const wordtCurrent = richting === 'volgende' ? oudeNext : oudePrev;
+  const verdwijnt = richting === 'volgende' ? oudePrev : oudeNext;
+
+  if (verdwijnt) verdwijnt.remove();
+
+  if (oudeCurrent) {
+    oudeCurrent.classList.remove('cc-current');
+    oudeCurrent.classList.add(richting === 'volgende' ? 'cc-prev' : 'cc-next');
+  }
+  if (wordtCurrent) {
+    wordtCurrent.classList.remove('cc-prev', 'cc-next');
+    wordtCurrent.classList.add('cc-current');
+    initCardDrag(wordtCurrent);
+  }
+
+  // Nieuwe buurkaart aan de andere kant erbij zetten (verschijnt meteen op z'n
+  // plek, dus zonder ongewenste animatie vanuit het midden).
+  const nieuweBuurIndex = richting === 'volgende' ? nieuw + 1 : nieuw - 1;
+  if (nieuweBuurIndex >= 0 && nieuweBuurIndex < advertentiesData.length) {
+    const buur = buildCard(advertentiesData[nieuweBuurIndex], richting === 'volgende' ? 'cc-next' : 'cc-prev');
+    buur.style.transition = 'none';
+    stack.appendChild(buur);
+    requestAnimationFrame(() => { buur.style.transition = ''; });
+  }
+
   cardIndex = nieuw;
-  renderCards();
+  updateBladerKnoppen();
+  setTimeout(() => { bezigMetBladeren = false; }, 380);
 }
 
 function updateBladerKnoppen() {
