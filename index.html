@@ -5097,20 +5097,20 @@ async function laadDirecteBerichten() {
     .eq('status', 'wachtend');
   const wachtOpAcceptatie = new Set((verstuurdeVerzoeken || []).map(v => v.naar_user_id));
 
-  // Via welke advertentie loopt het contact? Gebruiken we voor de juiste foto én
-  // de "via: ..."-regel, zodat de berichtenlijst hetzelfde toont als de matches.
-  const gespreksIds = [...new Set([
-    ...(verzoeken || []).map(v => v.van_user_id),
-    ...(ontvangen || []).map(b => b.van_user_id),
-    ...(verzonden || []).map(b => b.naar_user_id)
-  ].filter(Boolean))];
-  const viaMapBerichten = await getViaAdvertenties(gespreksIds);
-
   // Laad gesprekken
   const [{ data: ontvangen }, { data: verstuurd }] = await Promise.all([
     sb.from('directe_berichten').select('*, van:van_user_id(id, naam, foto_url, type)').eq('naar_user_id', currentUser.id).order('aangemaakt_op', { ascending: false }),
     sb.from('directe_berichten').select('*, naar:naar_user_id(id, naam, foto_url, type)').eq('van_user_id', currentUser.id).order('aangemaakt_op', { ascending: false })
   ]);
+
+  // Via welke advertentie loopt het contact? Gebruiken we voor de juiste foto én
+  // de "via: ..."-regel, zodat de berichtenlijst hetzelfde toont als de matches.
+  const gespreksIds = [...new Set([
+    ...(verzoeken || []).map(v => v.van_user_id),
+    ...(ontvangen || []).map(b => b.van_user_id),
+    ...(verstuurd || []).map(b => b.naar_user_id)
+  ].filter(Boolean))];
+  const viaMapBerichten = await getViaAdvertenties(gespreksIds);
 
   scroll.innerHTML = '';
 
