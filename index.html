@@ -30,16 +30,16 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 
 :root {
-  --bg: #0d0d14;
-  --bg2: #11111f;
-  --card: #16162a;
-  --card2: #1e1e35;
-  --card3: #24243e;
-  --text: #f0f0ff;
-  --sub: #a0a0c0;
-  --muted: #6666888;
-  --border: #2a2a3d;
-  --border2: #333355;
+  --bg: #06070e;
+  --bg2: #0c0d1a;
+  --card: rgba(255,255,255,0.045);
+  --card2: rgba(255,255,255,0.075);
+  --card3: rgba(255,255,255,0.11);
+  --text: #f2f3ff;
+  --sub: #9fa3c8;
+  --muted: #666688;
+  --border: rgba(255,255,255,0.09);
+  --border2: rgba(255,255,255,0.17);
   --neon: #7c4dff;
   --neon2: #448aff;
   --green: #2ecc71;
@@ -1622,6 +1622,150 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
 .btn-spinner { display:inline-block; width:18px; height:18px; border:2px solid rgba(255,255,255,0.35); border-top-color:#fff; border-radius:50%; animation:btnspin 0.7s linear infinite; vertical-align:middle; }
 @keyframes btnspin { to { transform: rotate(360deg); } }
 .btn[disabled] { cursor:default; }
+
+/* ═══════════════════════════════════════════
+   GLASS OVERHAUL — puur visuele override-laag
+   Apple-achtig frosted glass met muziek/stage-gloed.
+   Geen structuur- of gedragswijzigingen: alleen kleur,
+   blur, schaduw en randen bovenop de bestaande regels.
+═══════════════════════════════════════════ */
+
+/* Podiumlicht: ambient paars/blauwe gloed achter de hele app */
+#screen-app {
+  background:
+    radial-gradient(1000px 640px at 88% -12%, rgba(124,77,255,0.17), transparent 62%),
+    radial-gradient(900px 640px at -12% 104%, rgba(68,138,255,0.13), transparent 62%),
+    radial-gradient(520px 380px at 55% 42%, rgba(168,85,247,0.06), transparent 70%),
+    linear-gradient(165deg, #0a0817 0%, #06070e 48%, #04091a 100%);
+}
+
+/* Sidebar & mobiele nav als glaspanelen — de gloed schijnt erdoorheen */
+.sidebar {
+  background: rgba(10,11,22,0.55);
+  -webkit-backdrop-filter: blur(24px) saturate(1.5);
+  backdrop-filter: blur(24px) saturate(1.5);
+  border-right-color: rgba(255,255,255,0.07);
+}
+.mobile-nav {
+  background: rgba(9,10,20,0.72);
+  -webkit-backdrop-filter: blur(24px) saturate(1.5);
+  backdrop-filter: blur(24px) saturate(1.5);
+  border-top-color: rgba(255,255,255,0.08);
+}
+.nav-link.active {
+  background: rgba(124,77,255,0.16);
+  box-shadow: inset 0 0 0 1px rgba(124,77,255,0.28), inset 0 1px 0 rgba(255,255,255,0.08);
+}
+.sidebar-user {
+  background: rgba(255,255,255,0.05);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.07);
+}
+
+/* Chat als frosted kaart */
+.chat-shell {
+  background: rgba(15,16,30,0.55);
+  -webkit-backdrop-filter: blur(28px) saturate(1.4);
+  backdrop-filter: blur(28px) saturate(1.4);
+  border-color: rgba(255,255,255,0.09);
+  box-shadow: 0 24px 60px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.07);
+}
+.chat-header-bar, .chat-input-row { background: rgba(255,255,255,0.035); }
+.bubble-them {
+  background: rgba(255,255,255,0.07);
+  border-color: rgba(255,255,255,0.10);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+.bubble-me { box-shadow: 0 4px 16px rgba(124,77,255,0.30), inset 0 1px 0 rgba(255,255,255,0.22); }
+.chat-input {
+  background: rgba(255,255,255,0.06);
+  border-color: rgba(255,255,255,0.10);
+}
+.chat-empty-icoon {
+  background: rgba(255,255,255,0.05);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), 0 12px 32px rgba(0,0,0,0.35);
+}
+
+/* Modals: gedimde, geblurde achtergrond + glazen doos */
+.modal-overlay {
+  background: rgba(4,5,11,0.55);
+  -webkit-backdrop-filter: blur(14px) saturate(1.2);
+  backdrop-filter: blur(14px) saturate(1.2);
+}
+.modal-box {
+  background: rgba(17,18,33,0.78);
+  -webkit-backdrop-filter: blur(32px) saturate(1.5);
+  backdrop-filter: blur(32px) saturate(1.5);
+  border-color: rgba(255,255,255,0.12);
+  box-shadow: 0 32px 80px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.09);
+}
+
+/* Ontdek-kaarten: opaak houden (carousel-kaarten liggen achter elkaar),
+   maar met diepe zachte schaduw en glazen randlicht */
+.profile-card {
+  background: linear-gradient(180deg, #15162b 0%, #0d0e20 100%);
+  border-color: rgba(255,255,255,0.11);
+  box-shadow: 0 28px 70px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.03), inset 0 1px 0 rgba(255,255,255,0.08);
+}
+
+/* Lijstkaarten, profielblokken, invoervelden en chips als glas */
+.liked-card, .profile-hero, .profile-row {
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.055);
+}
+.input-field, .select-field {
+  background: rgba(255,255,255,0.055);
+  border-color: rgba(255,255,255,0.10);
+}
+.chip {
+  background: rgba(255,255,255,0.05);
+  border-color: rgba(255,255,255,0.10);
+}
+.chip.selected {
+  background: rgba(124,77,255,0.22);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.12);
+}
+
+/* Primaire knoppen: subtiel binnenlicht + neonzweem */
+.btn-primary {
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.24), 0 6px 22px rgba(124,77,255,0.32);
+}
+@media (hover: hover) {
+  .btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.28), 0 10px 28px rgba(124,77,255,0.42);
+  }
+}
+.send-btn { box-shadow: 0 4px 16px rgba(124,77,255,0.35), inset 0 1px 0 rgba(255,255,255,0.22); }
+
+/* Scrollbar dunner en glazig */
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.14); }
+::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.24); }
+
+/* Onboarding meesturen in dezelfde diepe podiumgloed */
+#screen-onboard {
+  background:
+    radial-gradient(900px 600px at 80% -10%, rgba(124,77,255,0.20), transparent 60%),
+    radial-gradient(800px 600px at -10% 100%, rgba(68,138,255,0.16), transparent 60%),
+    linear-gradient(165deg, #10062a 0%, #06070e 50%, #03102e 100%);
+}
+
+/* Toegankelijkheid & fallback: zonder backdrop-filter-ondersteuning
+   worden glaspanelen gewoon dekkend zodat alles leesbaar blijft */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .sidebar, .mobile-nav { background: #0b0c18; }
+  .chat-shell { background: #10111f; }
+  .modal-box { background: #131424; }
+  .modal-overlay { background: rgba(4,5,11,0.8); }
+}
+
+/* Mobiel: chat is full-bleed, dus geen kaart-schaduw of blur nodig */
+@media (max-width: 768px) {
+  .chat-shell { background: transparent; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
+  .chat-header-bar, .chat-input-row { background: rgba(12,13,26,0.85); }
+}
+
 </style>
 </head>
 <body>
