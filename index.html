@@ -999,40 +999,68 @@ html, body {
 .msg-name { font-size: 14px; font-weight: 600; color: var(--text); }
 .msg-preview { font-size: 13px; color: var(--sub); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-/* Op brede schermen rekt het chatvenster eindeloos uit, waardoor berichten ver uit
-   elkaar staan en er veel lege ruimte overblijft. De gesprekslijst krijgt daarom wat
-   meer breedte, en de chat zelf een leesbare maximumbreedte, netjes gecentreerd. */
-@media (min-width: 1100px) {
-  .msg-list-col { width: 380px; }
-  .chat-header-bar,
-  .chat-msgs,
-  .chat-input-row {
-    width: 100%;
-    max-width: 860px;
-    margin-left: auto;
-    margin-right: auto;
-  }
-  .chat-msgs { padding: 24px 8px; }
-  .bubble { max-width: 68%; }
-}
-@media (min-width: 1600px) {
-  .msg-list-col { width: 420px; }
-  .chat-header-bar,
-  .chat-msgs,
-  .chat-input-row { max-width: 960px; }
-}
-
-/* CHAT COLUMN */
+/* CHAT COLUMN
+   Op brede schermen rekte het chatvenster eindeloos uit: header-knoppen ver weg,
+   berichten en invoerveld losgetrokken. Daarom is de chat nu één afgebakende kaart
+   (zelfde stijl als de rest van de site: card-achtergrond, border, radius) die
+   gecentreerd in het paneel staat. Alles hoort visueel bij elkaar. */
 .chat-col {
   flex: 1;
   display: flex;
   flex-direction: column;
+  align-items: center;
   overflow: hidden;
+  padding: 20px;
+  min-width: 0;
 }
+.chat-shell {
+  width: 100%;
+  max-width: 760px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+}
+@media (min-width: 1100px) {
+  .msg-list-col { width: 380px; }
+  .bubble { max-width: 68%; }
+}
+@media (min-width: 1600px) {
+  .msg-list-col { width: 420px; }
+  .chat-shell { max-width: 820px; }
+}
+/* Lege staat: geen gesprek geselecteerd */
+.chat-empty {
+  display: none;
+  flex: 1;
+  width: 100%;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  color: var(--sub);
+  text-align: center;
+  padding: 24px;
+}
+.chat-empty-icoon {
+  width: 64px; height: 64px; border-radius: 20px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--sub);
+}
+.chat-empty-titel { font-family: var(--font-head); font-size: 17px; font-weight: 800; color: var(--text); }
+.chat-empty-sub { font-size: 13px; max-width: 300px; line-height: 1.5; }
+.chat-col.geen-gesprek .chat-shell { display: none; }
+.chat-col.geen-gesprek .chat-empty { display: flex; }
 .chat-header-bar {
   display: flex; align-items: center; gap: 12px;
-  padding: 16px 24px;
+  padding: 14px 18px;
   border-bottom: 1px solid var(--border);
+  background: var(--card2);
   flex-shrink: 0;
 }
 .chat-av-sm {
@@ -1043,10 +1071,10 @@ html, body {
 .chat-msgs {
   flex: 1;
   overflow-y: auto;
-  padding: 24px;
+  padding: 20px 18px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
 }
 .bubble {
   max-width: 65%;
@@ -1063,9 +1091,10 @@ html, body {
 .bubble-them { background: var(--card2); color: var(--text); border-bottom-left-radius: 4px; align-self: flex-start; border: 1px solid var(--border); }
 .bubble-me { background: var(--neon); color: #fff; border-bottom-right-radius: 4px; align-self: flex-end; }
 .chat-input-row {
-  display: flex; align-items: center; gap: 12px;
-  padding: 16px 24px;
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 14px;
   border-top: 1px solid var(--border);
+  background: var(--card2);
   flex-shrink: 0;
 }
 .chat-input {
@@ -1494,7 +1523,9 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
   /* Berichten */
   #panel-messages { flex-direction: column; }
   .msg-list-col { width: 100%; flex: 1; border-right: none; }
-  .chat-col { display: none; }
+  .chat-col { display: none; padding: 0; }
+  .chat-shell { max-width: none; border: none; border-radius: 0; background: transparent; }
+  .chat-header-bar, .chat-input-row { background: var(--bg2); }
 
   /* Profiel */
   #panel-profile { padding: 12px; gap: 12px; }
@@ -2288,7 +2319,15 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
         <div class="msg-list-header">Berichten</div>
         <div class="msg-list-scroll" id="msgListScroll"></div>
       </div>
-      <div class="chat-col">
+      <div class="chat-col geen-gesprek">
+        <div class="chat-empty">
+          <div class="chat-empty-icoon">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          </div>
+          <div class="chat-empty-titel">Selecteer een gesprek</div>
+          <div class="chat-empty-sub">Kies links een gesprek, of swipe verder in Ontdekken om nieuwe matches te vinden.</div>
+        </div>
+        <div class="chat-shell">
         <div class="chat-header-bar">
           <button id="chatTerugBtn" onclick="sluitMobieleChat()" style="display:none;width:34px;height:34px;border-radius:50%;border:1px solid var(--border);background:transparent;cursor:pointer;align-items:center;justify-content:center;color:var(--sub);flex-shrink:0;">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
@@ -2316,6 +2355,7 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
           <input class="chat-input" id="chatInput" maxlength="1000" placeholder="Typ een bericht..." onkeydown="if(event.key==='Enter')sendMsg()"/>
           <button class="send-btn" onclick="sendMsg()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button>
         </div>
+        </div><!-- /.chat-shell -->
       </div>
     </div>
 
@@ -5249,6 +5289,8 @@ async function weigerVerzoek(verzoekId, ev) {
 
 async function openGesprek(userId, user) {
   huidigChatUserId = userId;
+  // Lege staat weg, chat-kaart tonen
+  document.querySelector('.chat-col')?.classList.remove('geen-gesprek');
   // Eventuele oude "chat niet meer beschikbaar"-melding weghalen: bij het openen
   // van een (nieuw) gesprek mag die nooit blijven hangen.
   document.querySelector('.chat-niet-beschikbaar')?.remove();
@@ -5478,6 +5520,7 @@ async function bepaalChatStatus(anderId) {
 }
 
 function resetChatHeader() {
+  document.querySelector('.chat-col')?.classList.add('geen-gesprek');
   document.getElementById('blokkeerBtn').style.display = 'none';
   document.getElementById('meldBtn').style.display = 'none';
   document.querySelector('.chat-name').textContent = 'Selecteer een gesprek';
