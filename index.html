@@ -21,7 +21,7 @@
 <link rel="stylesheet" href="https://unpkg.com/@tabler/icons-webfont@latest/dist/tabler-icons.min.css"/>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@800;900&family=Space+Grotesk:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
 
 <style>
 /* ═══════════════════════════════════════════
@@ -1815,10 +1815,14 @@ body { letter-spacing: 0.01em; }
   #screen-app::before, #screen-app::after { animation: none; }
 }
 
+/* — Logo: terug naar het oude Syne-lettertype — */
+.sidebar-logo, .ob-logo, .auth-logo { font-family: 'Syne', sans-serif; }
+.sidebar-logo { font-size: 14px; letter-spacing: 1px; }
+
 /* — Signatuur: gloeiende podium-ring achter de swipe-kaarten — */
 @keyframes ringHue {
-  0%, 100% { filter: blur(40px) hue-rotate(0deg); }
-  50%      { filter: blur(40px) hue-rotate(50deg); }
+  0%, 100% { filter: blur(52px) hue-rotate(0deg); }
+  50%      { filter: blur(52px) hue-rotate(50deg); }
 }
 .card-stack { position: relative; }
 .card-stack::before {
@@ -1830,12 +1834,12 @@ body { letter-spacing: 0.01em; }
   width: 106%;
   height: 112%;
   border-radius: 50%;
-  background: conic-gradient(from 0deg,
-    rgba(124,77,255,0.55), rgba(217,70,239,0.40),
-    rgba(56,189,248,0.45), rgba(68,138,255,0.55),
-    rgba(124,77,255,0.55));
-  filter: blur(40px);
-  opacity: .68;
+  background: conic-gradient(from 210deg,
+    rgba(124,77,255,0.30), rgba(217,70,239,0.20),
+    rgba(56,189,248,0.22), rgba(68,138,255,0.30),
+    rgba(124,77,255,0.30));
+  filter: blur(52px);
+  opacity: .38;
   pointer-events: none;
   animation: ringHue 16s ease-in-out infinite;
 }
