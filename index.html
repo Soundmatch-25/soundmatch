@@ -21,7 +21,7 @@
 <link rel="stylesheet" href="https://unpkg.com/@tabler/icons-webfont@latest/dist/tabler-icons.min.css"/>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
 
 <style>
 /* ═══════════════════════════════════════════
@@ -45,8 +45,8 @@
   --green: #2ecc71;
   --red: #e53935;
   --grad: linear-gradient(135deg, #7c4dff, #448aff);
-  --font-head: 'Syne', sans-serif;
-  --font-body: 'Inter', sans-serif;
+  --font-head: 'Space Grotesk', 'Syne', sans-serif;
+  --font-body: 'Plus Jakarta Sans', 'Inter', sans-serif;
   --radius: 20px;
   --radius-sm: 12px;
   --sidebar-w: 280px;
@@ -1765,6 +1765,148 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
   .chat-shell { background: transparent; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
   .chat-header-bar, .chat-input-row { background: rgba(12,13,26,0.85); }
 }
+
+/* ═══════════════════════════════════════════
+   GLASS OVERHAUL II — meer show, zelfde structuur
+   Aurora-licht, gloeiende ring achter de kaarten,
+   nieuwe typografie en glossy details. Nog steeds
+   puur CSS: geen element of gedrag aangeraakt.
+═══════════════════════════════════════════ */
+
+/* — Typografie: strakker, groter, met heel subtiele lichtval — */
+body { letter-spacing: 0.01em; }
+.panel-header h2, .msg-list-header, .panel-titel, .discover-header h2 {
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  background: linear-gradient(120deg, #ffffff 30%, #c9c2ff 90%);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent; color: transparent;
+}
+.card-name { letter-spacing: -0.015em; font-weight: 700; }
+.chat-empty-titel, .modal-header h3 { letter-spacing: -0.015em; }
+.sidebar-logo { font-size: 15px; letter-spacing: 2.5px; }
+::selection { background: rgba(124,77,255,0.4); color: #fff; }
+
+/* — Aurora: twee traag drijvende lichtvlekken achter alles — */
+#screen-app { position: relative; }
+#screen-app::before, #screen-app::after {
+  content: '';
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 0;
+  filter: blur(10px);
+}
+#screen-app::before {
+  width: 55vw; height: 55vw; max-width: 900px; max-height: 900px;
+  top: -22%; right: -12%;
+  background: radial-gradient(circle, rgba(124,77,255,0.20) 0%, rgba(168,85,247,0.08) 45%, transparent 70%);
+  animation: glowDrift1 30s ease-in-out infinite;
+}
+#screen-app::after {
+  width: 48vw; height: 48vw; max-width: 780px; max-height: 780px;
+  bottom: -20%; left: -14%;
+  background: radial-gradient(circle, rgba(68,138,255,0.16) 0%, rgba(56,189,248,0.06) 45%, transparent 70%);
+  animation: glowDrift2 38s ease-in-out infinite;
+}
+.sidebar, .main-content, .mobile-nav { position: relative; z-index: 1; }
+@media (prefers-reduced-motion: reduce) {
+  #screen-app::before, #screen-app::after { animation: none; }
+}
+
+/* — Signatuur: gloeiende podium-ring achter de swipe-kaarten — */
+@keyframes ringHue {
+  0%, 100% { filter: blur(40px) hue-rotate(0deg); }
+  50%      { filter: blur(40px) hue-rotate(50deg); }
+}
+.card-stack { position: relative; }
+.card-stack::before {
+  content: '';
+  position: absolute;
+  z-index: 0;
+  top: 50%; left: 50%;
+  transform: translate(-50%,-50%);
+  width: 106%;
+  height: 112%;
+  border-radius: 50%;
+  background: conic-gradient(from 0deg,
+    rgba(124,77,255,0.55), rgba(217,70,239,0.40),
+    rgba(56,189,248,0.45), rgba(68,138,255,0.55),
+    rgba(124,77,255,0.55));
+  filter: blur(40px);
+  opacity: .68;
+  pointer-events: none;
+  animation: ringHue 16s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) { .card-stack::before { animation: none; } }
+
+/* — Glossy knoppen: pil-vorm met lichtval bovenop de gradient — */
+.btn { border-radius: 999px; }
+.btn-primary {
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0) 45%),
+    linear-gradient(135deg, #7c4dff, #448aff);
+}
+.btn-secondary, .btn-ghost { -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); }
+.liked-tab { border-radius: 999px; }
+.liked-tabs { border-radius: 999px; padding: 5px; }
+.liked-tab.active {
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.20) 0%, rgba(255,255,255,0) 50%),
+    var(--neon);
+  box-shadow: 0 4px 14px rgba(124,77,255,0.40);
+}
+
+/* — Gesprekkenlijst: glazen rijen met neon-rand op actief — */
+.msg-item { border: 1px solid transparent; }
+.msg-item:hover { background: rgba(255,255,255,0.05); }
+.msg-item.active {
+  background: rgba(124,77,255,0.10);
+  border-color: rgba(124,77,255,0.30);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
+}
+.msg-av, .liked-avatar, .sidebar-avatar, .chat-av-sm {
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.25), 0 6px 16px rgba(0,0,0,0.35);
+}
+
+/* — Chat: iets vollere bubbels, glossy invoerveld — */
+.bubble { border-radius: 20px; }
+.bubble-them { border-bottom-left-radius: 6px; }
+.bubble-me {
+  border-bottom-right-radius: 6px;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.16) 0%, rgba(255,255,255,0) 50%),
+    linear-gradient(135deg, #7c4dff, #448aff);
+}
+.chat-input { -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); }
+.chat-input:focus { box-shadow: 0 0 0 3px rgba(124,77,255,0.18); }
+
+/* — Swipe-knoppen: podiumgloed onder de actieknoppen — */
+.sw-like { box-shadow: 0 8px 26px rgba(46,204,113,0.35), inset 0 1px 0 rgba(255,255,255,0.25); }
+.sw-nope { box-shadow: 0 8px 26px rgba(229,57,53,0.28), inset 0 1px 0 rgba(255,255,255,0.18); }
+.sw-chat { box-shadow: 0 8px 26px rgba(124,77,255,0.32), inset 0 1px 0 rgba(255,255,255,0.18); }
+
+/* — Sidebar: actieve link met gradient-stip, gebruikerskaart glossy — */
+.nav-link { border-radius: 14px; }
+.nav-link.active {
+  background: linear-gradient(90deg, rgba(124,77,255,0.20), rgba(68,138,255,0.10));
+}
+.sidebar-user { -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); }
+
+/* — Mobiele nav: actief item krijgt een gloeiende punt — */
+.mob-nav-item { position: relative; }
+.mob-nav-item.active::after {
+  content: '';
+  position: absolute;
+  top: 2px; left: 50%; transform: translateX(-50%);
+  width: 18px; height: 3px; border-radius: 3px;
+  background: var(--grad);
+  box-shadow: 0 0 10px rgba(124,77,255,0.8);
+}
+
+/* — Focus zichtbaar en on-brand — */
+:focus-visible { outline: 2px solid rgba(124,77,255,0.7); outline-offset: 2px; }
 
 </style>
 </head>
