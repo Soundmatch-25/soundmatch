@@ -3743,38 +3743,50 @@ async function doSwipe(dir) {
 
 let matchPartner = null;
 
-// Titels van advertenties waarmee ik deze persoon heb geliket (voor match-context)
 // Via welke advertentie(s) loopt het contact met deze mensen? Beide richtingen:
 // advertenties van hén die ík geliket heb, én mijn advertenties die zíj geliket
-// hebben. Zonder dat tweede zag de advertentie-eigenaar nooit de "via:"-regel.
+// hebben. Belangrijk onderscheid: de FOTO van iemand mag alleen wisselen naar een
+// advertentiefoto als die advertentie ook echt van diegene is. Liket akita Aarts
+// advertentie, dan krijgt Aart die foto (het is zijn advertentie) — maar akita's
+// eigen avatar blijft gewoon haarzelf, ook al staat de "via: ..."-tekst er wel.
 async function getViaAdvertenties(userIds) {
   if (!currentUser || !userIds.length) return {};
   const map = {};
-  const voegToe = (userId, adv) => {
+  const voegToe = (userId, adv, eigenAd) => {
     if (!adv?.titel) return;
     const lijst = (map[userId] = map[userId] || []);
-    if (!lijst.some(a => a.id === adv.id)) lijst.push(adv);
+    const bestaand = lijst.find(a => a.id === adv.id);
+    if (bestaand) { bestaand.eigenAd = bestaand.eigenAd || eigenAd; return; }
+    lijst.push({ ...adv, eigenAd });
   };
   try {
-    // 1. Ik heb hun advertentie geliket
+    // 1. Ik heb hún advertentie geliket → target_id is altijd de advertentie-eigenaar,
+    // dus deze advertentie is gegarandeerd van de persoon die we hier koppelen.
     const { data: mijnSwipes } = await sb.from('swipes')
       .select('target_id, advertentie:advertentie_id(id, titel, foto_url)')
       .eq('swiper_id', currentUser.id)
       .eq('richting', 'like')
       .not('advertentie_id', 'is', null)
       .in('target_id', userIds);
-    (mijnSwipes || []).forEach(sw => voegToe(sw.target_id, sw.advertentie));
+    (mijnSwipes || []).forEach(sw => voegToe(sw.target_id, sw.advertentie, true));
 
-    // 2. Zij hebben mijn advertentie geliket
+    // 2. Zij hebben míjn advertentie geliket → de advertentie is van MIJ (currentUser),
+    // niet van de swiper. Alleen relevant voor de "via:"-tekst, nooit voor hun avatar.
     const { data: hunSwipes } = await sb.from('swipes')
       .select('swiper_id, advertentie:advertentie_id(id, titel, foto_url)')
       .eq('target_id', currentUser.id)
       .eq('richting', 'like')
       .not('advertentie_id', 'is', null)
       .in('swiper_id', userIds);
-    (hunSwipes || []).forEach(sw => voegToe(sw.swiper_id, sw.advertentie));
+    (hunSwipes || []).forEach(sw => voegToe(sw.swiper_id, sw.advertentie, false));
   } catch(e) {}
   return map;
+}
+
+// Handige helper: uit een lijst advertenties (zoals hierboven) alleen de foto pakken
+// van een advertentie die ook echt van de weergegeven persoon zelf is.
+function eigenAdFoto(ads) {
+  return (ads || []).find(a => a.eigenAd && a.foto_url)?.foto_url || null;
 }
 
 
@@ -3783,42 +3795,59 @@ async function showMatch(p) {
   // Markeer zodat checkNieuweMatches hem niet nogmaals toont
   if (p.matchId) lastMatchId = p.matchId;
 
-  // Loopt deze match via een advertentie? Dan tonen we die foto en titel, niet het
-  // persoonlijke profiel — je matcht immers mét die advertentie. Niet elke aanroep
-  // geeft die context mee (bv. "like terug"), dus halen we 'm hier zelf op.
+  // De match-popup toont BEIDE kanten tegelijk, dus hier geldt een net iets andere
+  // regel dan in de chat: wiens advertentie er ook bij betrokken was, díe kant wordt
+  // overal weergegeven als de advertentie — ook je eigen kant, want de match ontstond
+  // met de advertentie, niet met het kale profiel. Heeft een kant geen advertentie in
+  // dit contact, dan blijft gewoon de eigen foto staan.
   let toonNaam = p.naam || '';
-  let toonFoto = p.foto_url;
-  let viaTitel = p.isAdvertentie ? p.naam : null;
-  if (p.id) {
+  let toonFotoPartner = p.foto_url;
+  let toonFotoMij = currentProfile?.foto_url;
+  let viaTitels = [];
+
+  if (p.id && currentUser) {
     try {
-      const viaMap = await getViaAdvertenties([p.id]);
-      const ads = viaMap[p.id] || [];
-      if (ads.length) {
-        viaTitel = ads.map(a => a.titel).join(', ');
-        const adFoto = ads.find(a => a.foto_url)?.foto_url;
-        if (adFoto) toonFoto = adFoto;
-      }
+      // Advertenties van de partner die ík geliket heb
+      const { data: ikLiketeHun } = await sb.from('swipes')
+        .select('advertentie:advertentie_id(id, titel, foto_url)')
+        .eq('swiper_id', currentUser.id)
+        .eq('target_id', p.id)
+        .eq('richting', 'like')
+        .not('advertentie_id', 'is', null);
+      const partnerAd = (ikLiketeHun || []).map(r => r.advertentie).find(a => a?.foto_url);
+      if (partnerAd) { toonFotoPartner = partnerAd.foto_url; viaTitels.push(partnerAd.titel); }
+
+      // Mijn advertenties die de partner geliket heeft
+      const { data: zijLiketenMijn } = await sb.from('swipes')
+        .select('advertentie:advertentie_id(id, titel, foto_url)')
+        .eq('swiper_id', p.id)
+        .eq('target_id', currentUser.id)
+        .eq('richting', 'like')
+        .not('advertentie_id', 'is', null);
+      const mijnAd = (zijLiketenMijn || []).map(r => r.advertentie).find(a => a?.foto_url);
+      if (mijnAd) { toonFotoMij = mijnAd.foto_url; viaTitels.push(mijnAd.titel); }
     } catch(e) {}
   }
+  viaTitels = [...new Set(viaTitels.filter(Boolean))];
 
   document.getElementById('matchName').textContent = toonNaam;
 
   const emojiEl = document.getElementById('matchEmoji');
   if (emojiEl) {
-    if (toonFoto) emojiEl.innerHTML = '<img src="' + esc(toonFoto) + '" style="width:100%;height:100%;object-fit:cover;"/>';
+    if (toonFotoPartner) emojiEl.innerHTML = '<img src="' + esc(toonFotoPartner) + '" style="width:100%;height:100%;object-fit:cover;"/>';
     else emojiEl.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;">' + typeIcon(p.type) + '</div>';
   }
 
   const mijEl = document.getElementById('matchEmojiMij');
-  if (mijEl && currentProfile?.foto_url) {
-    mijEl.innerHTML = '<img src="' + esc(currentProfile.foto_url) + '" style="width:100%;height:100%;object-fit:cover;"/>';
+  if (mijEl && toonFotoMij) {
+    mijEl.innerHTML = '<img src="' + esc(toonFotoMij) + '" style="width:100%;height:100%;object-fit:cover;"/>';
   }
 
-  // Context: via welke advertentie ontstond deze match?
+  // Context: via welke advertentie(s) ontstond deze match?
   const viaEl = document.getElementById('matchViaAd');
   if (viaEl) {
-    if (viaTitel) {
-      viaEl.textContent = 'Via de advertentie “' + viaTitel + '”';
+    if (viaTitels.length) {
+      viaEl.textContent = 'Via de advertentie “' + viaTitels.join('” en “') + '”';
       viaEl.style.display = 'block';
     } else viaEl.style.display = 'none';
   }
@@ -4076,7 +4105,7 @@ async function laadMatchesLijst() {
 
     const av = document.createElement('div');
     av.style.cssText = 'width:48px;height:48px;border-radius:14px;overflow:hidden;flex-shrink:0;background:var(--grad);display:flex;align-items:center;justify-content:center;';
-    const viaAdFoto = ((window._viaAdMap || {})[anderId] || []).find(a => a.foto_url)?.foto_url;
+    const viaAdFoto = eigenAdFoto((window._viaAdMap || {})[anderId]);
     const matchFoto = viaAdFoto || ander.foto_url;
     av.innerHTML = matchFoto ? '<img src="' + esc(matchFoto) + '" style="width:100%;height:100%;object-fit:cover;"/>' : typeIcon(ander.type);
 
@@ -5120,7 +5149,7 @@ async function laadDirecteBerichten() {
     avEl.className = 'msg-av';
     avEl.style.overflow = 'hidden';
     const viaAdsGesprek = viaMapBerichten[userId] || [];
-    const viaFotoGesprek = viaAdsGesprek.find(a => a.foto_url)?.foto_url;
+    const viaFotoGesprek = eigenAdFoto(viaAdsGesprek);
     avEl.innerHTML = (viaFotoGesprek || g.user?.foto_url)
       ? '<img src="' + esc(viaFotoGesprek || g.user.foto_url) + '" style="width:100%;height:100%;object-fit:cover;"/>'
       : '<div style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;">' + typeIcon(g.user?.type) + '</div>';
@@ -5265,7 +5294,7 @@ async function openGesprek(userId, user) {
   const av = document.getElementById('chatAvatar');
   if (av) {
     av.style.width = '';
-    const adFoto = viaAds.find(a => a.foto_url)?.foto_url;
+    const adFoto = eigenAdFoto(viaAds);
     const userFoto = user?.foto_url;
     const onlineDot = '<div id="onlineDot" style="display:none;position:absolute;bottom:0;right:0;width:10px;height:10px;border-radius:50%;background:#4ade80;border:2px solid var(--bg2);z-index:3;"></div>';
     if (adFoto) {
