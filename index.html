@@ -2551,20 +2551,12 @@ body { letter-spacing: 0.01em; }
     <!-- Sta open voor reacties: scheidt 'wie ik ben' van 'ik ben nu op zoek'.
          Standaard aan. Uit = je blijft zichtbaar (achteraan, met rustig label),
          mensen kunnen je nog liken/matchen, maar niet zomaar een berichtverzoek sturen. -->
-    <div id="regOpenRij" style="display:flex;align-items:center;justify-content:space-between;gap:16px;background:var(--card2);border:1px solid var(--border);border-radius:14px;padding:14px 16px;">
+    <div id="regOpenRij" style="display:flex;align-items:center;justify-content:space-between;gap:16px;background:#14152a;border:1px solid var(--border);border-radius:14px;padding:14px 16px;">
       <div style="min-width:0;">
         <div style="font-size:14px;font-weight:600;color:var(--text);">Sta open voor reacties</div>
         <div style="font-size:12px;color:var(--sub);margin-top:2px;line-height:1.4;">Staat dit uit, dan blijf je zichtbaar maar geef je aan dat je momenteel niet actief op zoek bent.</div>
       </div>
-      <button type="button" id="regOpenToggle" role="switch" aria-checked="true" onclick="toggleOpenVoorReacties()" class="sm-switch aan" style="flex-shrink:0;"><span class="sm-switch-knop"></span></button>
-    </div>
-
-    <div id="regMailRij" style="display:flex;align-items:center;justify-content:space-between;gap:16px;background:var(--card2);border:1px solid var(--border);border-radius:14px;padding:14px 16px;">
-      <div style="min-width:0;">
-        <div style="font-size:14px;font-weight:600;color:var(--text);">Match-notificaties per e-mail</div>
-        <div style="font-size:12px;color:var(--sub);margin-top:2px;line-height:1.4;">Ontvang maximaal één keer per dag een mailtje als je nieuwe matches hebt.</div>
-      </div>
-      <button type="button" id="regMailToggle" role="switch" aria-checked="true" onclick="toggleMatchMails()" class="sm-switch aan" style="flex-shrink:0;"><span class="sm-switch-knop"></span></button>
+      <button type="button" id="regOpenToggle" role="switch" aria-checked="true" onclick="event.preventDefault();event.stopPropagation();toggleOpenVoorReacties()" class="sm-switch aan" style="flex-shrink:0;"><span class="sm-switch-knop" style="pointer-events:none;"></span></button>
     </div>
 
     <!-- Niveau + Beschikbaarheid (alleen voor muzikant/sessie/industry) -->
@@ -3501,26 +3493,6 @@ function zetOpenToggle(waarde) {
 }
 function leesOpenToggle() {
   const t = document.getElementById('regOpenToggle');
-  return t ? t.classList.contains('aan') : true;
-}
-
-// Schakelaar "match-notificaties per e-mail".
-function toggleMatchMails() {
-  const t = document.getElementById('regMailToggle');
-  if (!t) return;
-  const nieuw = !t.classList.contains('aan');
-  t.classList.toggle('aan', nieuw);
-  t.setAttribute('aria-checked', nieuw ? 'true' : 'false');
-}
-function zetMailToggle(waarde) {
-  const t = document.getElementById('regMailToggle');
-  if (!t) return;
-  const aan = waarde !== false; // default aan
-  t.classList.toggle('aan', aan);
-  t.setAttribute('aria-checked', aan ? 'true' : 'false');
-}
-function leesMailToggle() {
-  const t = document.getElementById('regMailToggle');
   return t ? t.classList.contains('aan') : true;
 }
 let swipeHistory = [];
@@ -6746,7 +6718,6 @@ function bewerkProfiel() {
   if (document.getElementById('regNiveau')) document.getElementById('regNiveau').value = p.niveau || 'Gevorderd';
   if (document.getElementById('regBeschikbaarheid')) document.getElementById('regBeschikbaarheid').value = p.beschikbaarheid || 'Serieus';
   zetOpenToggle(p.open_voor_reacties);
-  zetMailToggle(p.match_mails_aan);
 
   if (p.provincie && document.getElementById('regProvincie')) {
     document.getElementById('regProvincie').value = p.provincie;
@@ -7158,6 +7129,13 @@ function vulAlleChips() {
     if (el) el.innerHTML = chipsHtml(items, id === 'filterGenres');
   });
 }
+// Vangnet: vul de chips onafhankelijk van de rest van de init. Zo blijven instrument-
+// en genrekeuzes altijd zichtbaar, ook als een ander script-onderdeel een fout gooit.
+(function borgChips(){
+  const run = () => { try { vulAlleChips(); } catch(e){ console.error('borgChips:', e); } };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', run);
+  else run();
+})();
 
 // Optie-sets per categorie voor het filter (de chip-sectie beweegt mee)
 const FILTER_OPTIES = {
@@ -7746,7 +7724,6 @@ async function slaProfielOp() {
       bio,
       kop,
       open_voor_reacties: leesOpenToggle(),
-      match_mails_aan: leesMailToggle(),
       foto_url: uploadedFotoUrl || currentProfile?.foto_url || null,
       actief_op: new Date().toISOString()
     })
@@ -8103,11 +8080,12 @@ function splitsLogoLetters() {
 }
 try { splitsLogoLetters(); } catch (e) { /* logo blijft gewoon als platte tekst staan */ }
 
-initCookieMelding();
-// Alle chip-lijsten vullen vanuit centrale bron
-vulAlleChips();
+try { initCookieMelding(); } catch (e) { /* cookiemelding niet kritiek */ }
+// Alle chip-lijsten vullen vanuit centrale bron — apart afgeschermd zodat een
+// fout elders (bijv. trage/geblokkeerde library) dit nooit kan blokkeren.
+try { vulAlleChips(); } catch (e) { console.error('vulAlleChips faalde:', e); }
 // Filter-chips vullen voor de startcategorie
-vulFilterChips(typeof activeType !== 'undefined' ? activeType : 'muzikanten');
+try { vulFilterChips(typeof activeType !== 'undefined' ? activeType : 'muzikanten'); } catch (e) { console.error('vulFilterChips faalde:', e); }
 // Captcha-widget alvast onzichtbaar klaarzetten (pas uitgevoerd bij login/registratie/reset)
 setTimeout(zorgVoorTurnstile, 300);
 </script>
