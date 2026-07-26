@@ -7271,7 +7271,44 @@ let komtVanReset = false;
   }
 })();
 
+// Afmelden voor e-mailnotificaties via de link onderaan de mails.
+// Werkt zonder inloggen: de unieke, niet-te-raden token identificeert de gebruiker.
+(function afmeldRoute() {
+  const params = new URLSearchParams(window.location.search || '');
+  const token = params.get('afmelden');
+  if (!token) return;
+  window.__afmeldModus = true;
+
+  // Vervang de hele pagina door een simpel afmeldscherm in de huisstijl.
+  document.addEventListener('DOMContentLoaded', async () => {
+    document.body.innerHTML =
+      '<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:#0d0d14;padding:24px;font-family:Helvetica,Arial,sans-serif;">' +
+      '<div id="afmeldKaart" style="max-width:440px;width:100%;background:#16161f;border:1px solid #2a2a38;border-radius:20px;padding:40px 32px;text-align:center;">' +
+      '<div style="font-family:\'Trebuchet MS\',Helvetica,Arial,sans-serif;font-size:24px;font-weight:bold;letter-spacing:1px;color:#fff;margin-bottom:24px;">SOUND<span style="color:#7C4DFF;">MATCH.</span></div>' +
+      '<div id="afmeldInhoud" style="color:#a0a0b0;font-size:15px;line-height:1.6;">Bezig met afmelden...</div>' +
+      '</div></div>';
+
+    const inhoud = document.getElementById('afmeldInhoud');
+    try {
+      const { data, error } = await sb
+        .from('profiles')
+        .update({ match_mails_aan: false })
+        .eq('afmeld_token', token)
+        .select('id');
+      if (error) throw error;
+      if (!data || data.length === 0) {
+        inhoud.innerHTML = '<div style="font-size:18px;font-weight:bold;color:#fff;margin-bottom:10px;">Link niet geldig</div>Deze afmeldlink is verlopen of ongeldig. Je kunt je notificaties ook uitzetten in je profiel.';
+      } else {
+        inhoud.innerHTML = '<div style="font-size:18px;font-weight:bold;color:#fff;margin-bottom:10px;">Je bent afgemeld</div>Je ontvangt geen e-mailnotificaties meer over matches en likes. Van gedachten veranderd? Zet ze weer aan in je profiel.<div style="margin-top:24px;"><a href="https://soundmatch.nl" style="display:inline-block;padding:14px 32px;background:#7C4DFF;color:#fff;text-decoration:none;border-radius:14px;font-weight:bold;font-size:15px;">Naar Soundmatch</a></div>';
+      }
+    } catch (e) {
+      inhoud.innerHTML = '<div style="font-size:18px;font-weight:bold;color:#fff;margin-bottom:10px;">Er ging iets mis</div>Probeer het later opnieuw, of zet je notificaties uit in je profiel.';
+    }
+  });
+})();
+
 sb.auth.onAuthStateChange(async (event, session) => {
+  if (window.__afmeldModus) return; // afmeldpagina: app niet opstarten
   if (event === 'PASSWORD_RECOVERY' || (komtVanReset && session?.user)) {
     // Gebruiker klikte op de reset-link → toon het scherm voor een nieuw wachtwoord
     komtVanReset = true;
