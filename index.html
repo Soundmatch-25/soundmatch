@@ -2831,7 +2831,7 @@ body { letter-spacing: 0.01em; }
         <div class="panel-header" style="display:flex;align-items:center;justify-content:space-between;gap:16px;">
           <div>
             <h2>Mijn Advertenties</h2>
-            <div style="font-size:14px;color:var(--sub);margin-top:4px;font-weight:400;">Je profiel is je eerste advertentie. Maak er extra aan voor een band of project.</div>
+            <div style="font-size:14px;color:var(--sub);margin-top:4px;font-weight:400;">Je profiel én je losse advertenties — alles waarmee je in de stapel staat.</div>
           </div>
           <button class="btn btn-primary btn-sm" style="flex-shrink:0;" onclick="nieuweAdvertentie()">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -6239,14 +6239,18 @@ async function laadMijnAdvertenties() {
 
   // Je profiel is óók een advertentie: altijd als eerste kaart tonen.
   list.innerHTML = '';
+  list.appendChild(sectieKop('Je profiel', 'Dit is hoe je bij anderen in de stapel verschijnt.'));
   bouwProfielKaart(list);
 
   if (!data?.length) {
+    list.appendChild(sectieKop('Extra advertenties', 'Zoek je bandleden of bied je iets aan? Maak een aparte advertentie.'));
     const leeg = document.createElement('div');
-    leeg.innerHTML = `<div style="text-align:center;padding:40px 20px;color:var(--sub);"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="opacity:.4"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg><div style="font-size:15px;font-weight:600;">Nog geen extra advertenties</div><div style="font-size:13px;margin-top:6px;">Je profiel staat hierboven — maak er een extra aan voor een band of project.</div></div>`;
+    leeg.innerHTML = `<div style="text-align:center;padding:28px 20px 40px;color:var(--sub);"><div style="font-size:14px;">Je hebt er nog geen.</div></div>`;
     list.appendChild(leeg);
     return;
   }
+
+  list.appendChild(sectieKop('Extra advertenties', 'Los van je profiel. Deze kun je bewerken of verwijderen.'));
 
   data.forEach(ad => {
     const card = document.createElement('div');
@@ -6339,13 +6343,28 @@ async function laadMijnAdvertenties() {
   });
 }
 
+// Kopje boven een sectie in het advertentieoverzicht.
+function sectieKop(titel, sub) {
+  const wrap = document.createElement('div');
+  wrap.style.cssText = 'margin:22px 2px 10px;';
+  const h = document.createElement('div');
+  h.textContent = titel;
+  h.style.cssText = 'font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--sub);';
+  wrap.appendChild(h);
+  if (sub) {
+    const s = document.createElement('div');
+    s.textContent = sub;
+    s.style.cssText = 'font-size:13px;color:var(--sub);opacity:.75;margin-top:3px;line-height:1.4;';
+    wrap.appendChild(s);
+  }
+  return wrap;
+}
+
 // Je eigen profiel als vaste eerste kaart in het advertentieoverzicht.
 // Bewust géén verwijderknop: je profiel is je account, dat gooi je hier niet weg.
 function bouwProfielKaart(list) {
   const p = currentProfile;
   if (!p) return;
-
-  const typeLabel = { muzikant: 'Muzikant', band: 'Band', industry: 'Industry' }[p.type] || 'Profiel';
 
   const card = document.createElement('div');
   card.className = 'ad-panel-card';
@@ -6368,11 +6387,6 @@ function bouwProfielKaart(list) {
 
   const info = document.createElement('div');
   info.className = 'ad-card-info';
-
-  const label = document.createElement('div');
-  label.textContent = 'JE PROFIEL · ' + typeLabel.toUpperCase();
-  label.style.cssText = 'font-size:10px;font-weight:700;letter-spacing:.08em;color:#7c4dff;margin-bottom:4px;';
-  info.appendChild(label);
 
   const titel = document.createElement('div');
   titel.className = 'ad-card-title';
@@ -6410,8 +6424,8 @@ function bouwProfielKaart(list) {
   footer.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:12px 20px;border-top:1px solid #2a2a3e;background:#12122a;flex-wrap:wrap;gap:8px;';
 
   const badge = document.createElement('span');
-  badge.className = 'ad-status-badge';
-  badge.textContent = '● Altijd zichtbaar';
+  badge.style.cssText = 'font-size:12px;color:var(--sub);opacity:.8;';
+  badge.textContent = 'Staat altijd in de stapel';
 
   const bewerkBtn = document.createElement('button');
   bewerkBtn.className = 'undo-btn';
