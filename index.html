@@ -1013,6 +1013,29 @@ html, body {
   white-space: nowrap;
 }
 
+/* Knoppen in het advertentieoverzicht — bewust duidelijk zichtbaar,
+   .undo-btn was te subtiel (transparant, 12px, dunne rand). */
+.ad-act-btn {
+  padding: 9px 18px; border-radius: 10px;
+  font-size: 13px; font-weight: 700; cursor: pointer;
+  font-family: var(--font-body); white-space: nowrap;
+  border: 1px solid transparent;
+  transition: filter .15s, background .15s;
+}
+.ad-act-btn:hover { filter: brightness(1.15); }
+.ad-act-btn.primair {
+  background: var(--grad); color: #fff;
+  box-shadow: 0 4px 14px rgba(124,77,255,.32);
+}
+.ad-act-btn.secundair {
+  background: rgba(124,77,255,0.16); color: #b9a0ff;
+  border-color: rgba(124,77,255,0.45);
+}
+.ad-act-btn.gevaar {
+  background: rgba(229,57,53,0.14); color: #ff8a80;
+  border-color: rgba(229,57,53,0.45);
+}
+
 /* ═══════════════════════════════════════════
    MESSAGES PANEL
 ═══════════════════════════════════════════ */
@@ -6244,7 +6267,7 @@ async function laadMijnAdvertenties() {
   if (!data?.length) {
     list.appendChild(sectieKop('Extra advertenties'));
     const leeg = document.createElement('div');
-    leeg.innerHTML = `<div style="padding:4px 2px 32px;color:var(--sub);font-size:14px;">Je hebt er nog geen.</div>`;
+    leeg.innerHTML = `<div style="width:100%;max-width:720px;margin:0 auto;padding:4px 2px 32px;color:var(--sub);font-size:14px;">Je hebt er nog geen.</div>`;
     list.appendChild(leeg);
     return;
   }
@@ -6321,15 +6344,13 @@ async function laadMijnAdvertenties() {
     btns.style.cssText = 'display:flex;gap:8px;';
 
     const bewerkBtn = document.createElement('button');
-    bewerkBtn.className = 'undo-btn';
+    bewerkBtn.className = 'ad-act-btn secundair';
     bewerkBtn.textContent = 'Bewerken';
-    bewerkBtn.style.cssText = 'color:#7c4dff;border-color:rgba(124,77,255,0.3);';
     bewerkBtn.onclick = () => bewerkAd(ad.id);
 
     const verwijderBtn = document.createElement('button');
-    verwijderBtn.className = 'undo-btn';
+    verwijderBtn.className = 'ad-act-btn gevaar';
     verwijderBtn.textContent = 'Verwijderen';
-    verwijderBtn.style.cssText = 'color:#e53935;border-color:rgba(229,57,53,0.3);';
     verwijderBtn.onclick = () => verwijderAd(ad.id);
 
     btns.appendChild(bewerkBtn);
@@ -6343,10 +6364,11 @@ async function laadMijnAdvertenties() {
 }
 
 // Kopje boven een sectie in het advertentieoverzicht.
+// Zelfde breedte/centrering als .ad-panel-card, anders staat het kopje links en de kaart in het midden.
 function sectieKop(titel) {
   const h = document.createElement('div');
   h.textContent = titel;
-  h.style.cssText = 'margin:24px 0 10px;font-size:15px;font-weight:700;color:var(--txt);';
+  h.style.cssText = 'width:100%;max-width:720px;margin:24px auto 10px;padding:0 2px;font-size:15px;font-weight:700;color:var(--txt);';
   return h;
 }
 
@@ -6420,9 +6442,8 @@ function bouwProfielKaart(list) {
   if (!opJacht) badge.style.cssText = 'background:rgba(255,255,255,0.06);border-color:var(--border);color:var(--sub);';
 
   const bewerkBtn = document.createElement('button');
-  bewerkBtn.className = 'undo-btn';
+  bewerkBtn.className = 'ad-act-btn primair';
   bewerkBtn.textContent = 'Profiel aanpassen';
-  bewerkBtn.style.cssText = 'color:#7c4dff;border-color:rgba(124,77,255,0.3);';
   bewerkBtn.onclick = () => bewerkProfiel();
 
   footer.appendChild(badge);
