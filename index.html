@@ -2576,10 +2576,10 @@ body { letter-spacing: 0.01em; }
          mensen kunnen je nog liken/matchen, maar niet zomaar een berichtverzoek sturen. -->
     <div id="regOpenRij" style="display:flex;align-items:center;justify-content:space-between;gap:16px;background:#14152a;border:1px solid var(--border);border-radius:14px;padding:14px 16px;">
       <div style="min-width:0;">
-        <div style="font-size:14px;font-weight:600;color:var(--text);">Sta open voor reacties</div>
-        <div style="font-size:12px;color:var(--sub);margin-top:2px;line-height:1.4;">Staat dit uit, dan blijf je zichtbaar maar geef je aan dat je momenteel niet actief op zoek bent.</div>
+        <div style="font-size:14px;font-weight:600;color:var(--text);">Pauzeer mijn advertentie</div>
+        <div style="font-size:12px;color:var(--sub);margin-top:2px;line-height:1.4;">Tijdens een pauze blijf je zichtbaar, maar geef je aan dat je momenteel niet actief op zoek bent.</div>
       </div>
-      <button type="button" id="regOpenToggle" role="switch" aria-checked="true" onclick="event.preventDefault();event.stopPropagation();toggleOpenVoorReacties()" class="sm-switch aan" style="flex-shrink:0;"><span class="sm-switch-knop" style="pointer-events:none;"></span></button>
+      <button type="button" id="regOpenToggle" role="switch" aria-checked="false" onclick="event.preventDefault();event.stopPropagation();toggleOpenVoorReacties()" class="sm-switch" style="flex-shrink:0;"><span class="sm-switch-knop" style="pointer-events:none;"></span></button>
     </div>
 
     <!-- Niveau + Beschikbaarheid (alleen voor muzikant/sessie/industry) -->
@@ -3506,16 +3506,20 @@ function toggleOpenVoorReacties() {
   t.classList.toggle('aan', nieuw);
   t.setAttribute('aria-checked', nieuw ? 'true' : 'false');
 }
+// De schakelaar heet nu "Pauzeer mijn advertentie": AAN = gepauzeerd.
+// In de database blijft open_voor_reacties staan (true = actief), dus de UI is
+// bewust omgekeerd t.o.v. de opgeslagen waarde. Alleen hier omdraaien, nergens anders.
 function zetOpenToggle(waarde) {
   const t = document.getElementById('regOpenToggle');
   if (!t) return;
-  const aan = waarde !== false; // default aan
-  t.classList.toggle('aan', aan);
-  t.setAttribute('aria-checked', aan ? 'true' : 'false');
+  const gepauzeerd = waarde === false; // open_voor_reacties false = op pauze
+  t.classList.toggle('aan', gepauzeerd);
+  t.setAttribute('aria-checked', gepauzeerd ? 'true' : 'false');
 }
 function leesOpenToggle() {
   const t = document.getElementById('regOpenToggle');
-  return t ? t.classList.contains('aan') : true;
+  const gepauzeerd = t ? t.classList.contains('aan') : false;
+  return !gepauzeerd; // teruggeven als open_voor_reacties
 }
 let swipeHistory = [];
 let currentTab = 'liked';
@@ -6439,7 +6443,7 @@ function bouwProfielKaart(list) {
   const badge = document.createElement('span');
   badge.className = 'ad-status-badge';
   badge.textContent = opJacht ? '● Actief' : '● Pauze';
-  if (!opJacht) badge.style.cssText = 'background:rgba(255,255,255,0.06);border-color:var(--border);color:var(--sub);';
+  if (!opJacht) badge.style.cssText = 'background:rgba(229,57,53,0.15);border-color:rgba(229,57,53,0.4);color:#ff8a80;';
 
   const bewerkBtn = document.createElement('button');
   bewerkBtn.className = 'ad-act-btn primair';
@@ -7894,7 +7898,10 @@ async function slaProfielOp() {
   }
 
   // Profiel bijwerken in geheugen
-  currentProfile = data || { ...currentProfile, naam, type, leeftijd, locatie, provincie, stad, instrument: instrumenten, genres, niveau, beschikbaarheid, muzieklink, bio, kop };
+  // Let op: de terugvalvariant moet ALLE opgeslagen velden bevatten. Ontbrak er één
+  // (open_voor_reacties), dan bleef de oude waarde in het geheugen staan en klopte
+  // de status in "Mijn advertenties" pas na een harde refresh.
+  currentProfile = data || { ...currentProfile, naam, type, leeftijd, locatie, provincie, stad, instrument: instrumenten, genres, niveau, beschikbaarheid, muzieklink, bio, kop, open_voor_reacties: leesOpenToggle(), foto_url: uploadedFotoUrl || currentProfile?.foto_url || null };
   uploadedFotoUrl = null;
   const regTitel = document.getElementById('regTitel');
   if (regTitel) regTitel.textContent = 'Maak je profiel';
@@ -7903,6 +7910,8 @@ async function slaProfielOp() {
   const regBtn = document.getElementById('regOpslaanBtn');
   if (regBtn) regBtn.textContent = 'Profiel aanmaken →';
   vulProfielIn(currentProfile);
+  // Advertentieoverzicht meteen verversen: de profielkaart toont de Actief/Pauze-status.
+  if (document.getElementById('adPanelList')) laadMijnAdvertenties();
   showScreen('app');
 }
 
