@@ -2831,7 +2831,6 @@ body { letter-spacing: 0.01em; }
         <div class="panel-header" style="display:flex;align-items:center;justify-content:space-between;gap:16px;">
           <div>
             <h2>Mijn Advertenties</h2>
-            <div style="font-size:14px;color:var(--sub);margin-top:4px;font-weight:400;">Je profiel én je losse advertenties — alles waarmee je in de stapel staat.</div>
           </div>
           <button class="btn btn-primary btn-sm" style="flex-shrink:0;" onclick="nieuweAdvertentie()">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -6239,18 +6238,18 @@ async function laadMijnAdvertenties() {
 
   // Je profiel is óók een advertentie: altijd als eerste kaart tonen.
   list.innerHTML = '';
-  list.appendChild(sectieKop('Je profiel', 'Dit is hoe je bij anderen in de stapel verschijnt.'));
+  list.appendChild(sectieKop('Je profiel advertentie'));
   bouwProfielKaart(list);
 
   if (!data?.length) {
-    list.appendChild(sectieKop('Extra advertenties', 'Zoek je bandleden of bied je iets aan? Maak een aparte advertentie.'));
+    list.appendChild(sectieKop('Extra advertenties'));
     const leeg = document.createElement('div');
-    leeg.innerHTML = `<div style="text-align:center;padding:28px 20px 40px;color:var(--sub);"><div style="font-size:14px;">Je hebt er nog geen.</div></div>`;
+    leeg.innerHTML = `<div style="padding:4px 2px 32px;color:var(--sub);font-size:14px;">Je hebt er nog geen.</div>`;
     list.appendChild(leeg);
     return;
   }
 
-  list.appendChild(sectieKop('Extra advertenties', 'Los van je profiel. Deze kun je bewerken of verwijderen.'));
+  list.appendChild(sectieKop('Extra advertenties'));
 
   data.forEach(ad => {
     const card = document.createElement('div');
@@ -6344,20 +6343,11 @@ async function laadMijnAdvertenties() {
 }
 
 // Kopje boven een sectie in het advertentieoverzicht.
-function sectieKop(titel, sub) {
-  const wrap = document.createElement('div');
-  wrap.style.cssText = 'margin:22px 2px 10px;';
+function sectieKop(titel) {
   const h = document.createElement('div');
   h.textContent = titel;
-  h.style.cssText = 'font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--sub);';
-  wrap.appendChild(h);
-  if (sub) {
-    const s = document.createElement('div');
-    s.textContent = sub;
-    s.style.cssText = 'font-size:13px;color:var(--sub);opacity:.75;margin-top:3px;line-height:1.4;';
-    wrap.appendChild(s);
-  }
-  return wrap;
+  h.style.cssText = 'margin:24px 0 10px;font-size:15px;font-weight:700;color:var(--txt);';
+  return h;
 }
 
 // Je eigen profiel als vaste eerste kaart in het advertentieoverzicht.
@@ -6423,9 +6413,11 @@ function bouwProfielKaart(list) {
   const footer = document.createElement('div');
   footer.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:12px 20px;border-top:1px solid #2a2a3e;background:#12122a;flex-wrap:wrap;gap:8px;';
 
+  const opJacht = p.open_voor_reacties !== false;
   const badge = document.createElement('span');
-  badge.style.cssText = 'font-size:12px;color:var(--sub);opacity:.8;';
-  badge.textContent = 'Staat altijd in de stapel';
+  badge.className = 'ad-status-badge';
+  badge.textContent = opJacht ? '● Actief' : '● Pauze';
+  if (!opJacht) badge.style.cssText = 'background:rgba(255,255,255,0.06);border-color:var(--border);color:var(--sub);';
 
   const bewerkBtn = document.createElement('button');
   bewerkBtn.className = 'undo-btn';
