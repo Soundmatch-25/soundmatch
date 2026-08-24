@@ -3789,7 +3789,27 @@ async function laadAdvertenties() {
     if (!c) return null;
     return afstandKm(middelpunt, c);
   };
-  advertentiesData = [...adKaarten, ...profielKaarten];
+  // De-duplicatie: weer exacte doublures uit de feed (zelfde persoon én zelfde
+  // inhoud). Iemand mag meerdere advertenties hebben — ook per regio — maar je wilt
+  // niet twee identieke kaarten naast elkaar zien. Advertentiekaarten staan vooraan,
+  // dus bij een gelijke profielkaart wint de advertentie. Kaarten die inhoudelijk
+  // verschillen (andere tekst/regio) blijven allemaal staan.
+  const dedupSleutel = (k) => {
+    const uid = k.raw?.user_id || k.raw?.profiel?.id || k.raw?.id || '';
+    const tekst = [
+      (k.rol || k.raw?.kop || ''),
+      (k.raw?.omschrijving || k.raw?.bio || ''),
+      (k.raw?.locatie || k.stad || '')
+    ].join('|').toLowerCase().replace(/\s+/g, ' ').trim();
+    return uid + '::' + tekst;
+  };
+  const gezienDedup = new Set();
+  advertentiesData = [...adKaarten, ...profielKaarten].filter(k => {
+    const sleutel = dedupSleutel(k);
+    if (gezienDedup.has(sleutel)) return false;
+    gezienDedup.add(sleutel);
+    return true;
+  });
   advertentiesData.forEach(k => { k._afstand = afstandVoorKaart(k); });
   advertentiesData.sort((a, b) => {
     // Spotlight altijd eerst
@@ -7394,6 +7414,14 @@ let komtVanReset = false;
   }
 })();
 
+// Directe kijkmodus via ?kijk (voor advertentiecampagnes): bezoekers landen
+// meteen in de kijkmodus i.p.v. op het onboardingscherm. Alleen voor niet-ingelogde
+// bezoekers; wie is ingelogd krijgt gewoon de normale app.
+(function detecteerKijkLink() {
+  const params = new URLSearchParams(window.location.search || '');
+  if (params.has('kijk')) window.__wilKijken = true;
+})();
+
 // Afmelden voor e-mailnotificaties via de link onderaan de mails.
 // Werkt zonder inloggen: de unieke, niet-te-raden token identificeert de gebruiker.
 (function afmeldRoute() {
@@ -7460,6 +7488,22 @@ sb.auth.onAuthStateChange(async (event, session) => {
     }, 0);
   } else if (event === 'TOKEN_REFRESHED' && session?.user) {
     currentUser = session.user;
+  } else if ((event === 'INITIAL_SESSION' || event === 'SIGNED_OUT') && !session?.user) {
+    // Geen sessie: als de bezoeker via een ?kijk-advertentielink kwam, meteen
+    // de kijkmodus openen i.p.v. het onboardingscherm. Alleen als er echt niemand
+    // is ingelogd (dubbele check tegen currentUser voorkomt dat een ingelogde
+    // gebruiker met ?kijk-link per ongeluk in de kijkmodus belandt).
+    if (window.__wilKijken && !window.__kijkGestart) {
+      window.__kijkGestart = true;
+      setTimeout(async () => {
+        // Dubbelcheck de echte sessie: alleen kijkmodus starten als er niemand is ingelogd.
+        try {
+          const { data } = await sb.auth.getSession();
+          if (data?.session?.user || currentUser) return; // ingelogd → normale app
+        } catch (e) {}
+        try { startKijken(); } catch (e) {}
+      }, 300);
+    }
   }
 });
 
