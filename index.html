@@ -4802,6 +4802,10 @@ async function laadMatchesLijst() {
     info.innerHTML = '<div style="font-weight:700;font-size:14px;">' + esc(ander.naam || 'Onbekend') + '</div>' +
       '<div style="font-size:12px;color:var(--neon);margin-top:2px;">✓ Match' + (viaTitelsList.length ? ' · via: ' + esc(viaTitelsList.join(', ')) : '') + '</div>';
 
+    // Foto en naam openen het profiel van deze match.
+    maakKlikbaarProfiel(av, anderId);
+    maakKlikbaarProfiel(info, anderId);
+
     const btns = document.createElement('div');
     btns.style.cssText = 'display:flex;gap:8px;flex-shrink:0;';
 
@@ -4970,6 +4974,10 @@ async function laadOntvangenLikes() {
     info.innerHTML = '<div style="font-weight:700;font-size:14px;">' + esc(u.naam || 'Onbekend') + '</div>' +
       '<div style="font-size:12px;color:var(--sub);margin-top:2px;">' + (u.type ? esc(u.type.charAt(0).toUpperCase()+u.type.slice(1)) : '') + (toonLocatie(u) ? ' · ' + esc(toonLocatie(u)) : '') + '</div>' +
       (watGeliket ? '<div style="font-size:12px;color:#ff6b8a;margin-top:3px;">' + watGeliket + '</div>' : '');
+
+    // Foto en naam openen het profiel van deze persoon.
+    maakKlikbaarProfiel(av, u.id);
+    maakKlikbaarProfiel(info, u.id);
 
     const btn = document.createElement('button');
     btn.className = 'btn btn-primary btn-sm';
@@ -6031,6 +6039,10 @@ async function openGesprek(userId, user) {
     } else if (userFoto) {
       av.innerHTML = '<img src="' + esc(userFoto) + '" style="width:100%;height:100%;object-fit:cover;border-radius:50%;"/>' + onlineDot;
     }
+    // Ook de foto klikbaar maken → toont het profiel van deze persoon.
+    av.style.cursor = 'pointer';
+    av.title = 'Bekijk profiel';
+    av.onclick = () => openProfielVanUser(userId);
   }
   updateChatOnlineStatus(userId);
   await sb.from('directe_berichten').update({ gelezen: true }).eq('van_user_id', userId).eq('naar_user_id', currentUser.id).eq('gelezen', false);
@@ -6220,6 +6232,7 @@ function resetChatHeader() {
   const viaEl = document.getElementById('chatViaAd');
   if (viaEl) { viaEl.textContent = ''; viaEl.style.display = 'none'; }
   const av = document.getElementById('chatAvatar');
+  if (av) { av.onclick = null; av.style.cursor = ''; av.title = ''; }
   if (av) av.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>';
   stopAppInterval('gesprek'); stopChatRealtime();
   stopAppInterval('onlinelezen');
@@ -7219,6 +7232,15 @@ function openKaartDetail(index) {
   const acties = document.getElementById('kdActies');
   if (acties) acties.style.display = 'flex';
   toonKaartDetail(p, index);
+}
+
+// Maakt een element klikbaar zodat het het profiel van deze persoon opent.
+// Gebruikt op alle plekken buiten de swipe-kaarten om: matches, likes, chat.
+function maakKlikbaarProfiel(el, userId) {
+  if (!el || !userId) return;
+  el.style.cursor = 'pointer';
+  el.title = 'Bekijk profiel';
+  el.onclick = (e) => { e.stopPropagation(); openProfielVanUser(userId); };
 }
 
 // Opent hetzelfde detailvenster voor een willekeurige gebruiker (vanuit chat of
