@@ -2786,6 +2786,13 @@ body { letter-spacing: 0.01em; }
         </div>
 
         <div class="chat-msgs" id="chatMsgs"></div>
+        <div id="chatVerzoekBalk" style="display:none;padding:12px 14px;border-top:1px solid var(--border);background:rgba(124,77,255,0.08);">
+          <div id="chatVerzoekTekst" style="font-size:13px;color:var(--sub);margin-bottom:10px;"></div>
+          <div style="display:flex;gap:8px;">
+            <button id="chatVerzoekJa" class="btn btn-primary btn-sm" style="flex:1;">Accepteren</button>
+            <button id="chatVerzoekNee" class="btn btn-ghost btn-sm" style="flex:1;">Weigeren</button>
+          </div>
+        </div>
         <div class="chat-input-row">
           <input class="chat-input" id="chatInput" maxlength="1000" placeholder="Typ een bericht..." onkeydown="if(event.key==='Enter')sendMsg()"/>
           <button class="send-btn" onclick="sendMsg()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button>
@@ -3178,7 +3185,7 @@ body { letter-spacing: 0.01em; }
       <div id="kdBio" style="font-size:15px;color:var(--text);line-height:1.7;white-space:pre-wrap;"></div>
       <div id="kdRijen"></div>
       <div id="kdLinks"></div>
-      <div style="display:flex;gap:10px;padding-top:4px;">
+      <div id="kdActies" style="display:flex;gap:10px;padding-top:4px;">
         <button class="btn btn-primary" style="flex:1;" onclick="sluitKaartDetail();openDirectBerichtModal()">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
           Bericht sturen
@@ -5772,11 +5779,11 @@ async function laadDirecteBerichten() {
       const card = document.createElement('div');
       card.style.cssText = 'background:var(--card2);border:1px solid rgba(124,77,255,0.3);border-radius:14px;padding:12px 14px;margin-bottom:8px;';
       card.innerHTML =
-        '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">' +
+        '<div onclick="openProfielVanUser(\'' + u.id + '\')" title="Bekijk profiel" style="display:flex;align-items:center;gap:10px;margin-bottom:10px;cursor:pointer;">' +
           '<div style="width:36px;height:36px;border-radius:10px;overflow:hidden;flex-shrink:0;background:var(--grad);">' +
             (u.foto_url ? '<img src="' + esc(u.foto_url) + '" style="width:100%;height:100%;object-fit:cover;"/>' : typeIcon(u.type)) +
           '</div>' +
-          '<div><div style="font-weight:700;font-size:13px;">' + esc(u.naam || 'Onbekend') + '</div>' +
+          '<div><div style="font-weight:700;font-size:13px;text-decoration:underline;text-decoration-color:rgba(255,255,255,0.25);text-underline-offset:3px;">' + esc(u.naam || 'Onbekend') + '</div>' +
           '<div style="font-size:12px;color:var(--sub);">' + esc(u.type || '') + '</div></div>' +
         '</div>' +
         '<div style="font-size:13px;color:var(--sub);margin-bottom:10px;font-style:italic;">"' + esc(v.inhoud.substring(0, 80)) + (v.inhoud.length > 80 ? '...' : '') + '"</div>' +
@@ -5958,8 +5965,41 @@ async function openGesprek(userId, user) {
   const meldBtn = document.getElementById('meldBtn');
   if (meldBtn) meldBtn.style.display = 'flex';
 
+  // Naam in de chat-header klikbaar maken → toont het profiel van deze persoon.
+  if (naamEl) {
+    naamEl.style.cursor = 'pointer';
+    naamEl.title = 'Bekijk profiel';
+    naamEl.onclick = () => openProfielVanUser(userId);
+  }
+
   // Invoerveld afstemmen op de werkelijke staat van dit gesprek.
-  const { staat } = await bepaalChatStatus(userId);
+  const { staat, verzoekId } = await bepaalChatStatus(userId);
+
+  // Berichtverzoek rechtstreeks vanuit de chat afhandelen, zodat je niet meer
+  // naar de Likes-pagina hoeft om iemand goed te keuren.
+  const verzoekBalk = document.getElementById('chatVerzoekBalk');
+  if (verzoekBalk) {
+    if (staat === 'moet_accepteren' && verzoekId) {
+      const naam = user?.naam || 'Deze persoon';
+      document.getElementById('chatVerzoekTekst').textContent =
+        naam + ' wil je een bericht sturen. Accepteer je het verzoek?';
+      document.getElementById('chatVerzoekJa').onclick = async () => {
+        await accepteerVerzoek(verzoekId, userId);
+        verzoekBalk.style.display = 'none';
+        openGesprek(userId, user);
+      };
+      document.getElementById('chatVerzoekNee').onclick = async () => {
+        await weigerVerzoek(verzoekId);
+        verzoekBalk.style.display = 'none';
+        resetChatHeader();
+        laadDirecteBerichten();
+      };
+      verzoekBalk.style.display = 'block';
+    } else {
+      verzoekBalk.style.display = 'none';
+    }
+  }
+
   const chatInputEl = document.getElementById('chatInput');
   if (chatInputEl) {
     const naam = user?.naam || 'deze persoon';
@@ -6153,19 +6193,23 @@ async function bepaalChatStatus(anderId) {
   if (match) return { staat: 'match' };
 
   const { data: verzoek } = await sb.from('berichtverzoeken')
-    .select('van_user_id')
+    .select('id, van_user_id')
     .or(`and(van_user_id.eq.${currentUser.id},naar_user_id.eq.${anderId}),and(van_user_id.eq.${anderId},naar_user_id.eq.${currentUser.id})`)
     .eq('status', 'wachtend')
     .maybeSingle();
   if (verzoek) {
     return verzoek.van_user_id === currentUser.id
-      ? { staat: 'wacht_op_ander' }   // ik heb gestuurd, de ander moet nog reageren
-      : { staat: 'moet_accepteren' }; // de ander heeft gestuurd, ik moet nog beslissen
+      ? { staat: 'wacht_op_ander', verzoekId: verzoek.id }   // ik heb gestuurd, de ander moet nog reageren
+      : { staat: 'moet_accepteren', verzoekId: verzoek.id }; // de ander heeft gestuurd, ik moet nog beslissen
   }
   return { staat: 'beeindigd' };
 }
 
 function resetChatHeader() {
+  const vb = document.getElementById('chatVerzoekBalk');
+  if (vb) vb.style.display = 'none';
+  const cn = document.querySelector('.chat-name');
+  if (cn) { cn.onclick = null; cn.style.cursor = ''; cn.title = ''; }
   document.querySelector('.chat-col')?.classList.add('geen-gesprek');
   document.getElementById('blokkeerBtn').style.display = 'none';
   document.getElementById('meldBtn').style.display = 'none';
@@ -7168,8 +7212,39 @@ function openFilter() {
   document.getElementById('filterModal').classList.add('open');
 }
 
+// Opent het detailvenster voor een kaart uit de feed (met like-/berichtknoppen).
 function openKaartDetail(index) {
   const p = advertentiesData[index];
+  if (!p) return;
+  const acties = document.getElementById('kdActies');
+  if (acties) acties.style.display = 'flex';
+  toonKaartDetail(p, index);
+}
+
+// Opent hetzelfde detailvenster voor een willekeurige gebruiker (vanuit chat of
+// Likes-pagina). Haalt het profiel op en toont het zonder like-/berichtknoppen,
+// want daar zit je al in gesprek of in een verzoek.
+async function openProfielVanUser(userId) {
+  if (!userId) return;
+  try {
+    const { data, error } = await sb.from('profiles')
+      .select('*')
+      .eq('id', userId)
+      .maybeSingle();
+    if (error || !data) {
+      toonInfo('Profiel niet gevonden', 'Dit profiel kon niet worden geladen.', '\uD83D\uDC64');
+      return;
+    }
+    const kaart = profielNaarKaart(data);
+    const acties = document.getElementById('kdActies');
+    if (acties) acties.style.display = 'none';
+    toonKaartDetail(kaart, null);
+  } catch (e) {
+    toonInfo('Profiel niet gevonden', 'Dit profiel kon niet worden geladen.', '\uD83D\uDC64');
+  }
+}
+
+function toonKaartDetail(p, index) {
   if (!p) return;
   const raw = p.raw || {};
 
@@ -7233,8 +7308,9 @@ function openKaartDetail(index) {
     links.style.display = 'none';
   }
 
-  // Sla index op voor chat knop
-  modal.dataset.index = index;
+  // Sla index op voor chat knop (leeg bij een profiel dat niet uit de feed komt)
+  if (index === null || index === undefined) delete modal.dataset.index;
+  else modal.dataset.index = index;
   modal.classList.add('open');
 }
 
