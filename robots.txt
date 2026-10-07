@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://soundmatch.nl/sitemap.xml
+Sitemap: https://www.soundmatch.nl/sitemap.xml
